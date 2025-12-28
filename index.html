@@ -68,8 +68,10 @@
     <!-- API Configuration - Uses /api prefix for backend routes -->
     <script>
         window.APP_CONFIG = {
-            // Backend API URL - uses relative /api path which is routed to port 8001 by ingress
-            API_URL: ''
+            // Backend API URL
+            // In production: ingress routes /api/* to backend
+            // In development: connect directly to backend port
+            API_URL: window.location.hostname === 'localhost' ? 'http://localhost:8001' : ''
         };
     </script>
     
