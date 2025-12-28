@@ -3,25 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>remod3 - Portfolio</title>
-    
-    <!-- Tailwind CSS CDN -->
+    <title>remod3</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom styles -->
     <link rel="stylesheet" href="/assets/css/app.css">
-    
-    <!-- Prism.js for syntax highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
-    
-    <!-- KaTeX for math formulas -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Tailwind config -->
+
     <script>
         tailwind.config = {
             theme: {
@@ -45,35 +35,22 @@
     </script>
 </head>
 <body class="bg-discord-darker text-discord-text min-h-screen">
-    <!-- Navbar -->
     <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-discord-dark border-b border-discord-light"></nav>
-    
-    <!-- Main content -->
     <main id="app" class="pt-16 min-h-screen"></main>
-    
-    <!-- Modal container -->
     <div id="modal-container"></div>
-    
-    <!-- Toast container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
-    
-    <!-- Libraries via CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    
-    <!-- API Configuration - Uses /api prefix for backend routes -->
     <script>
         window.APP_CONFIG = {
-            // Backend API URL - uses relative /api path which is routed to port 8001 by ingress
-            API_URL: ''
+            API_URL: window.location.hostname === 'localhost' ? 'http://localhost:8001' : ''
         };
     </script>
-    
-    <!-- Main module -->
+
     <script type="module" src="/assets/js/app.js"></script>
 </body>
 </html>
