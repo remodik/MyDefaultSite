@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кто я?</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card fade-in">
+    <div class="banner-container">
+        <div class="banner" style="background-image: url('blue_mybanner.gif')"></div>
+    </div>
+    <div class="header">
+        <div class="avatar-container">
+            <img src="blue_avatar.png" alt="Аватар пользователя" class="avatar">
+            <div class="avatar-decoration"></div>
+        </div>
+        <h1>remod3</h1>
+        <div class="title">チェリー | せんちゃ</div>
+        <div class="title">ベテルギウスロマネ・コンティ</div>
+    </div>
+    <div class="content">
+        <div class="section fade-in">
+            <h2><i class="fas fa-heart accent-3" aria-label="Обо мне"></i> Обо мне</h2>
+            <p>Привет! Меня зовут Илья, мне 18 лет, и я обычный начинающий разработчик на Python, который любит аниме.</p>
+            <p>Моя цель - создать универсального Discord бота, который будет уметь всё! (Ну, или почти)</p>
+            <p>День рождения: <span id="birthday-countdown"></span></p>
+        </div>
+        <div class="section fade-in">
+            <h2><i class="fas fa-star accent-1" aria-label="Увлечения"></i> Увлечения</h2>
+            <div class="skills">
+                <div class="skill">Python</div>
+                <div class="skill">Discord API</div>
+                <div class="skill">Py-cord/disnake</div>
+                <div class="skill">HTML/CSS</div>
+                <div class="skill">Просмотр аниме</div>
+            </div>
+        </div>
+        <div class="section fade-in">
+            <h2><i class="fas fa-envelope accent-4" aria-label="Контакты"></i> Контакты</h2>
+            <div class="contact-item">
+                <i class="fas fa-envelope accent-3" aria-label="Email"></i>
+                <span>slenderzet@gmail.com</span>
+            </div>
+            <div class="contact-item">
+                <i class="fas fa-map-marker-alt accent-3" aria-label="Местоположение"></i>
+                <span>Тояма, Япония (мечтаю там побывать)</span>
+            </div>
+        </div>
+        <div class="social-links">
+            <a href="https://vk.com/remod3" class="social-link" aria-label="VK"><i class="fab fa-vk accent-3"></i></a>
+            <a href="https://t.me/remod3" class="social-link" aria-label="Telegram"><i class="fab fa-telegram accent-3"></i></a>
+            <a href="https://discord.gg/nKkQdDgWfC" class="social-link" aria-label="Discord сервер"><i class="fab fa-discord accent-3"></i></a>
+            <a href="https://discord.com/users/743864658951274528" class="social-link" aria-label="Discord профиль"><i class="fab fa-discord accent-3"></i></a>
+            <a href="https://open.spotify.com/user/31hx3sueaixdsbody6s6lligjm6a" class="social-link" aria-label="Spotify"><i class="fab fa-spotify accent-3"></i></a>
+        </div>
+
+        <div style="text-align:center; margin-top:10px; color:#7289DA; display: flex; justify-content: center; gap: 20px;">
+            <div>
+                <i class="fas fa-eye" aria-label="Просмотры"></i> <span id="viewsCount">0</span>
+            </div>
+            <div id="likesContainer" style="cursor: pointer;">
+                <i class="far fa-heart" aria-label="Лайки"></i> <span id="likesCount">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
