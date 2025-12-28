@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -62,7 +62,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 FROM_EMAIL = os.getenv("FROM_EMAIL")
@@ -214,11 +213,11 @@ class ContactMessage(BaseModel):
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -232,11 +231,11 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-def _to_iso(dt: Optional[datetime]) -> Optional[str]:
+def _to_iso(dt: Optional[datetime]) -> str | None:
     return dt.isoformat() if dt else None
 
 
-def user_to_public_dict(user: User) -> Dict[str, Any]:
+def user_to_public_dict(user: User) -> dict[str, Any]:
     return {
         "id": user.id,
         "username": user.username,
@@ -246,7 +245,7 @@ def user_to_public_dict(user: User) -> Dict[str, Any]:
     }
 
 
-def project_to_dict(project: Project) -> Dict[str, Any]:
+def project_to_dict(project: Project) -> dict[str, Any]:
     return {
         "id": project.id,
         "name": project.name,
@@ -256,7 +255,7 @@ def project_to_dict(project: Project) -> Dict[str, Any]:
     }
 
 
-def file_to_dict(file: FileModel) -> Dict[str, Any]:
+def file_to_dict(file: FileModel) -> dict[str, Any]:
     return {
         "id": file.id,
         "project_id": file.project_id,
