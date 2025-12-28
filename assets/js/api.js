@@ -1,13 +1,13 @@
 // API URL Configuration
-// For production, this will be set via window.APP_CONFIG
-// For development, falls back to localhost:8001
+// Empty string means same origin (requests go to /api/*)
+// The Kubernetes ingress routes /api/* to backend port 8001
 const API_URL = (function() {
     // Check if running in browser and has config
-    if (typeof window !== 'undefined' && window.APP_CONFIG?.API_URL) {
+    if (typeof window !== 'undefined' && window.APP_CONFIG?.API_URL !== undefined) {
         return window.APP_CONFIG.API_URL;
     }
     // Default for local development
-    return 'http://localhost:8001';
+    return '';
 })();
 
 // Token management
