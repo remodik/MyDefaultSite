@@ -1,0 +1,7 @@
+{
+  "name": "remod3-portfolio",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npx serve ../. -l 3000 -s"
+  }
+}
