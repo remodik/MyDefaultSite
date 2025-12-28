@@ -3,70 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кто я?</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <title>remod3 - Portfolio</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/assets/css/app.css">
+    
+    <!-- Prism.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+    
+    <!-- KaTeX for math formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tailwind config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            dark: '#1e1f22',
+                            darker: '#111214',
+                            light: '#2b2d31',
+                            lighter: '#313338',
+                            text: '#b5bac1',
+                            accent: '#5865f2',
+                            green: '#23a559',
+                            red: '#f23f43',
+                            yellow: '#f0b232',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-<div class="card fade-in">
-    <div class="banner-container">
-        <div class="banner" style="background-image: url('blue_mybanner.gif')"></div>
-    </div>
-    <div class="header">
-        <div class="avatar-container">
-            <img src="blue_avatar.png" alt="Аватар пользователя" class="avatar">
-            <div class="avatar-decoration"></div>
-        </div>
-        <h1>remod3</h1>
-        <div class="title">チェリー | せんちゃ</div>
-        <div class="title">ベテルギウスロマネ・コンティ</div>
-    </div>
-    <div class="content">
-        <div class="section fade-in">
-            <h2><i class="fas fa-heart accent-3" aria-label="Обо мне"></i> Обо мне</h2>
-            <p>Привет! Меня зовут Илья, мне 18 лет, и я обычный начинающий разработчик на Python, который любит аниме.</p>
-            <p>Моя цель - создать универсального Discord бота, который будет уметь всё! (Ну, или почти)</p>
-            <p>День рождения: <span id="birthday-countdown"></span></p>
-        </div>
-        <div class="section fade-in">
-            <h2><i class="fas fa-star accent-1" aria-label="Увлечения"></i> Увлечения</h2>
-            <div class="skills">
-                <div class="skill">Python</div>
-                <div class="skill">Discord API</div>
-                <div class="skill">Py-cord/disnake</div>
-                <div class="skill">HTML/CSS</div>
-                <div class="skill">Просмотр аниме</div>
-            </div>
-        </div>
-        <div class="section fade-in">
-            <h2><i class="fas fa-envelope accent-4" aria-label="Контакты"></i> Контакты</h2>
-            <div class="contact-item">
-                <i class="fas fa-envelope accent-3" aria-label="Email"></i>
-                <span>slenderzet@gmail.com</span>
-            </div>
-            <div class="contact-item">
-                <i class="fas fa-map-marker-alt accent-3" aria-label="Местоположение"></i>
-                <span>Тояма, Япония (мечтаю там побывать)</span>
-            </div>
-        </div>
-        <div class="social-links">
-            <a href="https://vk.com/remod3" class="social-link" aria-label="VK"><i class="fab fa-vk accent-3"></i></a>
-            <a href="https://t.me/remod3" class="social-link" aria-label="Telegram"><i class="fab fa-telegram accent-3"></i></a>
-            <a href="https://discord.gg/nKkQdDgWfC" class="social-link" aria-label="Discord сервер"><i class="fab fa-discord accent-3"></i></a>
-            <a href="https://discord.com/users/743864658951274528" class="social-link" aria-label="Discord профиль"><i class="fab fa-discord accent-3"></i></a>
-            <a href="https://open.spotify.com/user/31hx3sueaixdsbody6s6lligjm6a" class="social-link" aria-label="Spotify"><i class="fab fa-spotify accent-3"></i></a>
-        </div>
-
-        <div style="text-align:center; margin-top:10px; color:#7289DA; display: flex; justify-content: center; gap: 20px;">
-            <div>
-                <i class="fas fa-eye" aria-label="Просмотры"></i> <span id="viewsCount">0</span>
-            </div>
-            <div id="likesContainer" style="cursor: pointer;">
-                <i class="far fa-heart" aria-label="Лайки"></i> <span id="likesCount">0</span>
-            </div>
-        </div>
-    </div>
-</div>
-<script src="script.js"></script>
+<body class="bg-discord-darker text-discord-text min-h-screen">
+    <!-- Navbar -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-discord-dark border-b border-discord-light"></nav>
+    
+    <!-- Main content -->
+    <main id="app" class="pt-16 min-h-screen"></main>
+    
+    <!-- Modal container -->
+    <div id="modal-container"></div>
+    
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    
+    <!-- Libraries via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Main module -->
+    <script type="module" src="/assets/js/app.js"></script>
 </body>
 </html>
