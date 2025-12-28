@@ -65,6 +65,14 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
+    <!-- API Configuration - Uses /api prefix for backend routes -->
+    <script>
+        window.APP_CONFIG = {
+            // Backend API URL - uses relative /api path which is routed to port 8001 by ingress
+            API_URL: ''
+        };
+    </script>
+    
     <!-- Main module -->
     <script type="module" src="/assets/js/app.js"></script>
 </body>
