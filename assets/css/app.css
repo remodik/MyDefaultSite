@@ -75,7 +75,7 @@ body {
 
 /* Card styles */
 .card {
-    background: linear-gradient(to bottom, #5865F2 0%, #2b2d31 100%);
+    background: linear-gradient(to bottom, #5865F2 0%, #5865F2 200px, #2b2d31 260px, #2b2d31 100%);
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -102,6 +102,26 @@ body {
 
 .avatar:hover {
     transform: scale(1.1) rotate(5deg);
+}
+
+/* Avatar container for decoration */
+.avatar-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Avatar decoration (Discord-style) */
+.avatar-decoration {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    background: url('https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true') no-repeat center;
+    background-size: contain;
+    pointer-events: none;
 }
 
 .avatar-sm {
@@ -818,18 +838,27 @@ code[class*="language-"] {
     .container {
         padding: 16px;
     }
-    
+
     .modal {
         margin: 16px;
         max-height: calc(100vh - 32px);
     }
-    
+
     .avatar {
         width: 80px;
         height: 80px;
     }
-    
+
+    .avatar-decoration {
+        width: 110px;
+        height: 110px;
+    }
+
     .banner {
         height: 150px;
+    }
+
+    .card {
+        background: linear-gradient(to bottom, #5865F2 0%, #5865F2 150px, #2b2d31 210px, #2b2d31 100%);
     }
 }

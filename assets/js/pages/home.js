@@ -58,9 +58,10 @@ export function render() {
                 <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
                 
                 <!-- Header -->
-                <div class="relative -mt-16 px-6 pb-6 text-center">
-                    <div class="inline-block relative">
+                <div class="relative -mt-16 px-6 pb-4 text-center">
+                    <div class="avatar-container inline-block relative">
                         <img src="/assets/images/blue_avatar.png" alt="Avatar" class="avatar mx-auto" onerror="this.src='https://via.placeholder.com/120/5865F2/ffffff?text=R'">
+                        <div class="avatar-decoration"></div>
                     </div>
                     <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
                     <div class="mt-2 space-x-2">
