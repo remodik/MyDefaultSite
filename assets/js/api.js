@@ -1,5 +1,14 @@
 // API URL Configuration
-const API_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8001';
+// For production, this will be set via window.APP_CONFIG
+// For development, falls back to localhost:8001
+const API_URL = (function() {
+    // Check if running in browser and has config
+    if (typeof window !== 'undefined' && window.APP_CONFIG?.API_URL) {
+        return window.APP_CONFIG.API_URL;
+    }
+    // Default for local development
+    return 'http://localhost:8001';
+})();
 
 // Token management
 function getToken() {
