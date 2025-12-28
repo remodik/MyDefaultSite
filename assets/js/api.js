@@ -239,8 +239,18 @@ export const adminApi = {
 
 // WebSocket for chat
 export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) {
-    const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
-    const wsUrl = API_URL.replace(/^https?/, wsProtocol);
+    // Determine WebSocket URL based on current location
+    let wsUrl;
+    if (API_URL) {
+        const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
+        wsUrl = API_URL.replace(/^https?/, wsProtocol);
+    } else {
+        // Use current location for WebSocket
+        const loc = window.location;
+        const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${wsProtocol}//${loc.host}`;
+    }
+    
     const ws = new WebSocket(`${wsUrl}/api/ws/chat?token=${token}`);
     
     ws.onopen = () => {
