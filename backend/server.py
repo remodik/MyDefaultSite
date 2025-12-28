@@ -4,7 +4,6 @@ import os
 import random
 import smtplib
 import string
-import sys
 import uuid
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
@@ -24,9 +23,7 @@ from sqlalchemy import delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from backend.database import (
+from database import (
     AdminResetRequest,
     ChatMessage,
     File as FileModel,
@@ -60,7 +57,7 @@ app.add_middleware(
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -116,8 +113,14 @@ class ConnectionManager:
                 "username": username
         })
 
-    def disconnect(self, websocket: WebSocket) -> None:
+    def disconnect(self, websocket: WebSocket) -> Optional[str]:
+        username = None
+        for conn in self.active_connections:
+            if conn["websocket"] == websocket:
+                username = conn["username"]
+                break
         self.active_connections = [conn for conn in self.active_connections if conn["websocket"] != websocket]
+        return username
 
     async def broadcast(self, message: dict) -> None:
         disconnected = []
@@ -369,7 +372,7 @@ def _send_reset_email(email: str, message_data: Dict[str, str]) -> bool:
                 server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(sender, [email], mime_message.as_string())
         return True
-    except Exception as exc:  # pragma: no cover - logging for runtime issues
+    except Exception as exc:
         print(f"Error sending email: {exc}")
         return False
 
@@ -387,7 +390,7 @@ async def send_reset_email(email: str, code: str) -> bool:
         try:
             await FASTMAIL_CLIENT.send_message(message)
             return True
-        except Exception as exc:  # pragma: no cover - logging for runtime issues
+        except Exception as exc:
             print(f"FastMail send failed, falling back to SMTP: {exc}")
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _send_reset_email, email, message_data)
@@ -879,7 +882,7 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
     try:
         await websocket.accept()
 
-        # Валидация токена
+        # Validate token
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             user_id = payload.get("sub")
@@ -891,7 +894,7 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
             await websocket.close(code=1008, reason="Invalid token")
             return
 
-        # Проверяем пользователя в БД
+        # Check user in DB
         async with async_session_factory() as session:
             user_result = await session.execute(
                 select(User).where(User.id == user_id)
@@ -902,10 +905,10 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
                 await websocket.close(code=1008, reason="User not found")
                 return
 
-            # Регистрируем соединение (БЕЗ accept внутри)
+            # Register connection
             await manager.connect(websocket, user_id, user.username)
 
-            # Отправляем историю
+            # Send history
             history_result = await session.execute(
                 select(ChatMessage)
                 .order_by(ChatMessage.timestamp.desc())
@@ -921,7 +924,13 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
                 "messages": messages
             })
 
-        # Основной цикл (создаем новую сессию для каждого сообщения)
+            # Broadcast join notification
+            await manager.broadcast({
+                "type": "user_joined",
+                "username": user.username
+            })
+
+        # Main loop
         while True:
             data = await websocket.receive_json()
 
@@ -943,7 +952,6 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
                 })
 
     except WebSocketDisconnect:
-        # Нормальное отключение клиента
         pass
 
     except Exception as exc:
@@ -952,10 +960,15 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
         traceback.print_exc()
 
     finally:
-        # Очистка при любом завершении
-        manager.disconnect(websocket)
+        # Cleanup
+        username = manager.disconnect(websocket)
+        
+        if username:
+            await manager.broadcast({
+                "type": "user_left",
+                "username": username
+            })
 
-        # Безопасное закрытие
         with suppress(Exception):
             if websocket.client_state.name == "CONNECTED":
                 await websocket.close(code=1000)
