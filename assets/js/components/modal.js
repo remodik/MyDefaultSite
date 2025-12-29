@@ -83,7 +83,7 @@ function handleEscape(e) {
 }
 
 export function confirmModal(message, onConfirm, onCancel) {
-    return showModal({
+    const id = showModal({
         title: 'Подтверждение',
         content: `<p class="text-discord-text">${message}</p>`,
         footer: `
@@ -96,14 +96,14 @@ export function confirmModal(message, onConfirm, onCancel) {
     setTimeout(() => {
         const confirmBtn = document.querySelector('[data-confirm]');
         const cancelBtn = document.querySelector('[data-cancel]');
-        
+
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => {
                 closeModal();
                 if (onConfirm) onConfirm();
             });
         }
-        
+
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => {
                 closeModal();
@@ -111,4 +111,6 @@ export function confirmModal(message, onConfirm, onCancel) {
             });
         }
     }, 0);
+
+    return id;
 }
