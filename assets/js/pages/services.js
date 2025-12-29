@@ -1,5 +1,3 @@
-// Services page
-
 import { servicesApi } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { showToast, escapeHtml } from '../utils.js';
@@ -98,8 +96,7 @@ function renderServices() {
             `).join('')}
         </div>
     `;
-    
-    // Event listeners for admin actions
+
     if (isAdmin()) {
         container.querySelectorAll('.edit-service').forEach(btn => {
             btn.addEventListener('click', () => {
