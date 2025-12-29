@@ -1,5 +1,3 @@
-// Modal component
-
 import { generateId } from '../utils.js';
 
 let activeModal = null;
@@ -16,8 +14,7 @@ export function showModal(options) {
     const id = generateId();
     const container = document.getElementById('modal-container');
     if (!container) return;
-    
-    // Close existing modal
+
     closeModal();
     
     const sizeClass = {
@@ -45,25 +42,21 @@ export function showModal(options) {
             </div>
         </div>
     `;
-    
-    // Store close callback
+
     activeModal = { id, onClose };
-    
-    // Close on overlay click
+
     const overlay = document.getElementById(`modal-${id}`);
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
             closeModal();
         }
     });
-    
-    // Close button
+
     const closeBtn = overlay.querySelector('[data-close-modal]');
     if (closeBtn) {
         closeBtn.addEventListener('click', closeModal);
     }
-    
-    // Close on Escape
+
     document.addEventListener('keydown', handleEscape);
     
     return id;
@@ -99,8 +92,7 @@ export function confirmModal(message, onConfirm, onCancel) {
         `,
         onClose: onCancel,
     });
-    
-    // Wait for DOM update
+
     setTimeout(() => {
         const confirmBtn = document.querySelector('[data-confirm]');
         const cancelBtn = document.querySelector('[data-cancel]');
