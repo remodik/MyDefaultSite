@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import asyncio
 import sys
 import uuid
@@ -51,15 +50,13 @@ async def create_demo_services():
     await init_models()
     
     async with async_session_factory() as session:
-        # Check if services exist
         result = await session.execute(select(Service))
         existing = result.scalars().all()
         
         if existing:
             print(f"Services already exist ({len(existing)} services)")
             return
-        
-        # Create demo services
+
         for service_data in DEMO_SERVICES:
             service = Service(
                 id=str(uuid.uuid4()),
