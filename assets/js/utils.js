@@ -1,6 +1,3 @@
-// Utility functions
-
-// Format date
 export function formatDate(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -11,7 +8,6 @@ export function formatDate(dateStr) {
     });
 }
 
-// Format time
 export function formatTime(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -21,13 +17,11 @@ export function formatTime(dateStr) {
     });
 }
 
-// Format datetime
 export function formatDateTime(dateStr) {
     if (!dateStr) return '';
     return `${formatDate(dateStr)} ${formatTime(dateStr)}`;
 }
 
-// Relative time
 export function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -47,7 +41,6 @@ export function formatRelativeTime(dateStr) {
     return formatDate(dateStr);
 }
 
-// Toast notifications
 export function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -76,14 +69,12 @@ export function showToast(message, type = 'info') {
     }, 4000);
 }
 
-// Escape HTML
 export function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-// Get file icon
 export function getFileIcon(fileType) {
     const icons = {
         'py': 'fab fa-python',
@@ -108,7 +99,6 @@ export function getFileIcon(fileType) {
     return icons[fileType] || 'fas fa-file';
 }
 
-// Get language for Prism
 export function getPrismLanguage(fileType) {
     const languages = {
         'py': 'python',
@@ -138,11 +128,9 @@ export function getPrismLanguage(fileType) {
     return languages[fileType] || 'plaintext';
 }
 
-// Render markdown with syntax highlighting and math
 export function renderMarkdown(content) {
     if (!window.marked) return escapeHtml(content);
-    
-    // Configure marked
+
     marked.setOptions({
         breaks: true,
         gfm: true,
@@ -160,8 +148,7 @@ export function renderMarkdown(content) {
     });
     
     let html = marked.parse(content);
-    
-    // Render math with KaTeX
+
     if (window.katex && window.renderMathInElement) {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
@@ -180,7 +167,6 @@ export function renderMarkdown(content) {
     return html;
 }
 
-// Debounce function
 export function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -193,7 +179,6 @@ export function debounce(func, wait) {
     };
 }
 
-// Generate random ID
 export function generateId() {
     return Math.random().toString(36).substr(2, 9);
 }
