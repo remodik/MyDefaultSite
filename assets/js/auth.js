@@ -1,5 +1,3 @@
-// Auth state management
-
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user';
 
