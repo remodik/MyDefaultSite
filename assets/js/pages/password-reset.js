@@ -1,10 +1,8 @@
-// Password Reset page
-
 import { authApi } from '../api.js';
 import { router } from '../router.js';
 import { showToast } from '../utils.js';
 
-let step = 'request'; // 'request', 'code', 'no-email'
+let step = 'request';
 let usernameOrEmail = '';
 
 export function render() {
