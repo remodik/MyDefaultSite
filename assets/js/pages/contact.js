@@ -1,5 +1,3 @@
-// Contact page
-
 import { contactApi } from '../api.js';
 import { showToast } from '../utils.js';
 
@@ -153,8 +151,7 @@ export function mount() {
                 `;
                 successDiv.classList.remove('hidden');
                 showToast('Сообщение отправлено!', 'success');
-                
-                // Reset form
+
                 form.reset();
             } catch (error) {
                 errorDiv.textContent = error.message || 'Ошибка отправки. Попробуйте позже.';
