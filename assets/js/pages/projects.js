@@ -1,5 +1,3 @@
-// Projects page
-
 import { projectsApi } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { router } from '../router.js';
@@ -92,8 +90,7 @@ function renderProjects() {
             `).join('')}
         </div>
     `;
-    
-    // Event listeners
+
     if (isAdmin()) {
         container.querySelectorAll('.edit-project').forEach(btn => {
             btn.addEventListener('click', (e) => {
