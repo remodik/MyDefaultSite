@@ -1,5 +1,3 @@
-// Home page
-
 const birthdayTimestamp = 1791406800;
 
 function formatRelativeTime(seconds) {
@@ -54,13 +52,13 @@ export function render() {
     return `
         <div class="max-w-lg mx-auto px-4 py-8">
             <div class="card fade-in">
-                <!-- Banner -->
                 <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
                 
-                <!-- Header -->
-                <div class="relative -mt-16 px-6 pb-6 text-center">
-                    <div class="inline-block relative">
+                <div class="relative -mt-16 px-6 pb-4 text-center">
+
+                    <div class="avatar-container inline-block relative">
                         <img src="/assets/images/blue_avatar.png" alt="Avatar" class="avatar mx-auto" onerror="this.src='https://via.placeholder.com/120/5865F2/ffffff?text=R'">
+                        <div class="avatar-decoration"></div>
                     </div>
                     <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
                     <div class="mt-2 space-x-2">
@@ -71,9 +69,7 @@ export function render() {
                     </div>
                 </div>
                 
-                <!-- Content -->
                 <div class="bg-discord-light px-6 py-8 space-y-6">
-                    <!-- About -->
                     <section class="fade-in" style="animation-delay: 0.2s">
                         <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
                             <i class="fas fa-heart text-pink-500"></i>
@@ -150,8 +146,7 @@ export function render() {
 export function mount() {
     updateBirthdayCountdown();
     const interval = setInterval(updateBirthdayCountdown, 60000);
-    
-    // Store cleanup function
+
     window._homeCleanup = () => clearInterval(interval);
 }
 
