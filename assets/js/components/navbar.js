@@ -1,5 +1,3 @@
-// Navbar component
-
 import { isAuthenticated, isAdmin, getUser, logout } from '../auth.js';
 import { router } from '../router.js';
 
@@ -74,8 +72,7 @@ export function renderNavbar() {
             </div>
         </div>
     `;
-    
-    // Event listeners
+
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const logoutBtn = document.getElementById('logout-btn');
     
@@ -97,7 +94,6 @@ export function renderNavbar() {
     }
 }
 
-// Listen for auth and route changes
 window.addEventListener('auth-changed', renderNavbar);
 window.addEventListener('route-changed', () => {
     mobileMenuOpen = false;
