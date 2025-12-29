@@ -1,5 +1,3 @@
-// Project Detail page
-
 import { projectsApi, filesApi } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { router } from '../router.js';
@@ -78,8 +76,7 @@ function renderProject() {
             </div>
         </div>
     `;
-    
-    // Event listeners
+
     setupEventListeners();
 }
 
@@ -184,7 +181,6 @@ function renderFileViewer() {
 }
 
 function setupEventListeners() {
-    // File list click
     document.querySelectorAll('.file-item').forEach(item => {
         item.addEventListener('click', (e) => {
             if (e.target.closest('.delete-file')) return;
@@ -197,47 +193,40 @@ function setupEventListeners() {
             }
         });
     });
-    
-    // Delete file from list
+
     document.querySelectorAll('.delete-file').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             deleteFile(btn.dataset.id);
         });
     });
-    
-    // Add file button
+
     const addFileBtn = document.getElementById('add-file-btn');
     if (addFileBtn) {
         addFileBtn.addEventListener('click', () => showFileModal());
     }
-    
-    // Upload file button
+
     const uploadFileBtn = document.getElementById('upload-file-btn');
     const fileInput = document.getElementById('file-input');
     if (uploadFileBtn && fileInput) {
         uploadFileBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileUpload);
     }
-    
-    // Edit file button
+
     const editFileBtn = document.getElementById('edit-file-btn');
     if (editFileBtn) {
         editFileBtn.addEventListener('click', () => showFileModal(selectedFile));
     }
-    
-    // Delete current file button
+
     const deleteCurrentBtn = document.getElementById('delete-current-file-btn');
     if (deleteCurrentBtn) {
         deleteCurrentBtn.addEventListener('click', () => deleteFile(selectedFile.id));
     }
-    
-    // Highlight code
+
     if (window.Prism) {
         Prism.highlightAll();
     }
-    
-    // Render math in markdown
+
     if (window.renderMathInElement && selectedFile?.file_type === 'md') {
         const mdContent = document.querySelector('.markdown-content');
         if (mdContent) {
@@ -329,8 +318,7 @@ function showFileModal(file = null) {
         
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
         if (saveBtn) saveBtn.addEventListener('click', () => saveFile(file?.id));
-        
-        // Tab support in textarea
+
         if (textarea) {
             textarea.addEventListener('keydown', (e) => {
                 if (e.key === 'Tab') {
@@ -405,12 +393,10 @@ async function deleteFile(id) {
 async function loadProject(projectId) {
     try {
         project = await projectsApi.getById(projectId);
-        
-        // Keep selected file if it still exists
+
         if (selectedFile) {
             selectedFile = project.files?.find(f => f.id === selectedFile.id) || null;
         }
-        // Auto-select first file if none selected
         if (!selectedFile && project.files?.length > 0) {
             selectedFile = project.files[0];
         }
