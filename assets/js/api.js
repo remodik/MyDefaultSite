@@ -1,21 +1,14 @@
-// API URL Configuration
-// Empty string means same origin (requests go to /api/*)
-// The Kubernetes ingress routes /api/* to backend port 8001
 const API_URL = (function() {
-    // Check if running in browser and has config
     if (typeof window !== 'undefined' && window.APP_CONFIG?.API_URL !== undefined) {
         return window.APP_CONFIG.API_URL;
     }
-    // Default for local development
     return '';
 })();
 
-// Token management
 function getToken() {
     return localStorage.getItem('auth_token');
 }
 
-// API request wrapper
 async function apiRequest(endpoint, options = {}) {
     const token = getToken();
     
@@ -36,7 +29,6 @@ async function apiRequest(endpoint, options = {}) {
     const response = await fetch(`${API_URL}${endpoint}`, config);
     
     if (response.status === 401) {
-        // Token expired or invalid
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.dispatchEvent(new CustomEvent('auth-changed'));
@@ -51,7 +43,6 @@ async function apiRequest(endpoint, options = {}) {
     return response.json();
 }
 
-// Auth API
 export const authApi = {
     async register(username, password, email = null) {
         const body = { username, password };
@@ -92,7 +83,6 @@ export const authApi = {
     },
 };
 
-// Projects API
 export const projectsApi = {
     async getAll() {
         return apiRequest('/api/projects');
@@ -123,7 +113,6 @@ export const projectsApi = {
     },
 };
 
-// Files API
 export const filesApi = {
     async getById(id) {
         return apiRequest(`/api/files/${id}`);
@@ -177,7 +166,6 @@ export const filesApi = {
     },
 };
 
-// Services API
 export const servicesApi = {
     async getAll() {
         return apiRequest('/api/services');
@@ -204,7 +192,6 @@ export const servicesApi = {
     },
 };
 
-// Contact API
 export const contactApi = {
     async send(data) {
         return apiRequest('/api/contact', {
@@ -214,7 +201,6 @@ export const contactApi = {
     },
 };
 
-// Admin API
 export const adminApi = {
     async getUsers() {
         return apiRequest('/api/admin/users');
@@ -237,15 +223,12 @@ export const adminApi = {
     },
 };
 
-// WebSocket for chat
 export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) {
-    // Determine WebSocket URL based on current location
     let wsUrl;
     if (API_URL) {
         const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
         wsUrl = API_URL.replace(/^https?/, wsProtocol);
     } else {
-        // Use current location for WebSocket
         const loc = window.location;
         const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
         wsUrl = `${wsProtocol}//${loc.host}`;
