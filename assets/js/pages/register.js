@@ -1,5 +1,3 @@
-// Register page
-
 import { authApi } from '../api.js';
 import { login } from '../auth.js';
 import { router } from '../router.js';
