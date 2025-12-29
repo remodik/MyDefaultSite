@@ -1,10 +1,7 @@
-// Main application entry point
-
 import { router } from './router.js';
 import { renderNavbar } from './components/navbar.js';
 import { API_URL } from './api.js';
 
-// Import all pages
 import * as homePage from './pages/home.js';
 import * as loginPage from './pages/login.js';
 import * as registerPage from './pages/register.js';
@@ -17,12 +14,10 @@ import * as contactPage from './pages/contact.js';
 import * as adminPanelPage from './pages/admin-panel.js';
 import * as notFoundPage from './pages/not-found.js';
 
-// Configure API URL from backend
 window.APP_CONFIG = {
     API_URL: API_URL || 'http://localhost:8001'
 };
 
-// Setup routes
 router.addRoute('/', homePage);
 router.addRoute('/login', loginPage);
 router.addRoute('/register', registerPage);
@@ -34,22 +29,17 @@ router.addRoute('/chat', chatPage, { requireAuth: true });
 router.addRoute('/contact', contactPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
 
-// Set 404 handler
 router.setNotFound(notFoundPage);
 
-// Initialize app
 function initApp() {
     console.log('🚀 remod3 Portfolio App initialized');
     console.log('📡 API URL:', window.APP_CONFIG.API_URL);
-    
-    // Render navbar
+
     renderNavbar();
-    
-    // Initialize router
+
     router.init();
 }
 
-// Wait for DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
