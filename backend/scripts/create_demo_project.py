@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import asyncio
 import sys
 import uuid
@@ -183,23 +182,20 @@ async def create_demo_project():
     await init_models()
     
     async with async_session_factory() as session:
-        # Check if demo project exists
         result = await session.execute(select(Project).where(Project.name == "Discord Bot Example"))
         existing = result.scalar_one_or_none()
         
         if existing:
             print("Demo project already exists")
             return
-        
-        # Get admin user
+
         result = await session.execute(select(User).where(User.username == "remodik"))
         admin = result.scalar_one_or_none()
         
         if not admin:
             print("Admin user not found. Run create_admin.py first.")
             return
-        
-        # Create project
+
         project_id = str(uuid.uuid4())
         project = Project(
             id=project_id,
@@ -209,8 +205,7 @@ async def create_demo_project():
             created_at=datetime.now(),
         )
         session.add(project)
-        
-        # Create files
+
         files_data = [
             ("README.md", README_CONTENT, "md"),
             ("bot.py", PYTHON_CODE, "py"),
