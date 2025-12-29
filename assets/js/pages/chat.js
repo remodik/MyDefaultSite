@@ -1,5 +1,3 @@
-// Chat page
-
 import { createChatWebSocket, getToken } from '../api.js';
 import { getUser } from '../auth.js';
 import { showToast, escapeHtml, formatTime } from '../utils.js';
@@ -97,8 +95,7 @@ function renderMessages() {
             </div>
         `;
     }).join('');
-    
-    // Scroll to bottom
+
     container.scrollTop = container.scrollHeight;
 }
 
@@ -142,7 +139,6 @@ function connectWebSocket() {
     
     ws = createChatWebSocket(
         token,
-        // onMessage
         (data) => {
             if (data.type === 'history') {
                 messages = data.messages || [];
@@ -156,16 +152,13 @@ function connectWebSocket() {
                 addNotification(`${data.username} покинул чат`, 'leave');
             }
         },
-        // onOpen
         () => {
             updateConnectionStatus(true);
             reconnectAttempts = 0;
         },
-        // onClose
         (event) => {
             updateConnectionStatus(false);
-            
-            // Try to reconnect
+
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 reconnectAttempts++;
                 setTimeout(() => {
@@ -175,7 +168,6 @@ function connectWebSocket() {
                 }, 2000 * reconnectAttempts);
             }
         },
-        // onError
         (error) => {
             updateConnectionStatus(false);
             console.error('WebSocket error:', error);
