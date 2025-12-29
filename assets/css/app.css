@@ -1,6 +1,3 @@
-/* Custom styles for remod3 Portfolio */
-
-/* Base */
 * {
     margin: 0;
     padding: 0;
@@ -17,7 +14,6 @@ body {
     color: #b5bac1;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -36,7 +32,6 @@ body {
     background: #5865f2;
 }
 
-/* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -73,9 +68,8 @@ body {
     animation: spin 1s linear infinite;
 }
 
-/* Card styles */
 .card {
-    background: linear-gradient(to bottom, #5865F2 0%, #2b2d31 100%);
+    background: linear-gradient(to bottom, #5865F2 0%, #5865F2 200px, #2b2d31 260px, #2b2d31 100%);
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -88,7 +82,6 @@ body {
     box-shadow: 0 12px 40px rgba(88, 101, 242, 0.2);
 }
 
-/* Avatar */
 .avatar {
     width: 120px;
     height: 120px;
@@ -104,13 +97,30 @@ body {
     transform: scale(1.1) rotate(5deg);
 }
 
+.avatar-container {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar-decoration {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    background: url("https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true") no-repeat center;
+    background-size: contain;
+    pointer-events: none;
+}
+
 .avatar-sm {
     width: 40px;
     height: 40px;
     border-width: 2px;
 }
 
-/* Banner */
 .banner {
     height: 200px;
     background: linear-gradient(135deg, #5865F2 0%, #7289DA 100%);
@@ -118,7 +128,6 @@ body {
     background-position: center;
 }
 
-/* Buttons */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -195,7 +204,6 @@ body {
     font-size: 18px;
 }
 
-/* Input styles */
 .input {
     width: 100%;
     padding: 12px 16px;
@@ -226,7 +234,6 @@ textarea.input {
     resize: vertical;
 }
 
-/* Labels */
 .label {
     display: block;
     margin-bottom: 8px;
@@ -237,7 +244,6 @@ textarea.input {
     letter-spacing: 0.5px;
 }
 
-/* Tags/Badges */
 .tag {
     display: inline-flex;
     align-items: center;
@@ -274,7 +280,6 @@ textarea.input {
     color: #f23f43;
 }
 
-/* Modal */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -336,7 +341,6 @@ textarea.input {
     gap: 12px;
 }
 
-/* Toast notifications */
 .toast {
     padding: 16px 20px;
     background: #313338;
@@ -363,7 +367,6 @@ textarea.input {
     border-left-color: #f0b232;
 }
 
-/* Loading spinner */
 .spinner {
     width: 24px;
     height: 24px;
@@ -379,7 +382,6 @@ textarea.input {
     border-width: 4px;
 }
 
-/* Navbar */
 .navbar {
     display: flex;
     align-items: center;
@@ -424,7 +426,6 @@ textarea.input {
     color: white;
 }
 
-/* Mobile menu */
 .mobile-menu-btn {
     display: none;
     background: none;
@@ -461,7 +462,6 @@ textarea.input {
     }
 }
 
-/* Code blocks */
 pre[class*="language-"] {
     background: #1e1f22 !important;
     border-radius: 8px;
@@ -475,7 +475,6 @@ code[class*="language-"] {
     font-size: 14px;
 }
 
-/* Markdown styles */
 .markdown-content {
     line-height: 1.7;
 }
@@ -554,12 +553,10 @@ code[class*="language-"] {
     margin: 24px 0;
 }
 
-/* Task list checkboxes */
 .markdown-content input[type="checkbox"] {
     margin-right: 8px;
 }
 
-/* File viewer */
 .file-viewer {
     background: #1e1f22;
     border-radius: 8px;
@@ -589,7 +586,6 @@ code[class*="language-"] {
     overflow: auto;
 }
 
-/* Chat styles */
 .chat-container {
     display: flex;
     flex-direction: column;
@@ -654,7 +650,6 @@ code[class*="language-"] {
     font-size: 14px;
 }
 
-/* Service card */
 .service-card {
     background: #2b2d31;
     border-radius: 12px;
@@ -668,7 +663,6 @@ code[class*="language-"] {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Project card */
 .project-card {
     background: #2b2d31;
     border-radius: 12px;
@@ -684,13 +678,11 @@ code[class*="language-"] {
     border-color: #5865f2;
 }
 
-/* Contact form */
 .contact-form {
     max-width: 600px;
     margin: 0 auto;
 }
 
-/* Admin panel */
 .admin-table {
     width: 100%;
     border-collapse: collapse;
@@ -719,7 +711,6 @@ code[class*="language-"] {
     background: #313338;
 }
 
-/* Empty state */
 .empty-state {
     text-align: center;
     padding: 48px;
@@ -732,14 +723,12 @@ code[class*="language-"] {
     opacity: 0.5;
 }
 
-/* Skills/Tags container */
 .skills-container {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-/* Social links */
 .social-link {
     display: inline-flex;
     align-items: center;
@@ -759,7 +748,6 @@ code[class*="language-"] {
     transform: translateY(-4px);
 }
 
-/* File tabs */
 .file-tabs {
     display: flex;
     gap: 4px;
@@ -813,7 +801,6 @@ code[class*="language-"] {
     background: #f23f43;
 }
 
-/* Responsive utilities */
 @media (max-width: 640px) {
     .container {
         padding: 16px;
@@ -823,13 +810,22 @@ code[class*="language-"] {
         margin: 16px;
         max-height: calc(100vh - 32px);
     }
-    
+
     .avatar {
         width: 80px;
         height: 80px;
     }
-    
+
+    .avatar-decoration {
+        width: 110px;
+        height: 110px;
+    }
+
     .banner {
         height: 150px;
+    }
+
+    .card {
+        background: linear-gradient(to bottom, #5865F2 0%, #5865F2 150px, #2b2d31 210px, #2b2d31 100%);
     }
 }
