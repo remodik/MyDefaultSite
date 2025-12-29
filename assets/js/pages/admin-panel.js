@@ -1,5 +1,3 @@
-// Admin Panel page
-
 import { adminApi } from '../api.js';
 import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { confirmModal } from '../components/modal.js';
@@ -107,8 +105,7 @@ function renderUsers() {
             </table>
         </div>
     `;
-    
-    // Event listeners
+
     container.querySelectorAll('.toggle-role').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
@@ -168,8 +165,7 @@ function renderResetRequests() {
             `).join('')}
         </div>
     `;
-    
-    // Event listeners
+
     container.querySelectorAll('.approve-reset').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
@@ -269,14 +265,12 @@ async function loadResetRequests() {
 
 export async function mount() {
     activeTab = 'users';
-    
-    // Load data
+
     await Promise.all([
         loadUsers(),
         loadResetRequests(),
     ]);
-    
-    // Tab listeners
+
     const tabUsers = document.getElementById('tab-users');
     const tabRequests = document.getElementById('tab-requests');
     
@@ -286,8 +280,7 @@ export async function mount() {
     if (tabRequests) {
         tabRequests.addEventListener('click', () => switchTab('requests'));
     }
-    
-    // Render initial view
+
     renderUsers();
 }
 
