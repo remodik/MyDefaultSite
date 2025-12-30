@@ -557,6 +557,38 @@ code[class*="language-"] {
     margin-right: 8px;
 }
 
+.markdown-content code {
+    background: #1e1f22;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    color: #eb459e;
+}
+
+.markdown-content pre {
+    background: #1e1f22;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+.markdown-content pre code {
+    background: none;
+    padding: 0;
+    color: #f2f3f5;
+}
+
+.markdown-content strong {
+    color: #f2f3f5;
+    font-weight: 600;
+}
+
+.markdown-content em {
+    font-style: italic;
+}
+
 .file-viewer {
     background: #1e1f22;
     border-radius: 8px;
