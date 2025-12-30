@@ -15,15 +15,18 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "projects.db"
 
-if not DEFAULT_DB_PATH.exists():
-    DEFAULT_DB_PATH.touch()
-
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}")
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
+    pool_pre_ping=True,
 )
 async_session_factory = async_sessionmaker(
     engine,
