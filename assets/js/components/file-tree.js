@@ -550,11 +550,11 @@ function setupDragAndDrop(container, files, onSelect, projectId) {
 }
 
 export async function createRootFolder(projectId, containerId, files, onSelect) {
-    await createNewFolder(null, projectId, files, onSelect, containerId);
+    await createNewFile({ path: '' }, projectId, files, onSelect, containerId);
 }
 
 export async function createRootFile(projectId, containerId, files, onSelect) {
-    await createNewFile({ path: '' }, projectId, files, onSelect, containerId);
+    await createNewFolder(null, projectId, files, onSelect, containerId);
 }
 
 export function clearSelection() {
