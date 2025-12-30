@@ -1,8 +1,8 @@
 import { projectsApi, filesApi } from '../api.js';
 import { isAdmin } from '../auth.js';
-import { router } from '../router.js';
-import { showToast, escapeHtml, formatDate, getFileIcon, getPrismLanguage, renderMarkdown } from '../utils.js';
+import { showToast, escapeHtml, getFileIcon, getPrismLanguage, renderMarkdown } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { renderFileTree, createRootFolder, createRootFile } from '../components/file-tree.js';
 
 let project = null;
 let selectedFile = null;
@@ -38,8 +38,12 @@ function renderProject() {
             
             ${isAdmin() ? `
                 <div class="flex gap-2">
+                    <button class="btn btn-primary btn-sm" id="add-folder-btn">
+                        <i class="fas fa-folder-plus"></i>
+                        Новая папка
+                    </button>
                     <button class="btn btn-primary btn-sm" id="add-file-btn">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-file-plus"></i>
                         Новый файл
                     </button>
                     <button class="btn btn-secondary btn-sm" id="upload-file-btn">
@@ -51,9 +55,7 @@ function renderProject() {
             ` : ''}
         </div>
         
-        <!-- Two column layout -->
         <div class="grid lg:grid-cols-4 gap-6">
-            <!-- File list -->
             <div class="lg:col-span-1">
                 <div class="bg-discord-light rounded-lg overflow-hidden">
                     <div class="p-4 border-b border-discord-lighter">
@@ -62,13 +64,10 @@ function renderProject() {
                             Файлы (${project.files?.length || 0})
                         </h3>
                     </div>
-                    <div class="p-2" id="file-list">
-                        ${renderFileList()}
-                    </div>
+                    <div class="p-2" id="file-list"></div>
                 </div>
             </div>
             
-            <!-- File viewer -->
             <div class="lg:col-span-3">
                 <div id="file-viewer" class="bg-discord-light rounded-lg min-h-[400px]">
                     ${selectedFile ? renderFileViewer() : renderEmptyViewer()}
@@ -78,29 +77,6 @@ function renderProject() {
     `;
 
     setupEventListeners();
-}
-
-function renderFileList() {
-    if (!project.files || project.files.length === 0) {
-        return `
-            <div class="text-center py-8 text-discord-text text-sm">
-                <i class="fas fa-file-circle-xmark text-3xl mb-2 opacity-50"></i>
-                <p>Файлов нет</p>
-            </div>
-        `;
-    }
-    
-    return project.files.map(file => `
-        <div class="file-item flex items-center gap-3 p-3 rounded-lg hover:bg-discord-lighter cursor-pointer ${selectedFile?.id === file.id ? 'bg-discord-lighter' : ''}" data-file-id="${file.id}">
-            <i class="${getFileIcon(file.file_type)} text-discord-accent"></i>
-            <span class="flex-1 truncate text-sm text-white">${escapeHtml(file.name)}</span>
-            ${isAdmin() ? `
-                <button class="opacity-0 group-hover:opacity-100 hover:text-discord-red delete-file" data-id="${file.id}" title="Удалить">
-                    <i class="fas fa-times"></i>
-                </button>
-            ` : ''}
-        </div>
-    `).join('');
 }
 
 function renderEmptyViewer() {
@@ -122,7 +98,7 @@ function renderFileViewer() {
     const isVideo = ['mp4', 'avi', 'mov', 'webm'].includes(file.file_type);
     const isMarkdown = file.file_type === 'md';
     
-    let contentHtml = '';
+    let contentHtml;
     
     if (isImage) {
         const src = file.is_binary ? `data:image/${file.file_type};base64,${file.content}` : file.content;
@@ -181,29 +157,31 @@ function renderFileViewer() {
 }
 
 function setupEventListeners() {
-    document.querySelectorAll('.file-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            if (e.target.closest('.delete-file')) return;
-            const fileId = item.dataset.fileId;
-            const file = project.files.find(f => f.id === fileId);
-            if (file) {
+    if (project.files) {
+        renderFileTree(project.files, 'file-list', (file) => {
+            selectedFile = file;
+            updateFileViewer();
+        }, project.id);
+    }
+
+    const addFolderBtn = document.getElementById('add-folder-btn');
+    if (addFolderBtn) {
+        addFolderBtn.addEventListener('click', () => {
+            createRootFile(project.id, 'file-list', project.files, (file) => {
                 selectedFile = file;
                 updateFileViewer();
-                updateFileListSelection();
-            }
+            });
         });
-    });
-
-    document.querySelectorAll('.delete-file').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteFile(btn.dataset.id);
-        });
-    });
+    }
 
     const addFileBtn = document.getElementById('add-file-btn');
     if (addFileBtn) {
-        addFileBtn.addEventListener('click', () => showFileModal());
+        addFileBtn.addEventListener('click', () => {
+            createRootFolder(project.id, 'file-list', project.files, (file) => {
+                selectedFile = file;
+                updateFileViewer();
+            });
+        });
     }
 
     const uploadFileBtn = document.getElementById('upload-file-btn');
@@ -251,16 +229,6 @@ function setupViewerListeners() {
             });
         }
     }
-}
-
-function updateFileListSelection() {
-    document.querySelectorAll('.file-item').forEach(item => {
-        if (item.dataset.fileId === selectedFile?.id) {
-            item.classList.add('bg-discord-lighter');
-        } else {
-            item.classList.remove('bg-discord-lighter');
-        }
-    });
 }
 
 function showFileModal(file = null) {
