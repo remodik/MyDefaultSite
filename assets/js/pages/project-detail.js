@@ -38,13 +38,13 @@ function renderProject() {
             
             ${isAdmin() ? `
                 <div class="flex gap-2">
-                    <button class="btn btn-primary btn-sm" id="add-folder-btn">
-                        <i class="fas fa-folder-plus"></i>
-                        Новая папка
-                    </button>
                     <button class="btn btn-primary btn-sm" id="add-file-btn">
                         <i class="fas fa-file-plus"></i>
                         Новый файл
+                    </button>
+                    <button class="btn btn-primary btn-sm" id="add-folder-btn">
+                        <i class="fas fa-folder-plus"></i>
+                        Новая папка
                     </button>
                     <button class="btn btn-secondary btn-sm" id="upload-file-btn">
                         <i class="fas fa-upload"></i>
