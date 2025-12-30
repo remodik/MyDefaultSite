@@ -61,7 +61,14 @@ function renderProject() {
                     <div class="p-4 border-b border-discord-lighter">
                         <h3 class="text-white font-semibold">
                             <i class="fas fa-folder-tree mr-2"></i>
-                            Файлы (${project.files?.length || 0})
+                            ${(() => {
+                                const files = project.files || [];
+                                const folders = files.filter(f => f.is_folder).length;
+                                const regularFiles = files.length - folders;
+                                return folders > 0 || regularFiles > 0
+                                    ? `${regularFiles} ${regularFiles === 1 ? 'файл' : 'файлов'}, ${folders} ${folders === 1 ? 'папка' : 'папок'}`
+                                    : 'Пусто';
+                            })()}
                         </h3>
                     </div>
                     <div class="p-2" id="file-list"></div>
