@@ -1,6 +1,6 @@
-import {filesApi} from '../api.js';
-import {showToast} from '../utils.js';
-import {showModal} from './modal.js';
+import { filesApi } from '../api.js';
+import { showToast } from '../utils.js';
+import { showModal, closeModal } from './modal.js';
 
 let expandedFolders = new Set();
 let selectedItem = null;
@@ -69,7 +69,7 @@ function renderTreeItem(item, onSelect, onContextMenu, projectId) {
     const isSelected = selectedItem?.id === item.id;
     const hasChildren = item.is_folder && item.children.length > 0;
 
-    return `
+    const itemHtml = `
         <div class="file-tree-item" data-item-id="${item.id}">
             <div
                 class="file-tree-item-content ${isSelected ? 'selected' : ''}"
@@ -96,6 +96,8 @@ function renderTreeItem(item, onSelect, onContextMenu, projectId) {
             ` : ''}
         </div>
     `;
+
+    return itemHtml;
 }
 
 export function renderFileTree(files, containerId, onSelect, projectId) {
@@ -104,14 +106,16 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
 
     const tree = buildFileTree(files);
 
-    container.innerHTML = `
+    const html = `
         <div class="file-tree">
             ${tree.length > 0
-        ? tree.map(item => renderTreeItem(item, onSelect, null, projectId)).join('')
-        : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No files yet</p></div>'
-    }
+                ? tree.map(item => renderTreeItem(item, onSelect, null, projectId)).join('')
+                : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No files yet</p></div>'
+            }
         </div>
     `;
+
+    container.innerHTML = html;
     attachTreeEventListeners(container, files, onSelect, projectId);
 }
 
@@ -178,7 +182,6 @@ function findItemById(files, id) {
 }
 
 function showContextMenu(event, item, projectId, files, onSelect, containerId) {
-    // Remove existing menu
     if (contextMenuElement) {
         contextMenuElement.remove();
     }
@@ -245,16 +248,16 @@ function closeContextMenu() {
 }
 
 async function createNewFile(folder, projectId, files, onSelect, containerId) {
-    showModal(
-        'Create New File',
-        `
+    showModal({
+        title: 'Создать файл',
+        content: `
         <div class="space-y-4">
             <div>
-                <label class="label">File Name</label>
+                <label class="label">Имя файла</label>
                 <input type="text" id="new-file-name" class="input" placeholder="example.js" />
             </div>
             <div>
-                <label class="label">File Type</label>
+                <label class="label">Тип файла</label>
                 <select id="new-file-type" class="input">
                     <option value="txt">Text (.txt)</option>
                     <option value="js">JavaScript (.js)</option>
@@ -267,132 +270,193 @@ async function createNewFile(folder, projectId, files, onSelect, containerId) {
             </div>
         </div>
         `,
-        async () => {
-            const name = document.getElementById('new-file-name').value.trim();
-            const fileType = document.getElementById('new-file-type').value;
+        footer: `
+            <button class="btn btn-secondary" data-action="cancel">Отмена</button>
+            <button class="btn btn-primary" data-action="create">Создать</button>
+        `
+    });
 
-            if (!name) {
-                showToast('Please enter a file name', 'error');
-                return false;
-            }
+    setTimeout(() => {
+        const createBtn = document.querySelector('[data-action="create"]');
+        const cancelBtn = document.querySelector('[data-action="cancel"]');
 
-            try {
-                await filesApi.create(projectId, name, '', fileType, folder.path, false);
-                showToast('File created successfully', 'success');
-
-                const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
-                renderFileTree(updatedProject.files, containerId, onSelect, projectId);
-                return true;
-            } catch (error) {
-                showToast(error.message, 'error');
-                return false;
-            }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => closeModal());
         }
-    );
+
+        if (createBtn) {
+            createBtn.addEventListener('click', async () => {
+                const name = document.getElementById('new-file-name').value.trim();
+                const fileType = document.getElementById('new-file-type').value;
+
+                if (!name) {
+                    showToast('Введите имя файла', 'error');
+                    return;
+                }
+
+                try {
+                    await filesApi.create(projectId, name, '', fileType, folder.path, false);
+                    showToast('Файл создан', 'success');
+                    closeModal();
+
+                    const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
+                    renderFileTree(updatedProject.files, containerId, onSelect, projectId);
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
+        }
+    }, 0);
 }
 
 async function createNewFolder(parentFolder, projectId, files, onSelect, containerId) {
-    showModal(
-        'Create New Folder',
-        `
+    showModal({
+        title: 'Создать папку',
+        content: `
         <div class="space-y-4">
             <div>
-                <label class="label">Folder Name</label>
+                <label class="label">Имя папки</label>
                 <input type="text" id="new-folder-name" class="input" placeholder="my-folder" />
             </div>
         </div>
         `,
-        async () => {
-            const name = document.getElementById('new-folder-name').value.trim();
+        footer: `
+            <button class="btn btn-secondary" data-action="cancel">Отмена</button>
+            <button class="btn btn-primary" data-action="create">Создать</button>
+        `
+    });
 
-            if (!name) {
-                showToast('Please enter a folder name', 'error');
-                return false;
-            }
+    setTimeout(() => {
+        const createBtn = document.querySelector('[data-action="create"]');
+        const cancelBtn = document.querySelector('[data-action="cancel"]');
 
-            try {
-                await filesApi.createFolder(projectId, name, parentFolder ? parentFolder.path : '');
-                showToast('Folder created successfully', 'success');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => closeModal());
+        }
 
-                if (parentFolder) {
-                    expandedFolders.add(parentFolder.id);
+        if (createBtn) {
+            createBtn.addEventListener('click', async () => {
+                const name = document.getElementById('new-folder-name').value.trim();
+
+                if (!name) {
+                    showToast('Введите имя папки', 'error');
+                    return;
                 }
 
-                const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
-                renderFileTree(updatedProject.files, containerId, onSelect, projectId);
-                return true;
-            } catch (error) {
-                showToast(error.message, 'error');
-                return false;
-            }
+                try {
+                    await filesApi.createFolder(projectId, name, parentFolder ? parentFolder.path : '');
+                    showToast('Папка создана', 'success');
+                    closeModal();
+
+                    if (parentFolder) {
+                        expandedFolders.add(parentFolder.id);
+                    }
+
+                    const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
+                    renderFileTree(updatedProject.files, containerId, onSelect, projectId);
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
         }
-    );
+    }, 0);
 }
 
 async function renameItem(item, projectId, files, onSelect, containerId) {
-    showModal(
-        `Rename ${item.is_folder ? 'Folder' : 'File'}`,
-        `
+    showModal({
+        title: `Переименовать ${item.is_folder ? 'папку' : 'файл'}`,
+        content: `
         <div class="space-y-4">
             <div>
-                <label class="label">New Name</label>
+                <label class="label">Новое имя</label>
                 <input type="text" id="rename-input" class="input" value="${item.name}" />
             </div>
         </div>
         `,
-        async () => {
-            const newName = document.getElementById('rename-input').value.trim();
+        footer: `
+            <button class="btn btn-secondary" data-action="cancel">Отмена</button>
+            <button class="btn btn-primary" data-action="rename">Переименовать</button>
+        `
+    });
 
-            if (!newName) {
-                showToast('Please enter a name', 'error');
-                return false;
-            }
+    setTimeout(() => {
+        const renameBtn = document.querySelector('[data-action="rename"]');
+        const cancelBtn = document.querySelector('[data-action="cancel"]');
 
-            if (newName === item.name) {
-                return true;
-            }
-
-            try {
-                await filesApi.rename(item.id, newName);
-                showToast('Renamed successfully', 'success');
-
-                const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
-                renderFileTree(updatedProject.files, containerId, onSelect, projectId);
-                return true;
-            } catch (error) {
-                showToast(error.message, 'error');
-                return false;
-            }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => closeModal());
         }
-    );
+
+        if (renameBtn) {
+            renameBtn.addEventListener('click', async () => {
+                const newName = document.getElementById('rename-input').value.trim();
+
+                if (!newName) {
+                    showToast('Введите имя', 'error');
+                    return;
+                }
+
+                if (newName === item.name) {
+                    closeModal();
+                    return;
+                }
+
+                try {
+                    await filesApi.rename(item.id, newName);
+                    showToast('Переименовано', 'success');
+                    closeModal();
+
+                    const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
+                    renderFileTree(updatedProject.files, containerId, onSelect, projectId);
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
+        }
+    }, 0);
 }
 
 async function deleteItem(item, projectId, files, onSelect, containerId) {
     const message = item.is_folder
-        ? 'Are you sure you want to delete this folder and all its contents?'
-        : 'Are you sure you want to delete this file?';
+        ? 'Вы уверены, что хотите удалить эту папку и всё её содержимое?'
+        : 'Вы уверены, что хотите удалить этот файл?';
 
-    showModal(
-        `Delete ${item.is_folder ? 'Folder' : 'File'}`,
-        `<p>${message}</p>`,
-        async () => {
-            try {
-                await filesApi.delete(item.id);
-                showToast('Deleted successfully', 'success');
+    showModal({
+        title: `Удалить ${item.is_folder ? 'папку' : 'файл'}`,
+        content: `<p class="text-discord-text">${message}</p>`,
+        footer: `
+            <button class="btn btn-secondary" data-action="cancel">Отмена</button>
+            <button class="btn btn-danger" data-action="delete">Удалить</button>
+        `
+    });
 
-                if (selectedItem?.id === item.id) {
-                    selectedItem = null;
-                }
+    setTimeout(() => {
+        const deleteBtn = document.querySelector('[data-action="delete"]');
+        const cancelBtn = document.querySelector('[data-action="cancel"]');
 
-                const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
-                renderFileTree(updatedProject.files, containerId, onSelect, projectId);
-                return true;
-            } catch (error) {
-                showToast(error.message, 'error');
-                return false;
-            }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => closeModal());
         }
-    );
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                try {
+                    await filesApi.delete(item.id);
+                    showToast('Удалено', 'success');
+                    closeModal();
+
+                    if (selectedItem?.id === item.id) {
+                        selectedItem = null;
+                    }
+
+                    const updatedProject = await import('../api.js').then(m => m.projectsApi.getById(projectId));
+                    renderFileTree(updatedProject.files, containerId, onSelect, projectId);
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
+        }
+    }, 0);
 }
 
 function setupDragAndDrop(container, files, onSelect, projectId) {
