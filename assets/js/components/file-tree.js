@@ -266,7 +266,7 @@ function closeContextMenu() {
 }
 
 // Create new file in folder
-async function createNewFile(folder, projectId, files, onSelect, containerId) {
+async function createNewFolder(folder, projectId, files, onSelect, containerId) {
     showModal({
         title: 'Создать файл',
         content: `
@@ -330,7 +330,7 @@ async function createNewFile(folder, projectId, files, onSelect, containerId) {
 }
 
 // Create new folder
-async function createNewFolder(parentFolder, projectId, files, onSelect, containerId) {
+async function createNewFile(parentFolder, projectId, files, onSelect, containerId) {
     showModal({
         title: 'Создать папку',
         content: `
@@ -591,12 +591,12 @@ function setupDragAndDrop(container, files, onSelect, projectId) {
 
 // Create root-level folder
 export async function createRootFolder(projectId, containerId, files, onSelect) {
-    await createNewFolder(null, projectId, files, onSelect, containerId);
+    await createNewFile(null, projectId, files, onSelect, containerId);
 }
 
 // Create root-level file
 export async function createRootFile(projectId, containerId, files, onSelect) {
-    await createNewFile({ path: '' }, projectId, files, onSelect, containerId);
+    await createNewFolder({ path: '' }, projectId, files, onSelect, containerId);
 }
 
 // Clear selection
