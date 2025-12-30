@@ -1,4 +1,10 @@
--e 
 # Environment files
 *.env
 *.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
