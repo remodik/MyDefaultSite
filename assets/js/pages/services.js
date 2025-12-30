@@ -3,6 +3,15 @@ import { isAdmin } from '../auth.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
 
+if (typeof marked !== 'undefined') {
+    marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+    });
+}
+
 let services = [];
 
 export function render() {
@@ -66,7 +75,7 @@ function renderServices() {
                         ` : ''}
                     </div>
                     
-                    <p class="text-discord-text mb-4">${escapeHtml(service.description)}</p>
+                    <div class="text-discord-text mb-4 markdown-content">${marked.parse(service.description)}</div>
                     
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
@@ -128,7 +137,8 @@ function showServiceModal(service = null) {
                 </div>
                 <div>
                     <label class="label" for="service-description">Описание</label>
-                    <textarea id="service-description" class="input" rows="3" required>${isEdit ? escapeHtml(service.description) : ''}</textarea>
+                    <textarea id="service-description" class="input" rows="6" required>${isEdit ? escapeHtml(service.description) : ''}</textarea>
+                    <p class="text-xs text-discord-text mt-1"><i class="fas fa-info-circle"></i></p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
