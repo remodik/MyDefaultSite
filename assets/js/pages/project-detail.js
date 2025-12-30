@@ -213,6 +213,18 @@ function setupEventListeners() {
         fileInput.addEventListener('change', handleFileUpload);
     }
 
+    setupViewerListeners();
+}
+
+function updateFileViewer() {
+    const viewer = document.getElementById('file-viewer');
+    if (viewer) {
+        viewer.innerHTML = selectedFile ? renderFileViewer() : renderEmptyViewer();
+        setupViewerListeners();
+    }
+}
+
+function setupViewerListeners() {
     const editFileBtn = document.getElementById('edit-file-btn');
     if (editFileBtn) {
         editFileBtn.addEventListener('click', () => showFileModal(selectedFile));
@@ -238,14 +250,6 @@ function setupEventListeners() {
                 throwOnError: false,
             });
         }
-    }
-}
-
-function updateFileViewer() {
-    const viewer = document.getElementById('file-viewer');
-    if (viewer) {
-        viewer.innerHTML = selectedFile ? renderFileViewer() : renderEmptyViewer();
-        setupEventListeners();
     }
 }
 
@@ -333,16 +337,27 @@ function showFileModal(file = null) {
     }, 0);
 }
 
+let isSaving = false;
+
 async function saveFile(id = null) {
+    if (isSaving) return;
+
     const name = document.getElementById('file-name').value.trim();
     const fileType = document.getElementById('file-type').value;
     const content = document.getElementById('file-content').value;
-    
+
     if (!name) {
         showToast('Введите имя файла', 'error');
         return;
     }
-    
+
+    isSaving = true;
+    const saveBtn = document.getElementById('save-file-btn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<div class="spinner"></div>';
+    }
+
     try {
         if (id) {
             await filesApi.update(id, { name, content });
@@ -355,6 +370,12 @@ async function saveFile(id = null) {
         await loadProject(project.id);
     } catch (error) {
         showToast(error.message || 'Ошибка сохранения', 'error');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Сохранить';
+        }
+    } finally {
+        isSaving = false;
     }
 }
 
