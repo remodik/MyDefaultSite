@@ -176,13 +176,26 @@ class ProjectUpdate(BaseModel):
 class FileCreate(BaseModel):
     project_id: str
     name: str
-    content: str
-    file_type: str
+    content: str = ""
+    file_type: str = ""
+    path: str = ""
+    parent_path: str = ""
+    is_folder: bool = False
 
 
 class FileUpdate(BaseModel):
     name: str | None = None
     content: str | None = None
+
+
+class FolderCreate(BaseModel):
+    project_id: str
+    name: str
+    parent_path: str = ""
+
+
+class FileMove(BaseModel):
+    new_parent_path: str
 
 
 class ChatMessagePayload(BaseModel):
@@ -264,6 +277,9 @@ def file_to_dict(file: FileModel) -> dict[str, Any]:
         "project_id": file.project_id,
         "name": file.name,
         "content": file.content,
+        "path": file.path,
+        "parent_path": file.parent_path,
+        "is_folder": file.is_folder,
         "file_type": file.file_type,
         "is_binary": file.is_binary,
         "created_at": _to_iso(file.created_at),
@@ -666,11 +682,19 @@ async def create_file(
     if not project_obj:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if file.parent_path:
+        full_path = f"{file.parent_path}/{file.name}"
+    else:
+        full_path = file.name
+
     file_id = str(uuid.uuid4())
     file_obj = FileModel(
         id=file_id,
         project_id=file.project_id,
         name=file.name,
+        path=full_path,
+        parent_path=file.parent_path,
+        is_folder=file.is_folder,
         content=file.content,
         file_type=file.file_type,
         is_binary=False,
@@ -787,10 +811,144 @@ async def delete_file(
     if not file_obj:
         raise HTTPException(status_code=404, detail="File not found")
 
+    if file_obj.is_folder:
+        result = await session.execute(
+            select(FileModel).where(
+                FileModel.project_id == file_obj.project_id,
+                FileModel.path.startswith(file_obj.path + "/")
+            )
+        )
+        children = result.scalars().all()
+        for child in children:
+            await session.delete(child)
+
     await session.delete(file_obj)
     await session.commit()
 
     return {"message": "File deleted"}
+
+
+@app.post("/api/folders")
+async def create_folder(
+    folder: FolderCreate,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    project_obj = await session.get(Project, folder.project_id)
+    if not project_obj:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if folder.parent_path:
+        full_path = f"{folder.parent_path}/{folder.name}"
+    else:
+        full_path = folder.name
+
+    folder_id = str(uuid.uuid4())
+    folder_obj = FileModel(
+        id=folder_id,
+        project_id=folder.project_id,
+        name=folder.name,
+        path=full_path,
+        parent_path=folder.parent_path,
+        is_folder=True,
+        content="",
+        file_type="folder",
+        is_binary=False,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(folder_obj)
+    await session.commit()
+
+    return file_to_dict(folder_obj)
+
+
+@app.put("/api/files/{file_id}/move")
+async def move_file(
+        file_id: str,
+        move_data: FileMove,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    file_obj = await session.get(FileModel, file_id)
+
+    if not file_obj:
+        raise HTTPException(status_code=404, detail="File not found")
+    old_path = file_obj.path
+    old_parent_path = file_obj.parent_path
+    new_parent_path = move_data.new_parent_path
+
+    if new_parent_path:
+        new_path = f"{new_parent_path}/{file_obj.name}"
+    else:
+        new_path = file_obj.name
+
+    file_obj.parent_path = new_parent_path
+    file_obj.path = new_path
+    file_obj.updated_at = datetime.now()
+
+    if file_obj.is_folder:
+        result = await session.execute(
+            select(FileModel).where(
+                FileModel.project_id == file_obj.project_id,
+                FileModel.parent_path.startswith(old_path)
+            )
+        )
+        children = result.scalars().all()
+
+        for child in children:
+            child.parent_path = child.parent_path.replace(old_path, new_path, 1)
+            child.path = child.path.replace(old_path, new_path, 1)
+            child.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(file_obj)
+
+    return file_to_dict(file_obj)
+
+
+@app.put("/api/files/{file_id}/rename")
+async def rename_file(
+        file_id: str,
+        new_name: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    file_obj = await session.get(FileModel, file_id)
+    if not file_obj:
+        raise HTTPException(status_code=404, detail="File not found")
+    old_path = file_obj.path
+    old_name = file_obj.name
+
+    if file_obj.parent_path:
+        new_path = f"{file_obj.parent_path}/{new_name}"
+    else:
+        new_path = new_name
+
+    file_obj.name = new_name
+    file_obj.path = new_path
+    file_obj.updated_at = datetime.now()
+
+    if file_obj.is_folder:
+        result = await session.execute(
+            select(FileModel).where(
+                FileModel.project_id == file_obj.project_id,
+                FileModel.parent_path.startswith(old_path)
+            )
+        )
+        children = result.scalars().all()
+        for child in children:
+            child.parent_path = child.parent_path.replace(old_path, new_path, 1)
+            child.path = child.path.replace(old_path, new_path, 1)
+            child.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(file_obj)
+
+    return file_to_dict(file_obj)
 
 
 @app.get("/api/admin/users")
