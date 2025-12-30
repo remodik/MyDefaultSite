@@ -118,7 +118,7 @@ export const filesApi = {
         return apiRequest(`/api/files/${id}`);
     },
     
-    async create(projectId, name, content, fileType) {
+    async create(projectId, name, content = '', fileType = '', parentPath = '', isFolder = false) {
         return apiRequest('/api/files', {
             method: 'POST',
             body: JSON.stringify({
@@ -126,15 +126,20 @@ export const filesApi = {
                 name,
                 content,
                 file_type: fileType,
+                parent_path: parentPath,
+                is_folder: isFolder
             }),
         });
     },
     
-    async upload(projectId, file) {
+    async upload(projectId, file, parentPath = '') {
         const token = getToken();
         const formData = new FormData();
         formData.append('project_id', projectId);
         formData.append('file', file);
+        if (parentPath) {
+            formData.append('parent_path', parentPath);
+        }
         
         const response = await fetch(`${API_URL}/api/files/upload`, {
             method: 'POST',
@@ -164,6 +169,32 @@ export const filesApi = {
             method: 'DELETE',
         });
     },
+
+    async move(id, newParentPath) {
+        return apiRequest(`/api/files/${id}/move`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                new_parent_path: newParentPath,
+            }),
+        });
+    },
+
+    async rename(id, newName) {
+        return apiRequest(`/api/files/${id}/rename?new_name=${encodeURIComponent(newName)}`, {
+            method: 'PUT',
+        });
+    },
+
+    async createFolder(projectId, name, parentPath = '') {
+        return apiRequest(`/api/folders`, {
+            method: 'POST',
+            body: JSON.stringify({
+                project_id: projectId,
+                name,
+                parent_path: parentPath,
+            }),
+        })
+    }
 };
 
 export const servicesApi = {
