@@ -24,7 +24,6 @@ function renderProject() {
     if (!container || !project) return;
     
     container.innerHTML = `
-        <!-- Header -->
         <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
             <div class="flex items-center gap-4">
                 <a href="/projects" class="btn btn-secondary btn-sm">

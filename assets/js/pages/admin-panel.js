@@ -17,7 +17,6 @@ export function render() {
                 <p class="text-discord-text mt-2">Управление пользователями и запросами</p>
             </div>
             
-            <!-- Tabs -->
             <div class="flex gap-2 mb-6">
                 <button class="btn ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}" id="tab-users">
                     <i class="fas fa-users"></i>

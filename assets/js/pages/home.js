@@ -50,7 +50,6 @@ function updateBirthdayCountdown() {
 
 export function render() {
     return `
-        <!-- Animated background -->
         <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation">
             <div class="absolute inset-0 opacity-20">
                 <div class="absolute top-20 left-10 w-64 h-64 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
@@ -62,9 +61,7 @@ export function render() {
         <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10">
             <div class="grid lg:grid-cols-12 gap-6">
                 
-                <!-- Left Sidebar -->
                 <div class="lg:col-span-3 space-y-6">
-                    <!-- Stats Card -->
                     <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.2s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-chart-line text-discord-accent"></i>
@@ -74,7 +71,7 @@ export function render() {
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-discord-text">Опыт</span>
-                                    <span class="text-discord-accent font-semibold">3+ года</span>
+                                    <span class="text-discord-accent font-semibold">1.5+ года</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
                                     <div class="bg-discord-accent h-2 rounded-full" style="width: 65%"></div>
@@ -83,25 +80,15 @@ export function render() {
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-discord-text">Проекты</span>
-                                    <span class="text-discord-accent font-semibold">15+</span>
+                                    <span class="text-discord-accent font-semibold">10+</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
                                     <div class="bg-green-500 h-2 rounded-full" style="width: 80%"></div>
                                 </div>
                             </div>
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-discord-text">Discord боты</span>
-                                    <span class="text-discord-accent font-semibold">10+</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-2">
-                                    <div class="bg-purple-500 h-2 rounded-full" style="width: 90%"></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Current Activity -->
                     <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.4s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-code text-green-500"></i>
@@ -112,27 +99,26 @@ export function render() {
                                 <div class="w-2 h-2 bg-green-500 rounded-full mt-2 pulse"></div>
                                 <div>
                                     <p class="text-discord-text text-sm">Разработка универсального Discord бота</p>
-                                    <span class="text-xs text-discord-text/60">Python, Py-cord</span>
+                                    <span class="text-xs text-discord-text/60">Python, discord.py</span>
                                 </div>
                             </div>
                             <div class="flex items-start gap-3">
                                 <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
                                 <div>
                                     <p class="text-discord-text text-sm">Изучение FastAPI и веб-разработки</p>
-                                    <span class="text-xs text-discord-text/60">Backend</span>
+                                    <span class="text-xs text-discord-text/60">Frontend</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Quick Links -->
                     <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.6s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-link text-discord-accent"></i>
                             Быстрые ссылки
                         </h3>
                         <div class="space-y-2">
-                            <a href="/projects" class="flex items-center gap-3 p-2 rounded hover:bg-discord-darker transition group">
+                            <a href="https://github.com/remodik?tab=repositories" class="flex items-center gap-3 p-2 rounded hover:bg-discord-darker transition group">
                                 <i class="fas fa-folder text-discord-accent group-hover:scale-110 transition"></i>
                                 <span class="text-discord-text text-sm group-hover:text-white">Мои проекты</span>
                             </a>
@@ -148,7 +134,6 @@ export function render() {
                     </div>
                 </div>
 
-                <!-- Main Profile Card -->
                 <div class="lg:col-span-6">
                     <div class="card fade-in">
                         <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
@@ -184,7 +169,6 @@ export function render() {
                                 </p>
                             </section>
                             
-                            <!-- Skills -->
                             <section class="fade-in" style="animation-delay: 0.4s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
                                     <i class="fas fa-star text-yellow-500"></i>
@@ -199,7 +183,6 @@ export function render() {
                                 </div>
                             </section>
                             
-                            <!-- Contacts -->
                             <section class="fade-in" style="animation-delay: 0.6s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
                                     <i class="fas fa-envelope text-green-500"></i>
@@ -212,12 +195,11 @@ export function render() {
                                     </div>
                                     <div class="flex items-center gap-3 text-discord-text">
                                         <i class="fas fa-map-marker-alt text-discord-accent w-6"></i>
-                                        <span>Тояма, Япония (мечтаю там побывать)</span>
+                                        <span>Тояма, Япония (мечтаю там побывать!)</span>
                                     </div>
                                 </div>
                             </section>
                             
-                            <!-- Social Links -->
                             <div class="flex justify-center gap-4 pt-4">
                                 <a href="https://vk.com/remod3" target="_blank" class="social-link" aria-label="VK">
                                     <i class="fab fa-vk"></i>
@@ -239,9 +221,7 @@ export function render() {
                     </div>
                 </div>
 
-                <!-- Right Sidebar -->
                 <div class="lg:col-span-3 space-y-6">
-                    <!-- Skills Progress -->
                     <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.8s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-code text-discord-accent"></i>
@@ -254,10 +234,10 @@ export function render() {
                                         <i class="fab fa-python text-blue-400"></i>
                                         Python
                                     </span>
-                                    <span class="text-xs text-discord-accent font-semibold">85%</span>
+                                    <span class="text-xs text-discord-accent font-semibold">65%</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style="width: 85%"></div>
+                                    <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style="width: 65%"></div>
                                 </div>
                             </div>
                             <div>
@@ -266,10 +246,10 @@ export function render() {
                                         <i class="fab fa-js text-yellow-400"></i>
                                         JavaScript
                                     </span>
-                                    <span class="text-xs text-discord-accent font-semibold">70%</span>
+                                    <span class="text-xs text-discord-accent font-semibold">30%</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full" style="width: 70%"></div>
+                                    <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full" style="width: 30%"></div>
                                 </div>
                             </div>
                             <div>
@@ -278,10 +258,10 @@ export function render() {
                                         <i class="fab fa-discord text-discord-accent"></i>
                                         Discord API
                                     </span>
-                                    <span class="text-xs text-discord-accent font-semibold">90%</span>
+                                    <span class="text-xs text-discord-accent font-semibold">75%</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full" style="width: 90%"></div>
+                                    <div class="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full" style="width: 75%"></div>
                                 </div>
                             </div>
                             <div>
@@ -290,76 +270,84 @@ export function render() {
                                         <i class="fas fa-database text-green-400"></i>
                                         SQL/DB
                                     </span>
-                                    <span class="text-xs text-discord-accent font-semibold">65%</span>
+                                    <span class="text-xs text-discord-accent font-semibold">35%</span>
                                 </div>
                                 <div class="w-full bg-discord-darker rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style="width: 65%"></div>
+                                    <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style="width: 35%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Favorite Anime -->
                     <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 1s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-tv text-pink-500"></i>
                             Любимые аниме
                         </h3>
                         <div class="space-y-3">
-                            <div class="flex items-center gap-3 group cursor-pointer">
-                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
-                                    🎭
+                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
+                                <div class="relative w-12 h-16 rounded overflow-hidden flex-shrink-0 shadow-lg">
+                                    <img 
+                                        src="https://cdn.myanimelist.net/images/anime/1522/128039.jpg" 
+                                        alt="Re:Zero"
+                                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                        loading="lazy"
+                                        onerror="this.src='https://via.placeholder.com/48x64/9333EA/ffffff?text=RZ'"
+                                    >
+                                    <div class="absolute inset-0 border-2 border-purple-500/50 rounded group-hover:border-purple-500 transition"></div>
                                 </div>
                                 <div class="flex-1">
                                     <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Re:Zero</p>
                                     <span class="text-xs text-discord-text/60">Фэнтези, Драма</span>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
+                                        <span class="text-xs text-discord-text/80">9.5/10</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3 group cursor-pointer">
-                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
-                                    ⚔️
+
+                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
+                                <div class="relative w-12 h-16 rounded overflow-hidden flex-shrink-0 shadow-lg">
+                                    <img 
+                                        src="https://cdn.myanimelist.net/images/anime/11/39717.jpg" 
+                                        alt="Sword Art Online"
+                                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                        loading="lazy"
+                                        onerror="this.src='https://via.placeholder.com/48x64/3B82F6/ffffff?text=SAO'"
+                                    >
+                                    <div class="absolute inset-0 border-2 border-blue-500/50 rounded group-hover:border-blue-500 transition"></div>
                                 </div>
                                 <div class="flex-1">
                                     <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Sword Art Online</p>
                                     <span class="text-xs text-discord-text/60">Экшен, Приключения</span>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
+                                        <span class="text-xs text-discord-text/80">8.8/10</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3 group cursor-pointer">
-                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
-                                    🎌
+
+                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
+                                <div class="relative w-12 h-16 rounded overflow-hidden flex-shrink-0 shadow-lg">
+                                    <img 
+                                        src="https://cdn.myanimelist.net/images/anime/1165/142698.jpg" 
+                                        alt="Blue Archive"
+                                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                        loading="lazy"
+                                        onerror="this.src='https://via.placeholder.com/48x64/F59E0B/ffffff?text=BA'"
+                                    >
+                                    <div class="absolute inset-0 border-2 border-yellow-500/50 rounded group-hover:border-yellow-500 transition"></div>
                                 </div>
                                 <div class="flex-1">
                                     <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Blue Archive</p>
                                     <span class="text-xs text-discord-text/60">Экшен, Школа</span>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
+                                        <span class="text-xs text-discord-text/80">9.2/10</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Fun Facts -->
-                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 1.2s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-lightbulb text-yellow-500"></i>
-                            Интересные факты
-                        </h3>
-                        <ul class="space-y-2 text-discord-text text-sm">
-                            <li class="flex items-start gap-2">
-                                <span class="text-discord-accent mt-0.5">•</span>
-                                <span>Создал более 10 Discord ботов</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-discord-accent mt-0.5">•</span>
-                                <span>Мечтаю посетить Японию</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-discord-accent mt-0.5">•</span>
-                                <span>Изучаю японский язык</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-discord-accent mt-0.5">•</span>
-                                <span>Играю в Blue Archive и Genshin Impact</span>
-                            </li>
-                        </ul>
                     </div>
                 </div>
             </div>
