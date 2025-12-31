@@ -32,11 +32,7 @@ router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: tru
 router.setNotFound(notFoundPage);
 
 function initApp() {
-    console.log('🚀 remod3 Portfolio App initialized');
-    console.log('📡 API URL:', window.APP_CONFIG.API_URL);
-
     renderNavbar();
-
     router.init();
 }
 
