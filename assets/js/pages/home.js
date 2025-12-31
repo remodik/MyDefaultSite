@@ -330,7 +330,7 @@ export function render() {
                             <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
                                 <div class="relative w-12 h-16 rounded overflow-hidden flex-shrink-0 shadow-lg">
                                     <img 
-                                        src="https://cdn.myanimelist.net/images/anime/1165/142698.jpg" 
+                                        src="https://cdn.myanimelist.net/images/anime/1739/140995.jpg" 
                                         alt="Blue Archive"
                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                         loading="lazy"
