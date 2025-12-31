@@ -50,92 +50,316 @@ function updateBirthdayCountdown() {
 
 export function render() {
     return `
-        <div class="max-w-lg mx-auto px-4 py-8">
-            <div class="card fade-in">
-                <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
-                
-                <div class="relative -mt-16 px-6 pb-4 text-center">
+        <!-- Animated background -->
+        <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation">
+            <div class="absolute inset-0 opacity-20">
+                <div class="absolute top-20 left-10 w-64 h-64 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div class="absolute top-40 right-10 w-64 h-64 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+                <div class="absolute bottom-20 left-1/3 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+            </div>
+        </div>
 
-                    <div class="avatar-container inline-block relative">
-                        <img src="/assets/images/blue_avatar.png" alt="Avatar" class="avatar mx-auto" onerror="this.src='https://via.placeholder.com/120/5865F2/ffffff?text=R'">
-                        <div class="avatar-decoration"></div>
+        <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10">
+            <div class="grid lg:grid-cols-12 gap-6">
+                
+                <!-- Left Sidebar -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Stats Card -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.2s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-discord-accent"></i>
+                            Статистика
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-discord-text">Опыт</span>
+                                    <span class="text-discord-accent font-semibold">3+ года</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-discord-accent h-2 rounded-full" style="width: 65%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-discord-text">Проекты</span>
+                                    <span class="text-discord-accent font-semibold">15+</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 80%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-discord-text">Discord боты</span>
+                                    <span class="text-discord-accent font-semibold">10+</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-purple-500 h-2 rounded-full" style="width: 90%"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
-                    <div class="mt-2 space-x-2">
-                        <span class="tag tag-primary">チェリー | せんちゃ</span>
+
+                    <!-- Current Activity -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.4s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-code text-green-500"></i>
+                            Сейчас работаю
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mt-2 pulse"></div>
+                                <div>
+                                    <p class="text-discord-text text-sm">Разработка универсального Discord бота</p>
+                                    <span class="text-xs text-discord-text/60">Python, Py-cord</span>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                                <div>
+                                    <p class="text-discord-text text-sm">Изучение FastAPI и веб-разработки</p>
+                                    <span class="text-xs text-discord-text/60">Backend</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mt-1">
-                        <span class="tag bg-discord-light text-white">ベテルギウスロマネ・コンティ</span>
+
+                    <!-- Quick Links -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.6s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-link text-discord-accent"></i>
+                            Быстрые ссылки
+                        </h3>
+                        <div class="space-y-2">
+                            <a href="/projects" class="flex items-center gap-3 p-2 rounded hover:bg-discord-darker transition group">
+                                <i class="fas fa-folder text-discord-accent group-hover:scale-110 transition"></i>
+                                <span class="text-discord-text text-sm group-hover:text-white">Мои проекты</span>
+                            </a>
+                            <a href="/services" class="flex items-center gap-3 p-2 rounded hover:bg-discord-darker transition group">
+                                <i class="fas fa-briefcase text-green-500 group-hover:scale-110 transition"></i>
+                                <span class="text-discord-text text-sm group-hover:text-white">Услуги</span>
+                            </a>
+                            <a href="/contact" class="flex items-center gap-3 p-2 rounded hover:bg-discord-darker transition group">
+                                <i class="fas fa-envelope text-purple-500 group-hover:scale-110 transition"></i>
+                                <span class="text-discord-text text-sm group-hover:text-white">Связаться</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="bg-discord-light px-6 py-8 space-y-6">
-                    <section class="fade-in" style="animation-delay: 0.2s">
-                        <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
-                            <i class="fas fa-heart text-pink-500"></i>
-                            Обо мне
-                        </h2>
-                        <p class="text-discord-text mb-3">
-                            Привет! Меня зовут Илья, мне 18 лет, и я обычный начинающий разработчик на Python, который любит аниме.
-                        </p>
-                        <p class="text-discord-text mb-3">
-                            Моя цель - создать универсального Discord бота, который будет уметь всё! (Ну, или почти)
-                        </p>
-                        <p class="text-discord-text">
-                            День рождения: <span id="birthday-countdown" class="text-discord-accent"></span>
-                        </p>
-                    </section>
-                    
-                    <!-- Skills -->
-                    <section class="fade-in" style="animation-delay: 0.4s">
-                        <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
-                            <i class="fas fa-star text-yellow-500"></i>
-                            Увлечения
-                        </h2>
-                        <div class="skills-container">
-                            <span class="tag">Python</span>
-                            <span class="tag">Discord API</span>
-                            <span class="tag">Py-cord/disnake</span>
-                            <span class="tag">HTML/CSS</span>
-                            <span class="tag">Просмотр аниме</span>
+
+                <!-- Main Profile Card -->
+                <div class="lg:col-span-6">
+                    <div class="card fade-in">
+                        <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
+                        
+                        <div class="relative -mt-16 px-6 pb-4 text-center">
+                            <div class="avatar-container inline-block relative">
+                                <img src="/assets/images/blue_avatar.png" alt="Avatar" class="avatar mx-auto" onerror="this.src='https://via.placeholder.com/120/5865F2/ffffff?text=R'">
+                                <div class="avatar-decoration"></div>
+                            </div>
+                            <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
+                            <div class="mt-2 space-x-2">
+                                <span class="tag tag-primary">チェリー | せんちゃ</span>
+                            </div>
+                            <div class="mt-1">
+                                <span class="tag bg-discord-light text-white">ベテルギウスロマネ・コンティ</span>
+                            </div>
                         </div>
-                    </section>
-                    
-                    <!-- Contacts -->
-                    <section class="fade-in" style="animation-delay: 0.6s">
-                        <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
-                            <i class="fas fa-envelope text-green-500"></i>
-                            Контакты
-                        </h2>
+                        
+                        <div class="bg-discord-light px-6 py-8 space-y-6">
+                            <section class="fade-in" style="animation-delay: 0.2s">
+                                <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
+                                    <i class="fas fa-heart text-pink-500"></i>
+                                    Обо мне
+                                </h2>
+                                <p class="text-discord-text mb-3">
+                                    Привет! Меня зовут Илья, мне 18 лет, и я обычный начинающий разработчик на Python, который любит аниме.
+                                </p>
+                                <p class="text-discord-text mb-3">
+                                    Моя цель - создать универсального Discord бота, который будет уметь всё! (Ну, или почти)
+                                </p>
+                                <p class="text-discord-text">
+                                    День рождения: <span id="birthday-countdown" class="text-discord-accent"></span>
+                                </p>
+                            </section>
+                            
+                            <!-- Skills -->
+                            <section class="fade-in" style="animation-delay: 0.4s">
+                                <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
+                                    <i class="fas fa-star text-yellow-500"></i>
+                                    Увлечения
+                                </h2>
+                                <div class="skills-container">
+                                    <span class="tag">Python</span>
+                                    <span class="tag">Discord API</span>
+                                    <span class="tag">Py-cord/disnake</span>
+                                    <span class="tag">HTML/CSS</span>
+                                    <span class="tag">Просмотр аниме</span>
+                                </div>
+                            </section>
+                            
+                            <!-- Contacts -->
+                            <section class="fade-in" style="animation-delay: 0.6s">
+                                <h2 class="flex items-center gap-2 text-discord-accent text-lg font-semibold border-b border-discord-lighter pb-2 mb-4">
+                                    <i class="fas fa-envelope text-green-500"></i>
+                                    Контакты
+                                </h2>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-3 text-discord-text">
+                                        <i class="fas fa-envelope text-discord-accent w-6"></i>
+                                        <span>slenderzet@gmail.com</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-discord-text">
+                                        <i class="fas fa-map-marker-alt text-discord-accent w-6"></i>
+                                        <span>Тояма, Япония (мечтаю там побывать)</span>
+                                    </div>
+                                </div>
+                            </section>
+                            
+                            <!-- Social Links -->
+                            <div class="flex justify-center gap-4 pt-4">
+                                <a href="https://vk.com/remod3" target="_blank" class="social-link" aria-label="VK">
+                                    <i class="fab fa-vk"></i>
+                                </a>
+                                <a href="https://t.me/remod3" target="_blank" class="social-link" aria-label="Telegram">
+                                    <i class="fab fa-telegram"></i>
+                                </a>
+                                <a href="https://discord.gg/nKkQdDgWfC" target="_blank" class="social-link" aria-label="Discord Server">
+                                    <i class="fab fa-discord"></i>
+                                </a>
+                                <a href="https://discord.com/users/743864658951274528" target="_blank" class="social-link" aria-label="Discord Profile">
+                                    <i class="fab fa-discord"></i>
+                                </a>
+                                <a href="https://open.spotify.com/user/31hx3sueaixdsbody6s6lligjm6a" target="_blank" class="social-link" aria-label="Spotify">
+                                    <i class="fab fa-spotify"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Skills Progress -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.8s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-code text-discord-accent"></i>
+                            Навыки
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-discord-text flex items-center gap-2">
+                                        <i class="fab fa-python text-blue-400"></i>
+                                        Python
+                                    </span>
+                                    <span class="text-xs text-discord-accent font-semibold">85%</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style="width: 85%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-discord-text flex items-center gap-2">
+                                        <i class="fab fa-js text-yellow-400"></i>
+                                        JavaScript
+                                    </span>
+                                    <span class="text-xs text-discord-accent font-semibold">70%</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full" style="width: 70%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-discord-text flex items-center gap-2">
+                                        <i class="fab fa-discord text-discord-accent"></i>
+                                        Discord API
+                                    </span>
+                                    <span class="text-xs text-discord-accent font-semibold">90%</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full" style="width: 90%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-discord-text flex items-center gap-2">
+                                        <i class="fas fa-database text-green-400"></i>
+                                        SQL/DB
+                                    </span>
+                                    <span class="text-xs text-discord-accent font-semibold">65%</span>
+                                </div>
+                                <div class="w-full bg-discord-darker rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style="width: 65%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Favorite Anime -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 1s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-tv text-pink-500"></i>
+                            Любимые аниме
+                        </h3>
                         <div class="space-y-3">
-                            <div class="flex items-center gap-3 text-discord-text">
-                                <i class="fas fa-envelope text-discord-accent w-6"></i>
-                                <span>slenderzet@gmail.com</span>
+                            <div class="flex items-center gap-3 group cursor-pointer">
+                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
+                                    🎭
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Re:Zero</p>
+                                    <span class="text-xs text-discord-text/60">Фэнтези, Драма</span>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-3 text-discord-text">
-                                <i class="fas fa-map-marker-alt text-discord-accent w-6"></i>
-                                <span>Тояма, Япония (мечтаю там побывать)</span>
+                            <div class="flex items-center gap-3 group cursor-pointer">
+                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
+                                    ⚔️
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Sword Art Online</p>
+                                    <span class="text-xs text-discord-text/60">Экшен, Приключения</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 group cursor-pointer">
+                                <div class="w-12 h-16 bg-discord-darker rounded flex-shrink-0 flex items-center justify-center text-2xl">
+                                    🎌
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Blue Archive</p>
+                                    <span class="text-xs text-discord-text/60">Экшен, Школа</span>
+                                </div>
                             </div>
                         </div>
-                    </section>
-                    
-                    <!-- Social Links -->
-                    <div class="flex justify-center gap-4 pt-4">
-                        <a href="https://vk.com/remod3" target="_blank" class="social-link" aria-label="VK">
-                            <i class="fab fa-vk"></i>
-                        </a>
-                        <a href="https://t.me/remod3" target="_blank" class="social-link" aria-label="Telegram">
-                            <i class="fab fa-telegram"></i>
-                        </a>
-                        <a href="https://discord.gg/nKkQdDgWfC" target="_blank" class="social-link" aria-label="Discord Server">
-                            <i class="fab fa-discord"></i>
-                        </a>
-                        <a href="https://discord.com/users/743864658951274528" target="_blank" class="social-link" aria-label="Discord Profile">
-                            <i class="fab fa-discord"></i>
-                        </a>
-                        <a href="https://open.spotify.com/user/31hx3sueaixdsbody6s6lligjm6a" target="_blank" class="social-link" aria-label="Spotify">
-                            <i class="fab fa-spotify"></i>
-                        </a>
+                    </div>
+
+                    <!-- Fun Facts -->
+                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 1.2s">
+                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-yellow-500"></i>
+                            Интересные факты
+                        </h3>
+                        <ul class="space-y-2 text-discord-text text-sm">
+                            <li class="flex items-start gap-2">
+                                <span class="text-discord-accent mt-0.5">•</span>
+                                <span>Создал более 10 Discord ботов</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-discord-accent mt-0.5">•</span>
+                                <span>Мечтаю посетить Японию</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-discord-accent mt-0.5">•</span>
+                                <span>Изучаю японский язык</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-discord-accent mt-0.5">•</span>
+                                <span>Играю в Blue Archive и Genshin Impact</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
