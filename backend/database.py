@@ -56,7 +56,7 @@ class Project(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, default="")
-    created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -64,7 +64,7 @@ class File(Base):
     __tablename__ = "files"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id"), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(255))
     path: Mapped[str] = mapped_column(String(1024), default="", index=True)
     parent_path: Mapped[str] = mapped_column(String(1024), default="", index=True)
@@ -80,7 +80,7 @@ class PasswordReset(Base):
     __tablename__ = "password_resets"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     code: Mapped[str] = mapped_column(String(10), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -91,7 +91,7 @@ class AdminResetRequest(Base):
     __tablename__ = "admin_reset_requests"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     requested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
@@ -102,7 +102,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
