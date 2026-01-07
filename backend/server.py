@@ -306,8 +306,9 @@ def generate_reset_code() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 
-def generate_random_password(length: int = 6) -> str:
-    chars = string.ascii_letters + string.digits + "!@#$%&*"
+def generate_random_password(length: int = 8) -> str:
+    chars = string.ascii_letters + string.digits
+    chars += "!@#$%^&*"
     return "".join(random.choices(chars, k=length))
 
 
