@@ -2,21 +2,18 @@ import asyncio
 import base64
 import os
 import random
-import smtplib
 import string
 import uuid
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Any
 
+import bcrypt
+import resend
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
-import bcrypt
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete, or_, select, text, update
@@ -61,44 +58,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-FROM_EMAIL = os.getenv("FROM_EMAIL")
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "dev@remod3.ru")
 
-
-def _env_flag(name: str, default: str = "false") -> bool:
-    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
-
-
-SMTP_USE_TLS = _env_flag("SMTP_USE_TLS", "true")
-SMTP_USE_SSL = _env_flag("SMTP_USE_SSL", "false")
-SMTP_VALIDATE_CERTS = _env_flag("SMTP_VALIDATE_CERTS", "true")
-SMTP_SUPPRESS_SEND = _env_flag("SMTP_SUPPRESS_SEND", "false")
-SMTP_TIMEOUT = int(os.getenv("SMTP_TIMEOUT", "30"))
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME")
-
-FASTMAIL_CONFIG: ConnectionConfig | None = None
-FASTMAIL_CLIENT: FastMail | None = None
-
-if SMTP_HOST:
-    mail_from = FROM_EMAIL or SMTP_USER
-    if mail_from:
-        FASTMAIL_CONFIG = ConnectionConfig(
-            MAIL_USERNAME=SMTP_USER,
-            MAIL_PASSWORD=SMTP_PASSWORD,
-            MAIL_FROM=mail_from,
-            MAIL_FROM_NAME=SMTP_FROM_NAME,
-            MAIL_PORT=SMTP_PORT,
-            MAIL_SERVER=SMTP_HOST,
-            MAIL_STARTTLS=SMTP_USE_TLS and not SMTP_USE_SSL,
-            MAIL_SSL_TLS=SMTP_USE_SSL,
-            USE_CREDENTIALS=bool(SMTP_USER and SMTP_PASSWORD),
-            VALIDATE_CERTS=SMTP_VALIDATE_CERTS,
-            SUPPRESS_SEND=SMTP_SUPPRESS_SEND,
-        )
-        FASTMAIL_CLIENT = FastMail(FASTMAIL_CONFIG)
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+else:
+    print("WARNING: RESEND_API_KEY is not set. Emails will not be sent.")
 
 
 class ConnectionManager:
@@ -107,9 +73,9 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, user_id: str, username: str) -> None:
         self.active_connections.append({
-                "websocket": websocket,
-                "user_id": user_id,
-                "username": username
+            "websocket": websocket,
+            "user_id": user_id,
+            "username": username
         })
 
     def disconnect(self, websocket: WebSocket) -> str | None:
@@ -307,7 +273,8 @@ async def ensure_db_connection(session: AsyncSession) -> None:
         ) from exc
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)) -> dict[
+    str, Any]:
     await ensure_db_connection(session)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -343,9 +310,12 @@ def _compose_reset_email(code: str) -> dict[str, str]:
     subject = "Password Reset Code"
     text_content = f"Your password reset code is: {code}\nThis code will expire in 15 minutes."
     html_content = (
-        "<p><strong>Your password reset code is:</strong> "
-        f"<code>{code}</code></p>"
+        "<div style='font-family: sans-serif; padding: 20px;'>"
+        "<h2>Password Reset</h2>"
+        "<p>Your password reset code is:</p>"
+        f"<h1 style='color: #4A90E2; letter-spacing: 5px;'>{code}</h1>"
         "<p>This code will expire in 15 minutes.</p>"
+        "</div>"
     )
     return {
         "subject": subject,
@@ -354,61 +324,42 @@ def _compose_reset_email(code: str) -> dict[str, str]:
     }
 
 
-def _send_reset_email(email: str, message_data: dict[str, str]) -> bool:
-    if not SMTP_HOST:
-        print("SMTP host is not configured; skipping email send.")
+def _send_email_via_resend(to_email: str, subject: str, html_content: str, text_content: str = None) -> bool:
+    if not RESEND_API_KEY:
+        print("Error: RESEND_API_KEY is not configured.")
         return False
-
-    sender = FROM_EMAIL or SMTP_USER
-    if not sender:
-        print("No sender email configured; set FROM_EMAIL or SMTP_USER.")
-        return False
-
-    if SMTP_USE_TLS and SMTP_USE_SSL:
-        print("Both SMTP_USE_TLS and SMTP_USE_SSL are enabled; defaulting to TLS only.")
-
-    mime_message = MIMEMultipart("alternative")
-    mime_message["Subject"] = message_data["subject"]
-    mime_message["From"] = sender
-    mime_message["To"] = email
-
-    mime_message.attach(MIMEText(message_data["text"], "plain"))
-    mime_message.attach(MIMEText(message_data["html"], "html"))
-
-    smtp_class = smtplib.SMTP_SSL if (SMTP_USE_SSL and not SMTP_USE_TLS) else smtplib.SMTP
 
     try:
-        with smtp_class(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
-            server.ehlo()
-            if SMTP_USE_TLS and smtp_class is smtplib.SMTP:
-                server.starttls()
-                server.ehlo()
-            if SMTP_USER and SMTP_PASSWORD:
-                server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(sender, [email], mime_message.as_string())
+        params = {
+            "from": f"MySite Support <{EMAIL_FROM}>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        if text_content:
+            params["text"] = text_content
+
+        r = resend.Emails.send(params)
+        print(f"✅ Email sent to {to_email}. ID: {r.get('id')}")
         return True
-    except Exception as exc:
-        print(f"Error sending email: {exc}")
+    except Exception as e:
+        print(f"❌ Failed to send email via Resend: {e}")
         return False
 
 
 async def send_reset_email(email: str, code: str) -> bool:
     message_data = _compose_reset_email(code)
 
-    if FASTMAIL_CLIENT:
-        message = MessageSchema(
-            subject=message_data["subject"],
-            recipients=[email],
-            body=message_data["html"],
-            subtype=MessageType.html,
-        )
-        try:
-            await FASTMAIL_CLIENT.send_message(message)
-            return True
-        except Exception as exc:
-            print(f"FastMail send failed, falling back to SMTP: {exc}")
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _send_reset_email, email, message_data)
+    # noinspection PyUnresolvedReferences,PyTypeChecker
+    return await loop.run_in_executor(
+        None,
+        _send_email_via_resend,
+        email,
+        message_data["subject"],
+        message_data["html"],
+        message_data["text"]
+    )
 
 
 @app.on_event("startup")
@@ -445,7 +396,7 @@ async def register(user: UserCreate, session: AsyncSession = Depends(get_session
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user_id}, expires_delta=access_token_expires)
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -467,7 +418,7 @@ async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": db_user.id}, expires_delta=access_token_expires)
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -482,8 +433,8 @@ async def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> di
 
 @app.post("/api/auth/password-reset-request")
 async def request_password_reset(
-    request: PasswordResetRequest,
-    session: AsyncSession = Depends(get_session),
+        request: PasswordResetRequest,
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -493,7 +444,7 @@ async def request_password_reset(
         )
     )
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -514,7 +465,7 @@ async def request_password_reset(
         await session.commit()
 
         email_sent = await send_reset_email(user.email, reset_code)
-        
+
         return {
             "message": "Reset code sent to your email",
             "has_email": True,
@@ -537,6 +488,7 @@ async def request_password_reset(
         "has_email": False,
     }
 
+
 @app.post("/api/auth/password-reset")
 async def reset_password(reset: PasswordReset, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -545,7 +497,7 @@ async def reset_password(reset: PasswordReset, session: AsyncSession = Depends(g
         select(User).where(or_(User.username == reset.username_or_email, User.email == reset.username_or_email))
     )
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -557,24 +509,24 @@ async def reset_password(reset: PasswordReset, session: AsyncSession = Depends(g
         )
     )
     reset_request = result.scalar_one_or_none()
-    
+
     if not reset_request:
         raise HTTPException(status_code=400, detail="Invalid reset code")
-    
+
     if datetime.now() > reset_request.expires_at:
         raise HTTPException(status_code=400, detail="Reset code expired")
 
     user.password_hash = get_password_hash(reset.new_password)
     reset_request.used = True
     await session.commit()
-    
+
     return {"message": "Password reset successful"}
 
 
 @app.get("/api/projects")
 async def get_projects(
-    current_user: dict[str, Any] = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        current_user: dict[str, Any] = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
 
@@ -585,9 +537,9 @@ async def get_projects(
 
 @app.get("/api/projects/{project_id}")
 async def get_project(
-    project_id: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        project_id: str,
+        current_user: dict[str, Any] = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -603,12 +555,11 @@ async def get_project(
     return project_data
 
 
-
 @app.post("/api/projects")
 async def create_project(
-    project: ProjectCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        project: ProjectCreate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
     project_id = str(uuid.uuid4())
@@ -625,13 +576,12 @@ async def create_project(
     return project_to_dict(project_obj)
 
 
-
 @app.put("/api/projects/{project_id}")
 async def update_project(
-    project_id: str,
-    project: ProjectUpdate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        project_id: str,
+        project: ProjectUpdate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -653,9 +603,9 @@ async def update_project(
 
 @app.delete("/api/projects/{project_id}")
 async def delete_project(
-    project_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        project_id: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
 
@@ -666,15 +616,15 @@ async def delete_project(
     await session.execute(delete(FileModel).where(FileModel.project_id == project_id))
     await session.delete(project_obj)
     await session.commit()
-    
+
     return {"message": "Project deleted"}
 
 
 @app.post("/api/files")
 async def create_file(
-    file: FileCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        file: FileCreate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -709,8 +659,8 @@ async def create_file(
 
 @app.post("/api/files/upload")
 async def upload_file(
-    project_id: str = Form(...),
-    file: UploadFile = File(...),
+        project_id: str = Form(...),
+        file: UploadFile = File(...),
         current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
@@ -739,7 +689,7 @@ async def upload_file(
         except UnicodeDecodeError:
             content_str = base64.b64encode(content).decode("utf-8")
             is_binary = True
-    
+
     file_id = str(uuid.uuid4())
     now = datetime.now()
     file_obj = FileModel(
@@ -760,9 +710,9 @@ async def upload_file(
 
 @app.get("/api/files/{file_id}")
 async def get_file(
-    file_id: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        file_id: str,
+        current_user: dict[str, Any] = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -774,10 +724,10 @@ async def get_file(
 
 @app.put("/api/files/{file_id}")
 async def update_file(
-    file_id: str,
-    file: FileUpdate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        file_id: str,
+        file: FileUpdate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -801,9 +751,9 @@ async def update_file(
 
 @app.delete("/api/files/{file_id}")
 async def delete_file(
-    file_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        file_id: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
 
@@ -830,9 +780,9 @@ async def delete_file(
 
 @app.post("/api/folders")
 async def create_folder(
-    folder: FolderCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session)
+        folder: FolderCreate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session)
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -953,8 +903,8 @@ async def rename_file(
 
 @app.get("/api/admin/users")
 async def get_users(
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
 
@@ -964,8 +914,8 @@ async def get_users(
 
 @app.get("/api/admin/reset-requests")
 async def get_reset_requests(
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
 
@@ -975,21 +925,21 @@ async def get_reset_requests(
     requests = []
     for reset in result.scalars().all():
         requests.append({
-                "id": reset.id,
-                "user_id": reset.user_id,
-                "username": reset.username,
-                "status": reset.status,
-                "requested_at": _to_iso(reset.requested_at),
-                "completed_at": _to_iso(reset.completed_at)
+            "id": reset.id,
+            "user_id": reset.user_id,
+            "username": reset.username,
+            "status": reset.status,
+            "requested_at": _to_iso(reset.requested_at),
+            "completed_at": _to_iso(reset.completed_at)
         })
     return requests
 
 
 @app.post("/api/admin/reset-password/{user_id}")
 async def admin_reset_password(
-    user_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        user_id: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
 
@@ -1007,16 +957,16 @@ async def admin_reset_password(
     )
 
     await session.commit()
-    
+
     return {"message": f"Password reset to {new_password}"}
 
 
 @app.put("/api/admin/users/{user_id}/role")
 async def update_user_role(
-    user_id: str,
-    role: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        user_id: str,
+        role: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
     if role not in ["user", "admin"]:
@@ -1112,7 +1062,7 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
 
     finally:
         username = manager.disconnect(websocket)
-        
+
         if username:
             await manager.broadcast({
                 "type": "user_left",
@@ -1145,7 +1095,7 @@ def service_to_dict(service: Service) -> dict[str, Any]:
 
 @app.get("/api/services")
 async def get_services(
-    session: AsyncSession = Depends(get_session),
+        session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
     result = await session.execute(select(Service))
@@ -1155,9 +1105,9 @@ async def get_services(
 
 @app.post("/api/services")
 async def create_service(
-    service: ServiceCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        service: ServiceCreate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
     service_id = str(uuid.uuid4())
@@ -1179,24 +1129,24 @@ async def create_service(
 
 @app.put("/api/services/{service_id}")
 async def update_service(
-    service_id: str,
-    service: ServiceUpdate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        service_id: str,
+        service: ServiceUpdate,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
     service_obj = await session.get(Service, service_id)
     if not service_obj:
         raise HTTPException(status_code=404, detail="Service not found")
-    
+
     update_data = {k: v for k, v in service.dict().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     for key, value in update_data.items():
         setattr(service_obj, key, value)
     service_obj.updated_at = datetime.now()
-    
+
     await session.commit()
     await session.refresh(service_obj)
     return service_to_dict(service_obj)
@@ -1204,15 +1154,15 @@ async def update_service(
 
 @app.delete("/api/services/{service_id}")
 async def delete_service(
-    service_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
+        service_id: str,
+        current_user: dict[str, Any] = Depends(get_current_admin),
+        session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
     service_obj = await session.get(Service, service_id)
     if not service_obj:
         raise HTTPException(status_code=404, detail="Service not found")
-    
+
     await session.delete(service_obj)
     await session.commit()
     return {"message": "Service deleted"}
@@ -1220,13 +1170,10 @@ async def delete_service(
 
 @app.post("/api/contact")
 async def send_contact_message(contact: ContactMessage) -> dict[str, Any]:
-    if not SMTP_HOST:
-        raise HTTPException(status_code=503, detail="Email service not configured")
-    
-    sender = FROM_EMAIL or SMTP_USER
-    if not sender:
-        raise HTTPException(status_code=503, detail="Email sender not configured")
-    
+    recipient = EMAIL_FROM
+    if not recipient:
+        raise HTTPException(status_code=503, detail="System email not configured")
+
     subject = f"Контакт: {contact.subject}"
     phone_text = f"\nТелефон: {contact.phone}" if contact.phone else ""
     text_content = f"""
@@ -1239,7 +1186,7 @@ Email: {contact.email}{phone_text}
 Сообщение:
 {contact.message}
 """
-    
+
     html_content = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -1256,29 +1203,18 @@ Email: {contact.email}{phone_text}
 </body>
 </html>
 """
-    
-    message_data = {
-        "subject": subject,
-        "text": text_content,
-        "html": html_content,
-    }
-    
-    if FASTMAIL_CLIENT:
-        message = MessageSchema(
-            subject=subject,
-            recipients=[sender],
-            body=html_content,
-            subtype=MessageType.html,
-        )
-        try:
-            await FASTMAIL_CLIENT.send_message(message)
-            return {"success": True, "message": "Сообщение отправлено"}
-        except Exception as exc:
-            print(f"FastMail send failed, falling back to SMTP: {exc}")
-    
+
     loop = asyncio.get_running_loop()
-    success = await loop.run_in_executor(None, _send_reset_email, sender, message_data)
-    
+    # noinspection PyUnresolvedReferences,PyTypeChecker
+    success = await loop.run_in_executor(
+        None,
+        _send_email_via_resend,
+        recipient,
+        subject,
+        html_content,
+        text_content
+    )
+
     if success:
         return {"success": True, "message": "Сообщение отправлено"}
     else:
