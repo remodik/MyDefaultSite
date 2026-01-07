@@ -156,9 +156,10 @@ function renderResetRequests() {
                             </p>
                         </div>
                     </div>
+                    <!-- ИЗМЕНЕНО: Убрали "на qwerty123" -->
                     <button class="btn btn-success approve-reset" data-id="${req.user_id}" data-username="${escapeHtml(req.username)}">
                         <i class="fas fa-check"></i>
-                        Сбросить на qwerty123
+                        Сгенерировать пароль
                     </button>
                 </div>
             `).join('')}
@@ -188,17 +189,17 @@ function updateRequestsBadge() {
 
 function switchTab(tab) {
     activeTab = tab;
-    
+
     const tabUsers = document.getElementById('tab-users');
     const tabRequests = document.getElementById('tab-requests');
-    
+
     if (tabUsers) {
         tabUsers.className = `btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`;
     }
     if (tabRequests) {
         tabRequests.className = `btn ${tab === 'requests' ? 'btn-primary' : 'btn-secondary'}`;
     }
-    
+
     if (tab === 'users') {
         renderUsers();
     } else {
@@ -216,11 +217,29 @@ async function toggleUserRole(userId, newRole) {
     }
 }
 
+function showNewPasswordModal(username, password) {
+    const message = `
+        <div class="text-center">
+            <p class="mb-2">Новый пароль для пользователя <b>${username}</b>:</p>
+            <div class="bg-discord-darker p-3 rounded text-xl font-mono select-all tracking-wider mb-2">
+                ${password}
+            </div>
+            <p class="text-sm text-discord-text">Скопируйте его и передайте пользователю.</p>
+        </div>
+    `;
+
+    alert(`Новый пароль для ${username}:\n\n${password}\n\nСкопируйте его!`);
+}
+
 async function resetUserPassword(userId, username) {
-    confirmModal(`Сбросить пароль пользователя ${username} на "qwerty123"?`, async () => {
+    confirmModal(`Сбросить пароль пользователя ${username}? Будет сгенерирован новый случайный пароль.`, async () => {
         try {
-            await adminApi.resetUserPassword(userId);
-            showToast('Пароль сброшен на qwerty123', 'success');
+            const response = await adminApi.resetUserPassword(userId);
+            const message = response.message || "";
+            const newPassword = message.replace("Password reset to ", "");
+
+            showNewPasswordModal(username, newPassword);
+
         } catch (error) {
             showToast(error.message || 'Ошибка сброса пароля', 'error');
         }
@@ -228,11 +247,15 @@ async function resetUserPassword(userId, username) {
 }
 
 async function approveResetRequest(userId, username) {
-    confirmModal(`Сбросить пароль пользователя ${username} на "qwerty123"?`, async () => {
+    confirmModal(`Сбросить пароль для ${username}?`, async () => {
         try {
-            await adminApi.resetUserPassword(userId);
-            showToast('Пароль сброшен', 'success');
+            const response = await adminApi.resetUserPassword(userId);
+            const message = response.message || "";
+            const newPassword = message.replace("Password reset to ", "");
+
+            showNewPasswordModal(username, newPassword);
             await loadResetRequests();
+
         } catch (error) {
             showToast(error.message || 'Ошибка сброса пароля', 'error');
         }
@@ -272,7 +295,7 @@ export async function mount() {
 
     const tabUsers = document.getElementById('tab-users');
     const tabRequests = document.getElementById('tab-requests');
-    
+
     if (tabUsers) {
         tabUsers.addEventListener('click', () => switchTab('users'));
     }
