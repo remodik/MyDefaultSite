@@ -2,6 +2,7 @@ import asyncio
 import base64
 import os
 import random
+import secrets
 import string
 import uuid
 from contextlib import asynccontextmanager, suppress
@@ -16,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import delete, or_, select, text, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,6 +61,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "dev@remod3.ru")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://remod3.ru")
 
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
@@ -120,12 +122,11 @@ class Token(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    username_or_email: str
+    email: str
 
 
 class PasswordReset(BaseModel):
-    username_or_email: str
-    reset_code: str
+    token: str
     new_password: str
 
 
@@ -302,8 +303,8 @@ async def get_current_admin(current_user: dict[str, Any] = Depends(get_current_u
     return current_user
 
 
-def generate_reset_code() -> str:
-    return "".join(random.choices(string.digits, k=6))
+def generate_reset_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
 def generate_random_password(length: int = 8) -> str:
@@ -312,22 +313,18 @@ def generate_random_password(length: int = 8) -> str:
     return "".join(random.choices(chars, k=length))
 
 
-def _compose_reset_email(code: str) -> dict[str, str]:
-    subject = "Password Reset Code"
-    text_content = f"Your password reset code is: {code}\nThis code will expire in 15 minutes."
-    html_content = (
-        "<div style='font-family: sans-serif; padding: 20px;'>"
-        "<h2>Password Reset</h2>"
-        "<p>Your password reset code is:</p>"
-        f"<h1 style='color: #4A90E2; letter-spacing: 5px;'>{code}</h1>"
-        "<p>This code will expire in 15 minutes.</p>"
-        "</div>"
-    )
-    return {
-        "subject": subject,
-        "text": text_content,
-        "html": html_content,
-    }
+def mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return "***@***.***"
+
+    local, domain = email.split("@", 1)
+
+    if len(local) <= 2:
+        masked_local = local[0] + "*" * (len(local) - 1) if len(local) > 1 else "*"
+    else:
+        masked_local = local[0] + "*" * (len(local) - 2) + local[-1]
+
+    return f"{masked_local}@{domain}"
 
 
 def _send_email_via_resend(to_email: str, subject: str, html_content: str, text_content: str = None) -> bool:
@@ -337,7 +334,7 @@ def _send_email_via_resend(to_email: str, subject: str, html_content: str, text_
 
     try:
         params = {
-            "from": f"remod3.ru Support <{EMAIL_FROM}>",
+            "from": f"remod3.ru <{EMAIL_FROM}>",
             "to": [to_email],
             "subject": subject,
             "html": html_content
@@ -353,8 +350,61 @@ def _send_email_via_resend(to_email: str, subject: str, html_content: str, text_
         return False
 
 
-async def send_reset_email(email: str, code: str) -> bool:
-    message_data = _compose_reset_email(code)
+async def send_reset_link_email(email: str, token: str) -> bool:
+    reset_link = f"{FRONTEND_URL}/password-reset?token={token}"
+
+    subject = "Сброс пароля - remod3.ru"
+
+    text_content = f"""
+Вы запросили сброс пароля на remod3.ru.
+
+Перейдите по ссылке для сброса пароля:
+{reset_link}
+
+Ссылка действительна 1 час.
+
+Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
+"""
+
+    html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #1e1f22; margin: 0; padding: 20px;">
+    <div style="max-width: 500px; margin: 0 auto; background: #2b2d31; border-radius: 12px; overflow: hidden; border: 1px solid #404249;">
+        <div style="background: linear-gradient(135deg, #5865F2 0%, #7289DA 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">Сброс пароля</h1>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #b5bac1; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Вы запросили сброс пароля для вашего аккаунта на remod3.ru.
+            </p>
+            <p style="color: #b5bac1; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                Нажмите на кнопку ниже, чтобы создать новый пароль:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" style="display: inline-block; background: #5865f2; color: white; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    Сбросить пароль
+                </a>
+            </div>
+            <p style="color: #72767d; font-size: 14px; line-height: 1.6; margin: 25px 0 0 0;">
+                Ссылка действительна <strong style="color: #b5bac1;">1 час</strong>.
+            </p>
+            <p style="color: #72767d; font-size: 14px; line-height: 1.6; margin: 15px 0 0 0;">
+                Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
+            </p>
+            <hr style="border: none; border-top: 1px solid #404249; margin: 25px 0;">
+            <p style="color: #5a5d63; font-size: 12px; margin: 0;">
+                Если кнопка не работает, скопируйте эту ссылку в браузер:<br>
+                <a href="{reset_link}" style="color: #5865f2; word-break: break-all;">{reset_link}</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+"""
 
     loop = asyncio.get_running_loop()
     # noinspection PyUnresolvedReferences,PyTypeChecker
@@ -362,9 +412,9 @@ async def send_reset_email(email: str, code: str) -> bool:
         None,
         _send_email_via_resend,
         email,
-        message_data["subject"],
-        message_data["html"],
-        message_data["text"]
+        subject,
+        html_content,
+        text_content
     )
 
 
@@ -445,88 +495,97 @@ async def request_password_reset(
     await ensure_db_connection(session)
 
     result = await session.execute(
-        select(User).where(
-            or_(User.username == request.username_or_email, User.email == request.username_or_email)
-        )
+        select(User).where(User.email == request.email)
     )
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user.email:
-        reset_code = generate_reset_code()
-        reset_id = str(uuid.uuid4())
-        expires_at = datetime.now() + timedelta(minutes=15)
-
-        reset = PasswordResetModel(
-            id=reset_id,
-            user_id=user.id,
-            code=reset_code,
-            created_at=datetime.now(),
-            expires_at=expires_at,
-            used=False,
-        )
-        session.add(reset)
-        await session.commit()
-
-        email_sent = await send_reset_email(user.email, reset_code)
-
         return {
-            "message": "Reset code sent to your email",
-            "has_email": True,
-            "email_sent": email_sent
+            "message": "Если этот email зарегистрирован, на него будет отправлена ссылка для сброса пароля"
         }
 
+    reset_token = generate_reset_token()
     reset_id = str(uuid.uuid4())
-    admin_request = AdminResetRequest(
+    expires_at = datetime.now() + timedelta(hours=1)
+
+    reset = PasswordResetModel(
         id=reset_id,
         user_id=user.id,
-        username=user.username,
-        status="pending",
-        requested_at=datetime.now(),
+        code=reset_token,
+        created_at=datetime.now(),
+        expires_at=expires_at,
+        used=False,
     )
-    session.add(admin_request)
+    session.add(reset)
     await session.commit()
 
+    email_sent = await send_reset_link_email(user.email, reset_token)
+
+    if not email_sent:
+        print(f"Failed to send reset email to {user.email}")
+
     return {
-        "message": "Reset request sent to administrator",
-        "has_email": False,
+        "message": "Если этот email зарегистрирован, на него будет отправлена ссылка для сброса пароля"
     }
 
 
-@app.post("/api/auth/password-reset")
-async def reset_password(reset: PasswordReset, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+@app.get("/api/auth/password-reset/verify")
+async def verify_reset_token(
+        token: str,
+        session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
     await ensure_db_connection(session)
 
     result = await session.execute(
-        select(User).where(or_(User.username == reset.username_or_email, User.email == reset.username_or_email))
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    result = await session.execute(
         select(PasswordResetModel).where(
-            PasswordResetModel.user_id == user.id,
-            PasswordResetModel.code == reset.reset_code,
+            PasswordResetModel.code == token,
             PasswordResetModel.used.is_(False),
         )
     )
     reset_request = result.scalar_one_or_none()
 
     if not reset_request:
-        raise HTTPException(status_code=400, detail="Invalid reset code")
+        raise HTTPException(status_code=400, detail="Недействительная или истёкшая ссылка")
 
     if datetime.now() > reset_request.expires_at:
-        raise HTTPException(status_code=400, detail="Reset code expired")
+        raise HTTPException(status_code=400, detail="Срок действия ссылки истёк")
+
+    return {"valid": True}
+
+
+@app.post("/api/auth/password-reset")
+async def reset_password(
+        reset: PasswordReset,
+        session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    result = await session.execute(
+        select(PasswordResetModel).where(
+            PasswordResetModel.code == reset.token,
+            PasswordResetModel.used.is_(False),
+        )
+    )
+    reset_request = result.scalar_one_or_none()
+
+    if not reset_request:
+        raise HTTPException(status_code=400, detail="Недействительная или истёкшая ссылка")
+
+    if datetime.now() > reset_request.expires_at:
+        raise HTTPException(status_code=400, detail="Срок действия ссылки истёк")
+
+    user = await session.get(User, reset_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    if len(reset.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль должен быть не менее 6 символов")
 
     user.password_hash = get_password_hash(reset.new_password)
     reset_request.used = True
     await session.commit()
 
-    return {"message": "Password reset successful"}
+    return {"message": "Пароль успешно изменён"}
 
 
 @app.get("/api/projects")
