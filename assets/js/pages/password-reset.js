@@ -119,8 +119,7 @@ function renderStepContent() {
                 </p>
                 <div class="bg-discord-darker rounded-lg p-4">
                     <p class="text-sm text-discord-text">
-                        После одобрения ваш пароль будет сброшен на:
-                        <code class="bg-discord-light px-2 py-1 rounded ml-1">qwerty123</code>
+                        Свяжитесь с администратором для получения нового пароля.
                     </p>
                 </div>
             </div>
@@ -130,26 +129,26 @@ function renderStepContent() {
 
 async function handleRequestSubmit(e) {
     e.preventDefault();
-    
+
     const input = document.getElementById('username-email');
     const errorDiv = document.getElementById('error-message');
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    
+
     usernameOrEmail = input.value.trim();
-    
+
     if (!usernameOrEmail) {
         errorDiv.textContent = 'Введите имя пользователя или email';
         errorDiv.classList.remove('hidden');
         return;
     }
-    
+
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
     errorDiv.classList.add('hidden');
-    
+
     try {
         const response = await authApi.requestPasswordReset(usernameOrEmail);
-        
+
         if (response.has_email) {
             step = 'code';
             showToast('Код отправлен на ваш email', 'success');
@@ -157,7 +156,7 @@ async function handleRequestSubmit(e) {
             step = 'no-email';
             showToast('Запрос отправлен администратору', 'info');
         }
-        
+
         renderStepContent();
     } catch (error) {
         errorDiv.textContent = error.message || 'Пользователь не найден';
@@ -169,28 +168,28 @@ async function handleRequestSubmit(e) {
 
 async function handleResetSubmit(e) {
     e.preventDefault();
-    
+
     const code = document.getElementById('code').value.trim();
     const newPassword = document.getElementById('new-password').value;
     const errorDiv = document.getElementById('error-message');
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    
+
     if (!code || !newPassword) {
         errorDiv.textContent = 'Заполните все поля';
         errorDiv.classList.remove('hidden');
         return;
     }
-    
+
     if (newPassword.length < 6) {
         errorDiv.textContent = 'Пароль должен быть не менее 6 символов';
         errorDiv.classList.remove('hidden');
         return;
     }
-    
+
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
     errorDiv.classList.add('hidden');
-    
+
     try {
         await authApi.resetPassword(usernameOrEmail, code, newPassword);
         showToast('Пароль успешно изменён!', 'success');
