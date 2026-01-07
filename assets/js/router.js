@@ -39,14 +39,18 @@ class Router {
             this.currentPage.unmount();
         }
 
+        const url = new URL(path, window.location.origin);
+        const fullPath = url.pathname + url.search;
+
         if (replace) {
-            history.replaceState({ path }, '', path);
+            history.replaceState({ path: fullPath }, '', fullPath);
         } else {
-            history.pushState({ path }, '', path);
+            history.pushState({ path: fullPath }, '', fullPath);
         }
 
-        const match = this.matchRoute(path);
-        
+        const routePath = url.pathname;
+        const match = this.matchRoute(routePath);
+
         if (match) {
             const { route, params } = match;
 
@@ -57,7 +61,7 @@ class Router {
                     return;
                 }
             }
-            
+
             if (route.requireAdmin) {
                 const userStr = localStorage.getItem('user');
                 const user = userStr ? JSON.parse(userStr) : null;
@@ -86,12 +90,12 @@ class Router {
             }
         }
 
-        window.dispatchEvent(new CustomEvent('route-changed', { detail: { path } }));
+        window.dispatchEvent(new CustomEvent('route-changed', { detail: { path: routePath } }));
     }
-    
+
     init() {
         window.addEventListener('popstate', (event) => {
-            const path = event.state?.path || window.location.pathname;
+            const path = event.state?.path || (window.location.pathname + window.location.search);
             this.navigate(path, true);
         });
 
@@ -106,7 +110,7 @@ class Router {
             }
         });
 
-        const path = window.location.pathname || '/';
+        const path = (window.location.pathname + window.location.search) || '/';
         this.navigate(path, true);
     }
 }
