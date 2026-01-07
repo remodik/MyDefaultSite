@@ -306,6 +306,11 @@ def generate_reset_code() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 
+def generate_random_password(length: int = 6) -> str:
+    chars = string.ascii_letters + string.digits + "!@#$%&*"
+    return "".join(random.choices(chars, k=length))
+
+
 def _compose_reset_email(code: str) -> dict[str, str]:
     subject = "Password Reset Code"
     text_content = f"Your password reset code is: {code}\nThis code will expire in 15 minutes."
@@ -947,7 +952,7 @@ async def admin_reset_password(
     if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
 
-    new_password = "qwerty123"
+    new_password = generate_random_password()
     user_obj.password_hash = get_password_hash(new_password)
 
     await session.execute(
