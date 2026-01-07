@@ -331,7 +331,7 @@ def _send_email_via_resend(to_email: str, subject: str, html_content: str, text_
 
     try:
         params = {
-            "from": f"MySite Support <{EMAIL_FROM}>",
+            "from": f"remod3.ru Support <{EMAIL_FROM}>",
             "to": [to_email],
             "subject": subject,
             "html": html_content
