@@ -64,19 +64,22 @@ export const authApi = {
         return apiRequest('/api/auth/me');
     },
     
-    async requestPasswordReset(usernameOrEmail) {
+    async requestPasswordReset(email) {
         return apiRequest('/api/auth/password-reset-request', {
             method: 'POST',
-            body: JSON.stringify({ username_or_email: usernameOrEmail }),
+            body: JSON.stringify({ email }),
         });
     },
-    
-    async resetPassword(usernameOrEmail, resetCode, newPassword) {
+
+    async verifyResetToken(token) {
+        return apiRequest(`/api/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+    },
+
+    async resetPassword(token, newPassword) {
         return apiRequest('/api/auth/password-reset', {
             method: 'POST',
             body: JSON.stringify({
-                username_or_email: usernameOrEmail,
-                reset_code: resetCode,
+                token,
                 new_password: newPassword,
             }),
         });
