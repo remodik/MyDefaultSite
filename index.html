@@ -4,8 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>remod3</title>
+    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            dark: '#1e1f22',
+                            darker: '#111214',
+                            light: '#2b2d31',
+                            lighter: '#313338',
+                            text: '#b5bac1',
+                            accent: '#5865f2',
+                            green: '#23a559',
+                            red: '#f23f43',
+                            yellow: '#f0b232',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="/assets/css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
