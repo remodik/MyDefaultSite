@@ -57,7 +57,7 @@ class Router {
             if (route.requireAuth) {
                 const token = localStorage.getItem('auth_token');
                 if (!token) {
-                    this.navigate('/login', true);
+                    await this.navigate('/login', true);
                     return;
                 }
             }
@@ -66,7 +66,7 @@ class Router {
                 const userStr = localStorage.getItem('user');
                 const user = userStr ? JSON.parse(userStr) : null;
                 if (user?.role !== 'admin') {
-                    this.navigate('/', true);
+                    await this.navigate('/', true);
                     return;
                 }
             }
