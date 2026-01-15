@@ -5,6 +5,7 @@ import random
 import secrets
 import string
 import uuid
+import httpx
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from typing import Any
@@ -56,6 +57,14 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+WAKATIME_API_KEY = os.getenv("WAKATIME_API_KEY")
+wakatime_cache = {
+    "data": None,
+    "expires_at": None
+}
+
+WAKATIME_CACHE_MINUTES = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -1284,6 +1293,50 @@ Email: {contact.email}{phone_text}
         return {"success": True, "message": "Сообщение отправлено"}
     else:
         raise HTTPException(status_code=500, detail="Failed to send email")
+
+
+@app.get("/api/wakatime/stats")
+async def get_wakatime_stats() -> dict[str, Any]:
+    if not WAKATIME_API_KEY:
+        raise HTTPException(status_code=503, detail="Wakatime API key not configured")
+
+    now = datetime.now()
+    if (wakatime_cache["data"] is not None and
+            wakatime_cache["expires_at"] is not None and
+            now < wakatime_cache["expires_at"]):
+        return {
+            **wakatime_cache["data"],
+            "cached": True,
+            "cache_expires_at": wakatime_cache["expires_at"].isoformat()
+        }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://wakatime.com/api/v1/users/current/stats/all_time",
+                headers={"Authorization": f"Bearer {WAKATIME_API_KEY}"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            wakatime_cache["data"] = data
+            wakatime_cache["expires_at"] = now + timedelta(minutes=WAKATIME_CACHE_MINUTES)
+
+            return {
+                **data,
+                "cached": False,
+                "cache_expires_at": wakatime_cache["expires_at"].isoformat()
+            }
+    except httpx.HTTPError as e:
+        if wakatime_cache["data"] is not None:
+            return {
+                **wakatime_cache["data"],
+                "cached": True,
+                "stale": True,
+                "error": str(e)
+            }
+        raise HTTPException(status_code=503, detail=f"Wakatime API error: {str(e)}")
 
 
 if __name__ == "__main__":
