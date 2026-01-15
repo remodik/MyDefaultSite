@@ -293,4 +293,10 @@ export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) 
     return ws;
 }
 
+export const wakatimeApi = {
+    async getStats() {
+        return apiRequest('/api/wakatime/stats');
+    },
+};
+
 export { API_URL, getToken };
