@@ -9,6 +9,14 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      - key: FRONTEND_URL
+        value: https://my-default-site-6batv4x79-remodiks-projects.vercel.app
+      - key: WAKATIME_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: dev@remod3.ru
       - key: PYTHON_VERSION
         value: "3.11.0"
     runtime: python
