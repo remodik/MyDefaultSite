@@ -64,6 +64,11 @@ wakatime_cache = {
     "expires_at": None
 }
 
+if WAKATIME_API_KEY:
+    print(f"✅ WAKATIME_API_KEY loaded: {WAKATIME_API_KEY}")
+else:
+    print("❌ WAKATIME_API_KEY not found!")
+
 WAKATIME_CACHE_MINUTES = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -1297,6 +1302,10 @@ Email: {contact.email}{phone_text}
 
 @app.get("/api/wakatime/stats")
 async def get_wakatime_stats() -> dict[str, Any]:
+    """Получить статистику Wakatime за последние 7 дней (с кэшированием)"""
+
+    print(f"🔍 Checking WAKATIME_API_KEY: {WAKATIME_API_KEY is not None}")
+
     if not WAKATIME_API_KEY:
         raise HTTPException(status_code=503, detail="Wakatime API key not configured")
 
@@ -1304,6 +1313,7 @@ async def get_wakatime_stats() -> dict[str, Any]:
     if (wakatime_cache["data"] is not None and
             wakatime_cache["expires_at"] is not None and
             now < wakatime_cache["expires_at"]):
+        print("📦 Returning cached data")
         return {
             **wakatime_cache["data"],
             "cached": True,
@@ -1311,24 +1321,28 @@ async def get_wakatime_stats() -> dict[str, Any]:
         }
 
     try:
+        print(f"🌐 Fetching from Wakatime API...")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://wakatime.com/api/v1/users/current/stats/last_7_days",
                 headers={"Authorization": f"Bearer {WAKATIME_API_KEY}"},
                 timeout=10.0
             )
+            print(f"📡 Wakatime response status: {response.status_code}")
             response.raise_for_status()
             data = response.json()
 
             wakatime_cache["data"] = data
             wakatime_cache["expires_at"] = now + timedelta(minutes=WAKATIME_CACHE_MINUTES)
 
+            print("✅ Successfully fetched and cached Wakatime data")
             return {
                 **data,
                 "cached": False,
                 "cache_expires_at": wakatime_cache["expires_at"].isoformat()
             }
     except httpx.HTTPError as e:
+        print(f"❌ Wakatime API error: {str(e)}")
         if wakatime_cache["data"] is not None:
             return {
                 **wakatime_cache["data"],
