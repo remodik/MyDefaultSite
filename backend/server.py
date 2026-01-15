@@ -1313,7 +1313,7 @@ async def get_wakatime_stats() -> dict[str, Any]:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://wakatime.com/api/v1/users/current/stats/all_time",
+                "https://wakatime.com/api/v1/users/current/stats/last_7_days",
                 headers={"Authorization": f"Bearer {WAKATIME_API_KEY}"},
                 timeout=10.0
             )
