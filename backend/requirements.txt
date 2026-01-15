@@ -13,3 +13,4 @@ websockets>=12.0
 psycopg2-binary
 asyncpg
 resend
+httpx
