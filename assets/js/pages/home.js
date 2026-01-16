@@ -416,12 +416,7 @@ function renderWakatimeSection() {
                target="_blank" 
                class="block bg-discord-darker p-4 rounded-lg hover:bg-discord-lighter transition">
                 <figure>
-                    <embed 
-                        src="https://wakatime.com/share/@remodik/d4fd57c5-2ad8-4ed6-8aaa-7faf78d73cf0.svg" 
-                        type="image/svg+xml"
-                        class="w-full"
-                        style="height: 400px;"
-                    />
+                    <embed src="https://wakatime.com/share/@remodik/781cefa2-c3b7-4793-ab74-7f6f33c4661c.svg">
                 </figure>
             </a>
             
