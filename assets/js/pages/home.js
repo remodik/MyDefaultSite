@@ -374,11 +374,6 @@ function renderWakatimeSection() {
             <div class="bg-discord-darker p-4 rounded-lg text-center">
                 <i class="fas fa-chart-bar text-discord-text/30 text-3xl mb-2"></i>
                 <p class="text-discord-text/70 text-sm">Данные обновляются...</p>
-                <a href="https://wakatime.com/@remodik" 
-                   target="_blank"
-                   class="text-discord-accent text-xs mt-2 inline-block hover:underline">
-                    Открыть на WakaTime →
-                </a>
             </div>
         `;
         return;
