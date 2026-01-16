@@ -1,8 +1,103 @@
 {
   "data": {
-    "human_readable_total": "0 hrs",
-    "human_readable_daily_average": "0 hrs",
-    "languages": [],
-    "updated_at": "2026-01-16T00:00:00Z"
+    "id": "c99309b1-8a9d-444d-875f-555c1803c8bb",
+    "user_id": "1ced28a2-9675-43d0-bf0f-7230a7fda47f",
+    "range": "all_time",
+    "timeout": 15,
+    "writes_only": false,
+    "ai_additions": 0,
+    "ai_deletions": 0,
+    "human_additions": 0,
+    "human_deletions": 0,
+    "holidays": 0,
+    "status": "ok",
+    "human_readable_daily_average": "36 mins",
+    "total_seconds": 2212.87,
+    "total_seconds_including_other_language": 2212.87,
+    "is_already_updating": false,
+    "languages": [
+      {
+        "name": "Python",
+        "total_seconds": 956.291,
+        "percent": 43.21,
+        "digital": "0:15",
+        "decimal": "0.25",
+        "text": "15 mins",
+        "hours": 0,
+        "minutes": 15
+      },
+      {
+        "name": "JavaScript",
+        "total_seconds": 733.147,
+        "percent": 33.13,
+        "digital": "0:12",
+        "decimal": "0.20",
+        "text": "12 mins",
+        "hours": 0,
+        "minutes": 12
+      },
+      {
+        "name": "HTML",
+        "total_seconds": 368.862,
+        "percent": 16.67,
+        "digital": "0:06",
+        "decimal": "0.10",
+        "text": "6 mins",
+        "hours": 0,
+        "minutes": 6
+      },
+      {
+        "name": "YAML",
+        "total_seconds": 106.2,
+        "percent": 4.8,
+        "digital": "0:01",
+        "decimal": "0.02",
+        "text": "1 min",
+        "hours": 0,
+        "minutes": 1
+      },
+      {
+        "name": "Text",
+        "total_seconds": 48.37,
+        "percent": 2.19,
+        "digital": "0:00",
+        "decimal": "0.00",
+        "text": "0 secs",
+        "hours": 0,
+        "minutes": 0
+      }
+    ],
+    "is_up_to_date_pending_future": false,
+    "is_up_to_date": true,
+    "is_stuck": false,
+    "human_readable_total": "36 mins",
+    "human_readable_daily_average_including_other_language": "36 mins",
+    "daily_average_including_other_language": 2213.0,
+    "percent_calculated": 100,
+    "daily_average": 2213.0,
+    "human_readable_total_including_other_language": "36 mins",
+    "editors": [
+      {
+        "total_seconds": 2212.87,
+        "name": "PyCharm",
+        "percent": 100.0,
+        "digital": "0:36",
+        "decimal": "0.60",
+        "text": "36 mins",
+        "hours": 0,
+        "minutes": 36
+      }
+    ],
+    "days_including_holidays": 1,
+    "days_minus_holidays": 1,
+    "is_cached": true,
+    "username": "remodik",
+    "is_including_today": false,
+    "human_readable_range": "since Jan 15 2026",
+    "is_coding_activity_visible": true,
+    "is_language_usage_visible": true,
+    "is_editor_usage_visible": true,
+    "is_category_usage_visible": false,
+    "is_os_usage_visible": false
   }
 }
