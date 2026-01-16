@@ -1296,7 +1296,6 @@ Email: {contact.email}{phone_text}
 
 @app.get("/api/wakatime/stats")
 async def get_wakatime_stats() -> dict[str, Any]:
-    """Получить статистику Wakatime за последние 7 дней (с кэшированием)"""
 
     now = datetime.now()
     if (wakatime_cache["data"] is not None and
@@ -1310,20 +1309,19 @@ async def get_wakatime_stats() -> dict[str, Any]:
         }
 
     try:
-        print(f"🌐 Fetching from Wakatime API...")
+        print(f"🌐 Fetching public Wakatime data...")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://wakatime.com/api/v1/users/remodik/stats/last_7_days",
                 headers={
-                    "Content-Type": "application/json"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Referer": "https://wakatime.com/@remodik"
                 },
                 timeout=10.0
             )
             print(f"📡 Wakatime response status: {response.status_code}")
-
-            if response.status_code == 401:
-                print(f"❌ 401 Response body: {response.text}")
-
             response.raise_for_status()
             data = response.json()
 
@@ -1345,7 +1343,7 @@ async def get_wakatime_stats() -> dict[str, Any]:
                 "stale": True,
                 "error": str(e)
             }
-        raise HTTPException(status_code=503, detail=f"Wakatime API error: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"Wakatime public API error: {str(e)}")
 
 
 if __name__ == "__main__":
