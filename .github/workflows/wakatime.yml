@@ -3,49 +3,37 @@ name: Update Wakatime Stats
 on:
   schedule:
     - cron: '0 */1 * * *'
+
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
-  update-wakatime:
+  update-stats:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-    
+
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: 📊 Fetch Wakatime stats
+
+      - name: Download Wakatime stats
         run: |
-          echo "Fetching Wakatime data..."
-          curl -s 'https://wakatime.com/api/v1/users/remodik/stats/all_time' \
-            -H 'Accept: application/json' \
-            -H 'User-Agent: Mozilla/5.0' \
-            -o wakatime-data.json
-          
-          if jq empty wakatime-data.json 2>/dev/null; then
-            echo "✅ Valid JSON downloaded"
-            cat wakatime-data.json | jq '.' > temp.json
-            mv temp.json wakatime-data.json
-          else
-            echo "❌ Invalid JSON, keeping old data"
-            exit 1
-          fi
-      
-      - name: 💾 Commit and push changes
+          echo "📥 Downloading Wakatime stats..."
+          curl -f -o wakatime-data.json \
+            'https://wakatime.com/api/v1/users/remodik/stats/last_7_days' || exit 1
+
+          echo "✅ Downloaded successfully"
+          cat wakatime-data.json
+
+      - name: Commit and push changes
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config user.name "Wakatime Bot"
+          git config user.email "wakatime-bot@users.noreply.github.com"
+
           git add wakatime-data.json
-          
+
           if git diff --staged --quiet; then
-            echo "📭 No changes to commit"
+            echo "📝 No changes to commit"
           else
-            git commit -m "🤖 Update Wakatime stats [skip ci]"
+            git commit -m "🤖 Update Wakatime stats"
             git push
-            echo "✅ Changes pushed"
+            echo "✅ Changes pushed to repository"
           fi
