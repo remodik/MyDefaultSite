@@ -4,33 +4,48 @@ on:
   schedule:
     - cron: '0 */1 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  update-stats:
+  update-wakatime:
     runs-on: ubuntu-latest
-
+    
+    permissions:
+      contents: write
+    
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Download Wakatime data
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 📊 Fetch Wakatime stats
         run: |
-          curl -o wakatime-data.json \
-            'https://wakatime.com/api/v1/users/remodik/stats/all_time'
+          echo "Fetching Wakatime data..."
+          curl -s 'https://wakatime.com/api/v1/users/remodik/stats/all_time' \
+            -H 'Accept: application/json' \
+            -H 'User-Agent: Mozilla/5.0' \
+            -o wakatime-data.json
           
-          cat wakatime-data.json | jq '.' > temp.json
-          mv temp.json wakatime-data.json
-
-      - name: Commit and push
+          if jq empty wakatime-data.json 2>/dev/null; then
+            echo "✅ Valid JSON downloaded"
+            cat wakatime-data.json | jq '.' > temp.json
+            mv temp.json wakatime-data.json
+          else
+            echo "❌ Invalid JSON, keeping old data"
+            exit 1
+          fi
+      
+      - name: 💾 Commit and push changes
         run: |
-          git config user.name "Wakatime Bot"
-          git config user.email "wakatime-bot@github.com"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add wakatime-data.json
           
-          # Коммитим только если есть изменения
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "📭 No changes to commit"
           else
             git commit -m "🤖 Update Wakatime stats [skip ci]"
             git push
+            echo "✅ Changes pushed"
           fi
