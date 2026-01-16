@@ -1,0 +1,36 @@
+name: Update Wakatime Stats
+
+on:
+  schedule:
+    - cron: '0 */1 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download Wakatime data
+        run: |
+          curl -o wakatime-data.json \
+            'https://wakatime.com/api/v1/users/remodik/stats/all_time'
+          
+          cat wakatime-data.json | jq '.' > temp.json
+          mv temp.json wakatime-data.json
+
+      - name: Commit and push
+        run: |
+          git config user.name "Wakatime Bot"
+          git config user.email "wakatime-bot@github.com"
+          git add wakatime-data.json
+          
+          # Коммитим только если есть изменения
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🤖 Update Wakatime stats [skip ci]"
+            git push
+          fi
