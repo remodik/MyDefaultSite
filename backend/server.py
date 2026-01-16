@@ -58,16 +58,10 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
-WAKATIME_API_KEY = os.getenv("WAKATIME_API_KEY")
 wakatime_cache = {
     "data": None,
     "expires_at": None
 }
-
-if WAKATIME_API_KEY:
-    print(f"✅ WAKATIME_API_KEY loaded: {WAKATIME_API_KEY}")
-else:
-    print("❌ WAKATIME_API_KEY not found!")
 
 WAKATIME_CACHE_MINUTES = 30
 
@@ -1304,11 +1298,6 @@ Email: {contact.email}{phone_text}
 async def get_wakatime_stats() -> dict[str, Any]:
     """Получить статистику Wakatime за последние 7 дней (с кэшированием)"""
 
-    print(f"🔍 Checking WAKATIME_API_KEY: {WAKATIME_API_KEY is not None}")
-
-    if not WAKATIME_API_KEY:
-        raise HTTPException(status_code=503, detail="Wakatime API key not configured")
-
     now = datetime.now()
     if (wakatime_cache["data"] is not None and
             wakatime_cache["expires_at"] is not None and
@@ -1324,11 +1313,17 @@ async def get_wakatime_stats() -> dict[str, Any]:
         print(f"🌐 Fetching from Wakatime API...")
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://wakatime.com/api/v1/users/current/stats/last_7_days",
-                headers={"Authorization": f"Bearer {WAKATIME_API_KEY}"},
+                "https://wakatime.com/api/v1/users/remodik/stats/last_7_days",
+                headers={
+                    "Content-Type": "application/json"
+                },
                 timeout=10.0
             )
             print(f"📡 Wakatime response status: {response.status_code}")
+
+            if response.status_code == 401:
+                print(f"❌ 401 Response body: {response.text}")
+
             response.raise_for_status()
             data = response.json()
 
