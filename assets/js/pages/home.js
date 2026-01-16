@@ -402,83 +402,33 @@ async function loadWakatimeStats() {
     }
 }
 
-function renderWakatimeSection(isCached = false) {
+function renderWakatimeSection() {
     const container = document.getElementById('wakatime-section');
     if (!container) return;
 
-    if (!wakatimeData) {
-        container.innerHTML = `
-            <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                <i class="fas fa-code text-green-500"></i>
-                Сейчас работаю
-            </h3>
-            <div class="space-y-3">
-                <div class="flex items-start gap-3">
-                    <div class="w-2 h-2 bg-green-500 rounded-full mt-2 pulse"></div>
-                    <div>
-                        <p class="text-discord-text text-sm">Разработка универсального Discord бота</p>
-                        <span class="text-xs text-discord-text/60">Python, discord.py</span>
-                    </div>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                    <div>
-                        <p class="text-discord-text text-sm">Изучение FastAPI и веб-разработки</p>
-                        <span class="text-xs text-discord-text/60">Frontend</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        return;
-    }
-
-    const totalTime = wakatimeData.human_readable_total || '0 hrs';
-    const dailyAverage = wakatimeData.human_readable_daily_average || '0 hrs';
-    const topLanguages = (wakatimeData.languages || []).slice(0, 5);
-
     container.innerHTML = `
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-white font-bold flex items-center gap-2">
-                <i class="fas fa-code text-green-500"></i>
-                Coding Activity
-            </h3>
-            ${isCached ? '<i class="fas fa-database text-discord-text/50 text-xs" title="Данные из кэша"></i>' : ''}
-        </div>
+        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+            <i class="fas fa-code text-green-500"></i>
+            Coding Activity
+        </h3>
         <div class="space-y-4">
-            <div class="bg-discord-darker p-3 rounded-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-discord-text text-sm">За всё время</span>
-                    <span class="text-green-500 font-bold">${totalTime}</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-discord-text/70 text-xs">В среднем в день</span>
-                    <span class="text-discord-accent text-xs">${dailyAverage}</span>
-                </div>
-            </div>
+            <a href="https://wakatime.com/@remodik" 
+               target="_blank" 
+               class="block bg-discord-darker p-4 rounded-lg hover:bg-discord-lighter transition">
+                <figure>
+                    <embed 
+                        src="https://wakatime.com/share/@remodik/d4fd57c5-2ad8-4ed6-8aaa-7faf78d73cf0.svg" 
+                        type="image/svg+xml"
+                        class="w-full"
+                        style="height: 400px;"
+                    />
+                </figure>
+            </a>
             
-            ${topLanguages.length > 0 ? `
-                <div>
-                    <span class="text-discord-text text-xs mb-2 block font-semibold">Топ языки:</span>
-                    <div class="space-y-2">
-                        ${topLanguages.map(lang => `
-                            <div>
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-discord-text">${lang.name}</span>
-                                    <span class="text-discord-accent font-semibold">${lang.text}</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-green-500 to-green-600 h-1.5 rounded-full transition-all duration-500" 
-                                         style="width: ${lang.percent}%"></div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : '<p class="text-discord-text/50 text-sm text-center py-4">Нет данных о языках</p>'}
-            
-            <div class="text-center pt-2 border-t border-discord-darker">
-                <a href="https://wakatime.com/@remod3" target="_blank" 
-                   class="text-xs text-discord-text/70 hover:text-discord-accent transition">
+            <div class="text-center">
+                <a href="https://wakatime.com/@remodik" 
+                   target="_blank"
+                   class="text-discord-text text-sm hover:text-discord-accent transition">
                     <i class="fas fa-external-link-alt mr-1"></i>
                     Подробнее на WakaTime
                 </a>
@@ -489,7 +439,7 @@ function renderWakatimeSection(isCached = false) {
 
 export function mount() {
     updateBirthdayCountdown();
-    loadWakatimeStats().catch(error => console.error('Wakatime load error:', error));
+    renderWakatimeSection();
 
     const interval = setInterval(updateBirthdayCountdown, 60000);
     window._homeCleanup = () => clearInterval(interval);
