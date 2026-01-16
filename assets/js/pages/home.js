@@ -1,5 +1,3 @@
-import { wakatimeApi } from '../api.js';
-
 const birthdayTimestamp = 1791406800;
 let wakatimeData = null;
 const WAKATIME_CACHE_KEY = 'wakatime_cache';
@@ -386,55 +384,154 @@ async function loadWakatimeStats() {
     }
 
     try {
-        console.log('🔄 Fetching fresh Wakatime data');
-        const response = await wakatimeApi.getStats();
-        wakatimeData = response.data;
+        console.log('🔄 Fetching fresh Wakatime data from frontend...');
 
-        setWakatimeCache(response.data);
+        const response = await fetch('https://wakatime.com/api/v1/users/remodik/stats/all_time');
 
-        const isCached = response.cached || false;
-        renderWakatimeSection(isCached);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
 
-        console.log(`✅ Wakatime data loaded ${isCached ? '(from server cache)' : '(fresh)'}`);
+        const result = await response.json();
+        wakatimeData = result.data;
+
+        setWakatimeCache(result.data);
+
+        renderWakatimeSection(false);
+        console.log('✅ Wakatime data loaded successfully');
     } catch (error) {
         console.error('❌ Failed to load Wakatime stats:', error);
         renderWakatimeSection(false);
     }
 }
 
-function renderWakatimeSection() {
+function renderWakatimeSection(isCached = false) {
     const container = document.getElementById('wakatime-section');
     if (!container) return;
 
+    if (!wakatimeData) {
+        container.innerHTML = `
+            <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-code text-green-500"></i>
+                Coding Activity
+            </h3>
+            <div class="bg-discord-darker p-4 rounded-lg text-center">
+                <i class="fas fa-spinner fa-spin text-discord-text/50 text-2xl mb-2"></i>
+                <p class="text-discord-text/70 text-sm">Загрузка статистики...</p>
+            </div>
+        `;
+        return;
+    }
+
+    const totalTime = wakatimeData.human_readable_total || '0 hrs';
+    const dailyAverage = wakatimeData.human_readable_daily_average || '0 hrs';
+    const topLanguages = (wakatimeData.languages || []).slice(0, 5);
+
+    const colorMap = {
+        'Python': 'from-blue-500 to-blue-600',
+        'JavaScript': 'from-yellow-400 to-yellow-600',
+        'TypeScript': 'from-blue-400 to-blue-600',
+        'HTML': 'from-orange-500 to-orange-600',
+        'CSS': 'from-purple-500 to-purple-600',
+        'YAML': 'from-red-500 to-red-600',
+        'JSON': 'from-green-500 to-green-600',
+        'Markdown': 'from-gray-400 to-gray-600',
+        'Text': 'from-gray-500 to-gray-700',
+    };
+
     container.innerHTML = `
-        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-            <i class="fas fa-code text-green-500"></i>
-            Coding Activity
-        </h3>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-white font-bold flex items-center gap-2">
+                <i class="fas fa-code text-green-500"></i>
+                Coding Activity
+            </h3>
+            <div class="flex items-center gap-2">
+                ${isCached ? '<i class="fas fa-database text-discord-text/50 text-xs" title="Данные из кэша"></i>' : ''}
+                <button id="refresh-wakatime" class="text-discord-text/70 hover:text-white transition text-xs" title="Обновить">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        
         <div class="space-y-4">
-            <a href="https://wakatime.com/@remodik" 
-               target="_blank" 
-               class="block bg-discord-darker p-4 rounded-lg hover:bg-discord-lighter transition">
-                <figure>
-                    <embed src="https://wakatime.com/share/@remodik/781cefa2-c3b7-4793-ab74-7f6f33c4661c.svg">
-                </figure>
-            </a>
+            <div class="bg-discord-darker p-4 rounded-lg border border-discord-lighter">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-discord-text/70 text-xs mb-1">За 7 дней</div>
+                        <div class="text-green-500 font-bold text-lg">${totalTime}</div>
+                    </div>
+                    <div>
+                        <div class="text-discord-text/70 text-xs mb-1">В среднем</div>
+                        <div class="text-discord-accent font-bold text-lg">${dailyAverage}</div>
+                    </div>
+                </div>
+            </div>
             
-            <div class="text-center">
+            ${topLanguages.length > 0 ? `
+                <div>
+                    <div class="text-discord-text text-xs font-semibold mb-3 uppercase tracking-wider">
+                        Топ языки
+                    </div>
+                    <div class="space-y-3">
+                        ${topLanguages.map((lang, index) => {
+                            const color = colorMap[lang.name] || 'from-gray-500 to-gray-600';
+                            return `
+                                <div class="fade-in" style="animation-delay: ${index * 0.1}s">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-gradient-to-r ${color}"></div>
+                                            <span class="text-discord-text text-sm font-medium">${lang.name}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-discord-text/70 text-xs">${lang.text}</span>
+                                            <span class="text-discord-accent text-xs font-bold">${Math.round(lang.percent)}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-full bg-discord-darker rounded-full h-2 overflow-hidden">
+                                        <div class="bg-gradient-to-r ${color} h-2 rounded-full transition-all duration-700 ease-out" 
+                                             style="width: 0"
+                                             data-width="${lang.percent}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : '<p class="text-discord-text/50 text-sm text-center py-4">Нет данных о языках</p>'}
+            
+            <div class="pt-3 border-t border-discord-darker">
                 <a href="https://wakatime.com/@remodik" 
                    target="_blank"
-                   class="text-discord-text text-sm hover:text-discord-accent transition">
-                    <i class="fas fa-external-link-alt mr-1"></i>
-                    Подробнее на WakaTime
+                   class="flex items-center justify-center gap-2 text-discord-text/70 hover:text-discord-accent text-sm transition group">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Полная статистика</span>
+                    <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
                 </a>
             </div>
         </div>
     `;
+
+    setTimeout(() => {
+        container.querySelectorAll('[data-width]').forEach(bar => {
+            bar.style.width = bar.dataset.width;
+        });
+    }, 100);
+
+    const refreshBtn = document.getElementById('refresh-wakatime');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+            localStorage.removeItem(WAKATIME_CACHE_KEY);
+            await loadWakatimeStats();
+        });
+    }
 }
 
 export function mount() {
     updateBirthdayCountdown();
-    renderWakatimeSection();
+    loadWakatimeStats().catch(err => {
+        console.error('Failed to load Wakatime stats:', err);
+    });
 
     const interval = setInterval(updateBirthdayCountdown, 60000);
     window._homeCleanup = () => clearInterval(interval);
