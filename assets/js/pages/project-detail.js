@@ -1,6 +1,14 @@
 import { projectsApi, filesApi } from '../api.js';
 import { isAdmin } from '../auth.js';
-import { showToast, escapeHtml, getFileIcon, getPrismLanguage, renderMarkdown } from '../utils.js';
+import {
+    showToast,
+    escapeHtml,
+    getFileIcon,
+    getPrismLanguage,
+    renderMarkdown,
+    getFileTypeFromName,
+    isMarkdownType,
+} from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
 import { renderFileTree, createRootFolder, createRootFile } from '../components/file-tree.js';
 
@@ -102,11 +110,57 @@ function renderFileViewer() {
     const file = selectedFile;
     const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico'].includes(file.file_type);
     const isVideo = ['mp4', 'avi', 'mov', 'webm'].includes(file.file_type);
-    const isMarkdown = file.file_type === 'md';
+    const isMarkdown = isMarkdownType(file.file_type);
+    const nonPreviewTypes = [
+        'zip',
+        'rar',
+        '7z',
+        'ppt',
+        'pptx',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'pdf',
+    ];
+    const isUnsupported =
+        file.is_folder ||
+        nonPreviewTypes.includes((file.file_type || '').toLowerCase()) ||
+        (file.is_binary && !isImage && !isVideo);
     
     let contentHtml;
-    
-    if (isImage) {
+
+    if (file.is_folder) {
+        contentHtml = `
+            <div class="flex items-center justify-center p-8 text-discord-text">
+                <div class="text-center">
+                    <i class="fas fa-folder text-4xl mb-3 opacity-60"></i>
+                    <p>Это папка. Выберите файл для просмотра.</p>
+                </div>
+            </div>
+        `;
+    } else if (isUnsupported) {
+        const mimeType = file.is_binary ? `application/${file.file_type || 'octet-stream'}` : 'text/plain;charset=utf-8';
+        const downloadLink = file.content
+            ? (file.is_binary
+                ? `data:${mimeType};base64,${file.content}`
+                : `data:${mimeType},${encodeURIComponent(file.content)}`)
+            : null;
+        contentHtml = `
+            <div class="flex items-center justify-center p-8 text-discord-text">
+                <div class="text-center max-w-md">
+                    <i class="fas fa-file-archive text-4xl mb-3 opacity-60"></i>
+                    <p>Предпросмотр для этого типа файла недоступен.</p>
+                    ${downloadLink ? `
+                        <a class="btn btn-secondary btn-sm mt-4 inline-flex items-center gap-2" href="${downloadLink}" download="${escapeHtml(file.name)}">
+                            <i class="fas fa-download"></i>
+                            Скачать файл
+                        </a>
+                    ` : '<p class="text-sm mt-2">Файл пустой или не содержит данных для скачивания.</p>'}
+                </div>
+            </div>
+        `;
+    } else if (isImage) {
         const src = file.is_binary ? `data:image/${file.file_type};base64,${file.content}` : file.content;
         contentHtml = `
             <div class="flex items-center justify-center p-8">
@@ -144,7 +198,7 @@ function renderFileViewer() {
             </div>
             ${isAdmin() ? `
                 <div class="flex gap-2">
-                    ${!isImage && !isVideo ? `
+                    ${!isImage && !isVideo && !isUnsupported ? `
                         <button class="btn btn-secondary btn-sm" id="edit-file-btn">
                             <i class="fas fa-edit"></i>
                             Редактировать
@@ -223,7 +277,7 @@ function setupViewerListeners() {
         Prism.highlightAll();
     }
 
-    if (window.renderMathInElement && selectedFile?.file_type === 'md') {
+    if (window.renderMathInElement && isMarkdownType(selectedFile?.file_type)) {
         const mdContent = document.querySelector('.markdown-content');
         if (mdContent) {
             renderMathInElement(mdContent, {
@@ -239,39 +293,15 @@ function setupViewerListeners() {
 
 function showFileModal(file = null) {
     const isEdit = !!file;
-    const fileTypes = [
-        { value: 'py', label: 'Python (.py)' },
-        { value: 'js', label: 'JavaScript (.js)' },
-        { value: 'ts', label: 'TypeScript (.ts)' },
-        { value: 'html', label: 'HTML (.html)' },
-        { value: 'css', label: 'CSS (.css)' },
-        { value: 'json', label: 'JSON (.json)' },
-        { value: 'md', label: 'Markdown (.md)' },
-        { value: 'txt', label: 'Text (.txt)' },
-        { value: 'sql', label: 'SQL (.sql)' },
-        { value: 'yml', label: 'YAML (.yml)' },
-        { value: 'xml', label: 'XML (.xml)' },
-    ];
     
     showModal({
         title: isEdit ? 'Редактировать файл' : 'Новый файл',
         content: `
             <form id="file-form" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="label" for="file-name">Имя файла</label>
-                        <input type="text" id="file-name" class="input" value="${isEdit ? escapeHtml(file.name) : ''}" ${isEdit ? 'readonly' : ''} required>
-                    </div>
-                    <div>
-                        <label class="label" for="file-type">Тип</label>
-                        <select id="file-type" class="input" ${isEdit ? 'disabled' : ''}>
-                            ${fileTypes.map(ft => `
-                                <option value="${ft.value}" ${(isEdit && file.file_type === ft.value) ? 'selected' : ''}>
-                                    ${ft.label}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
+               <div>
+                    <label class="label" for="file-name">Имя файла</label>
+                    <input type="text" id="file-name" class="input" value="${isEdit ? escapeHtml(file.name) : ''}" ${isEdit ? 'readonly' : ''} required>
+                    ${!isEdit ? '<p class="text-discord-text text-xs mt-2">Тип определяется автоматически по расширению (например, README.md).</p>' : ''}
                 </div>
                 <div>
                     <label class="label" for="file-content">Содержимое</label>
@@ -317,7 +347,6 @@ async function saveFile(id = null) {
     if (isSaving) return;
 
     const name = document.getElementById('file-name').value.trim();
-    const fileType = document.getElementById('file-type').value;
     const content = document.getElementById('file-content').value;
 
     if (!name) {
@@ -337,7 +366,7 @@ async function saveFile(id = null) {
             await filesApi.update(id, { name, content });
             showToast('Файл обновлён', 'success');
         } else {
-            await filesApi.create(project.id, name, content, fileType);
+            await filesApi.create(project.id, name, content, getFileTypeFromName(name));
             showToast('Файл создан', 'success');
         }
         closeModal();
