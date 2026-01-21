@@ -1,4 +1,5 @@
 import { filesApi } from '../api.js';
+import { getFileTypeFromName } from '../utils.js';
 import { showToast } from '../utils.js';
 import { showModal, closeModal } from './modal.js';
 
@@ -51,6 +52,12 @@ function getFileIcon(file) {
         'css': 'fab fa-css3 file-icon css',
         'json': 'fas fa-brackets-curly file-icon json',
         'md': 'fab fa-markdown file-icon md',
+        'markdown': 'fab fa-markdown file-icon md',
+        'mdx': 'fab fa-markdown file-icon md',
+        'mdown': 'fab fa-markdown file-icon md',
+        'mkd': 'fab fa-markdown file-icon md',
+        'mkdn': 'fab fa-markdown file-icon md',
+        'mdwn': 'fab fa-markdown file-icon md',
         'txt': 'fas fa-file-alt file-icon txt',
         'jpg': 'fas fa-image',
         'jpeg': 'fas fa-image',
@@ -256,18 +263,6 @@ async function createNewFile(folder, projectId, files, onSelect, containerId) {
                 <label class="label">Имя файла</label>
                 <input type="text" id="new-file-name" class="input" placeholder="example.js" />
             </div>
-            <div>
-                <label class="label">Тип файла</label>
-                <select id="new-file-type" class="input">
-                    <option value="txt">Text (.txt)</option>
-                    <option value="js">JavaScript (.js)</option>
-                    <option value="py">Python (.py)</option>
-                    <option value="html">HTML (.html)</option>
-                    <option value="css">CSS (.css)</option>
-                    <option value="json">JSON (.json)</option>
-                    <option value="md">Markdown (.md)</option>
-                </select>
-            </div>
         </div>
         `,
         footer: `
@@ -287,7 +282,6 @@ async function createNewFile(folder, projectId, files, onSelect, containerId) {
         if (createBtn) {
             createBtn.addEventListener('click', async () => {
                 const name = document.getElementById('new-file-name').value.trim();
-                const fileType = document.getElementById('new-file-type').value;
 
                 if (!name) {
                     showToast('Введите имя файла', 'error');
@@ -295,7 +289,7 @@ async function createNewFile(folder, projectId, files, onSelect, containerId) {
                 }
 
                 try {
-                    await filesApi.create(projectId, name, '', fileType, folder.path, false);
+                    await filesApi.create(projectId, name, '', getFileTypeFromName(name), folder.path, false);
                     showToast('Файл создан', 'success');
                     closeModal();
 
