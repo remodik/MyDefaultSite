@@ -84,6 +84,12 @@ export function getFileIcon(fileType) {
         'css': 'fab fa-css3-alt',
         'json': 'fas fa-code',
         'md': 'fab fa-markdown',
+        'markdown': 'fab fa-markdown',
+        'mdx': 'fab fa-markdown',
+        'mdown': 'fab fa-markdown',
+        'mkd': 'fab fa-markdown',
+        'mkdn': 'fab fa-markdown',
+        'mdwn': 'fab fa-markdown',
         'txt': 'fas fa-file-alt',
         'png': 'fas fa-image',
         'jpg': 'fas fa-image',
@@ -108,6 +114,12 @@ export function getPrismLanguage(fileType) {
         'css': 'css',
         'json': 'json',
         'md': 'markdown',
+        'markdown': 'markdown',
+        'mdx': 'markdown',
+        'mdown': 'markdown',
+        'mkd': 'markdown',
+        'mkdn': 'markdown',
+        'mdwn': 'markdown',
         'sql': 'sql',
         'sh': 'bash',
         'bash': 'bash',
@@ -165,6 +177,33 @@ export function renderMarkdown(content) {
     }
     
     return html;
+}
+
+export function getFileTypeFromName(name) {
+    if (!name) return 'txt';
+    const trimmedName = name.split('/').pop();
+    if (!trimmedName) return 'txt';
+    const dotCount = (trimmedName.match(/\./g) || []).length;
+    if (trimmedName.startsWith('.') && dotCount === 1) {
+        return trimmedName.slice(1).toLowerCase() || 'txt';
+    }
+    const lastDot = trimmedName.lastIndexOf('.');
+    if (lastDot === -1 || lastDot === trimmedName.length - 1) {
+        return 'txt';
+    }
+    return trimmedName.slice(lastDot + 1).toLowerCase() || 'txt';
+}
+
+export function isMarkdownType(fileType) {
+    return [
+        'md',
+        'markdown',
+        'mdx',
+        'mdown',
+        'mkd',
+        'mkdn',
+        'mdwn',
+    ].includes((fileType || '').toLowerCase());
 }
 
 export function debounce(func, wait) {
