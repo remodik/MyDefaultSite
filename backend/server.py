@@ -219,6 +219,20 @@ def _to_iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 
+def _infer_file_type(name: str, fallback: str = "txt") -> str:
+    base_name = name.rsplit("/", 1)[-1].strip()
+    if not base_name:
+        return fallback
+
+    if base_name.startswith(".") and base_name.count(".") == 1:
+        ext = base_name[1:]
+    else:
+        _, ext = os.path.splitext(base_name)
+        ext = ext[1:] if ext.startswith(".") else ext
+
+    return ext.lower() if ext else fallback
+
+
 def user_to_public_dict(user: User) -> dict[str, Any]:
     return {
         "id": user.id,
@@ -703,6 +717,12 @@ async def create_file(
     else:
         full_path = file.name
 
+    file_type = (file.file_type or "").strip().lower()
+        if file.is_folder:
+            file_type = "folder"
+        if not file_type:
+            file_type = _infer_file_type(file.name)
+
     file_id = str(uuid.uuid4())
     file_obj = FileModel(
         id=file_id,
@@ -712,7 +732,7 @@ async def create_file(
         parent_path=file.parent_path,
         is_folder=file.is_folder,
         content=file.content,
-        file_type=file.file_type,
+        file_type=file_type,
         is_binary=False,
         created_at=datetime.now(),
         updated_at=datetime.now(),
@@ -732,7 +752,7 @@ async def upload_file(
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
     content = await file.read()
-    file_type = file.filename.split(".")[-1] if "." in file.filename else "txt"
+    file_type = _infer_file_type(file.filename)
 
     if file_type in [
         "png",
