@@ -718,10 +718,10 @@ async def create_file(
         full_path = file.name
 
     file_type = (file.file_type or "").strip().lower()
-        if file.is_folder:
-            file_type = "folder"
-        if not file_type:
-            file_type = _infer_file_type(file.name)
+    if file.is_folder:
+        file_type = "folder"
+    if not file_type:
+        file_type = _infer_file_type(file.name)
 
     file_id = str(uuid.uuid4())
     file_obj = FileModel(
