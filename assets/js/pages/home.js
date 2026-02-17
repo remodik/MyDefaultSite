@@ -1,5 +1,4 @@
 const birthdayTimestamp = 1791406800;
-let wakatimeData = null;
 
 function formatRelativeTime(seconds) {
     if (seconds <= 0) return "сегодня! 🎉";
@@ -87,12 +86,6 @@ export function render() {
                                     <div class="bg-green-500 h-2 rounded-full" style="width: 80%"></div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-discord-light rounded-lg p-6 fade-in" style="animation-delay: 0.4s" id="wakatime-section">
-                        <div class="flex justify-center py-4">
-                            <div class="spinner"></div>
                         </div>
                     </div>
 
