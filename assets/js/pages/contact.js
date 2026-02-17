@@ -12,77 +12,77 @@ export function render() {
                 <p class="text-discord-text mt-2">Свяжитесь со мной</p>
             </div>
             
-<!--            <div class="bg-discord-light rounded-lg p-8 shadow-xl fade-in">-->
-<!--                <form id="contact-form" class="space-y-6">-->
-<!--                    <div class="grid md:grid-cols-2 gap-6">-->
-<!--                        <div>-->
-<!--                            <label class="label" for="contact-name">Имя *</label>-->
-<!--                            <input -->
-<!--                                type="text" -->
-<!--                                id="contact-name" -->
-<!--                                class="input" -->
-<!--                                placeholder="Ваше имя"-->
-<!--                                data-testid="contact-name"-->
-<!--                                required-->
-<!--                            >-->
-<!--                        </div>-->
-<!--                        <div>-->
-<!--                            <label class="label" for="contact-email">Email *</label>-->
-<!--                            <input -->
-<!--                                type="email" -->
-<!--                                id="contact-email" -->
-<!--                                class="input" -->
-<!--                                placeholder="your@email.com"-->
-<!--                                data-testid="contact-email"-->
-<!--                                required-->
-<!--                            >-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div>-->
-<!--                        <label class="label" for="contact-phone">Телефон (необязательно)</label>-->
-<!--                        <input -->
-<!--                            type="tel" -->
-<!--                            id="contact-phone" -->
-<!--                            class="input" -->
-<!--                            placeholder="+7 (999) 123-45-67"-->
-<!--                            data-testid="contact-phone"-->
-<!--                        >-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div>-->
-<!--                        <label class="label" for="contact-subject">Тема *</label>-->
-<!--                        <input -->
-<!--                            type="text" -->
-<!--                            id="contact-subject" -->
-<!--                            class="input" -->
-<!--                            placeholder="Тема сообщения"-->
-<!--                            data-testid="contact-subject"-->
-<!--                            required-->
-<!--                        >-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div>-->
-<!--                        <label class="label" for="contact-message">Сообщение *</label>-->
-<!--                        <textarea -->
-<!--                            id="contact-message" -->
-<!--                            class="input" -->
-<!--                            rows="5" -->
-<!--                            placeholder="Ваше сообщение..."-->
-<!--                            data-testid="contact-message"-->
-<!--                            required-->
-<!--                        ></textarea>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div id="contact-error" class="hidden text-discord-red text-sm"></div>-->
-<!--                    <div id="contact-success" class="hidden text-discord-green text-sm"></div>-->
-<!--                    -->
-<!--                    <button type="submit" class="btn btn-primary w-full" data-testid="contact-submit">-->
-<!--                        <i class="fas fa-paper-plane"></i>-->
-<!--                        Отправить сообщение-->
-<!--                    </button>-->
-<!--                </form>-->
-<!--            </div>-->
+            <div class="bg-discord-light rounded-lg p-8 shadow-xl fade-in">
+                <form id="contact-form" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="label" for="contact-name">Имя *</label>
+                            <input 
+                                type="text" 
+                                id="contact-name" 
+                                class="input" 
+                                placeholder="Ваше имя"
+                                data-testid="contact-name"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label class="label" for="contact-email">Email *</label>
+                            <input 
+                                type="email" 
+                                id="contact-email" 
+                                class="input" 
+                                placeholder="your@email.com"
+                                data-testid="contact-email"
+                                required
+                            >
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="label" for="contact-phone">Телефон (необязательно)</label>
+                        <input 
+                            type="tel" 
+                            id="contact-phone" 
+                            class="input" 
+                            placeholder="+7 (999) 123-45-67"
+                            data-testid="contact-phone"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="label" for="contact-subject">Тема *</label>
+                        <input 
+                            type="text" 
+                            id="contact-subject" 
+                            class="input" 
+                            placeholder="Тема сообщения"
+                            data-testid="contact-subject"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="label" for="contact-message">Сообщение *</label>
+                        <textarea 
+                            id="contact-message" 
+                            class="input" 
+                            rows="5" 
+                            placeholder="Ваше сообщение..."
+                            data-testid="contact-message"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div id="contact-error" class="hidden text-discord-red text-sm"></div>
+                    <div id="contact-success" class="hidden text-discord-green text-sm"></div>
+                    
+                    <button type="submit" class="btn btn-primary w-full" data-testid="contact-submit">
+                        <i class="fas fa-paper-plane"></i>
+                        Отправить сообщение
+                    </button>
+                </form>
+            </div>
             
             <div class="mt-8 grid md:grid-cols-3 gap-6">
                 <div class="bg-discord-light rounded-lg p-6 text-center">
