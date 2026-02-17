@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import AsyncIterator
 
 from dotenv import load_dotenv
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -14,30 +14,18 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 
-TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
-TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}")
 
-if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-    DATABASE_URL = (
-        TURSO_DATABASE_URL
-        .replace("libsql://", "")
-    )
-    DATABASE_URL = f"sqlite+libsql://{DATABASE_URL}?authToken={TURSO_AUTH_TOKEN}&secure=true"
-else:
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL",
-        f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}"
-    )
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+    pool_pre_ping=True,
 )
 async_session_factory = async_sessionmaker(
     engine,
