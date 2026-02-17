@@ -13,20 +13,31 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = BASE_DIR / "projects.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}")
+TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
+    DATABASE_URL = (
+        TURSO_DATABASE_URL
+        .replace("libsql://", "")
+    )
+    DATABASE_URL = f"sqlite+libsql://{DATABASE_URL}?authToken={TURSO_AUTH_TOKEN}&secure=true"
+else:
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}"
+    )
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
-    pool_pre_ping=True,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
 )
 async_session_factory = async_sessionmaker(
     engine,
@@ -123,39 +134,8 @@ class Service(Base):
 
 
 async def init_models() -> None:
-    # noinspection PyTypeChecker
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-        try:
-            check_column_sql = """
-                               SELECT column_name
-                               FROM information_schema.columns
-                               WHERE table_name = 'files' \
-                                 AND column_name = 'path' \
-                               """
-            result = await conn.execute(text(check_column_sql))
-            column_exists = result.fetchone() is not None
-            if not column_exists:
-                print("Applying folder support migration...")
-                migration_sql = """
-                                ALTER TABLE files ADD COLUMN IF NOT EXISTS path VARCHAR (1024) DEFAULT '';
-                                ALTER TABLE files ADD COLUMN IF NOT EXISTS parent_path VARCHAR (1024) DEFAULT '';
-                                ALTER TABLE files ADD COLUMN IF NOT EXISTS is_folder BOOLEAN DEFAULT FALSE;
-
-                                CREATE INDEX IF NOT EXISTS ix_files_path ON files(path);
-                                CREATE INDEX IF NOT EXISTS ix_files_parent_path ON files(parent_path);
-                                CREATE INDEX IF NOT EXISTS ix_files_is_folder ON files(is_folder);
-                                """
-                await conn.execute(text(migration_sql))
-
-                await conn.execute(
-                    text("UPDATE files SET path = name WHERE path = '' OR path IS NULL")
-                )
-                print("✓ Folder support migration completed")
-        except Exception as e:
-            print(f"Migration check skipped (likely SQLite): {e}")
-            pass
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

@@ -14,3 +14,4 @@ psycopg2-binary
 asyncpg
 resend
 httpx
+libsql-client>=0.3.0

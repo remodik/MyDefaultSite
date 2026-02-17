@@ -5,14 +5,14 @@ services:
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT"
     envVars:
-      - key: DATABASE_URL
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
         sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: FRONTEND_URL
-        value: https://my-default-site-6batv4x79-remodiks-projects.vercel.app
-      - key: WAKATIME_API_KEY
-        sync: false
+        value: https://remod3.ru
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
@@ -20,8 +20,3 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.0"
     runtime: python
-
-databases:
-  - name: mycardsite-db
-    region: frankfurt
-    plan: free
