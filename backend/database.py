@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator
+import ssl
 
 from dotenv import load_dotenv
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
@@ -27,7 +28,7 @@ engine = create_async_engine(
     future=True,
     pool_pre_ping=True,
     connect_args={
-        "ssl": True
+        "ssl": ssl.create_default_context()
     } if "postgresql" in DATABASE_URL else {}
 )
 async_session_factory = async_sessionmaker(
