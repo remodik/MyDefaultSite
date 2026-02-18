@@ -22,7 +22,7 @@ from sqlalchemy import delete, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import (
+from backend.database import (
     AdminResetRequest,
     ChatMessage,
     File as FileModel,
