@@ -27,8 +27,7 @@ engine = create_async_engine(
     future=True,
     pool_pre_ping=True,
     connect_args={
-        "ssl": "require",
-        "server_settings": {"jit": "off"}
+        "ssl": True
     } if "postgresql" in DATABASE_URL else {}
 )
 async_session_factory = async_sessionmaker(
