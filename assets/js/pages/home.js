@@ -89,7 +89,6 @@ const FEATURED_PROJECTS = [
 
 export function render() {
     return `
-        <!-- Animated background blobs -->
         <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation" aria-hidden="true">
             <div class="absolute inset-0 opacity-20">
                 <div class="absolute top-20 left-10 w-72 h-72 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob"></div>
@@ -101,10 +100,8 @@ export function render() {
         <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10">
             <div class="grid lg:grid-cols-12 gap-6">
 
-                <!-- ===== Левая колонка ===== -->
                 <div class="lg:col-span-3 space-y-5">
 
-                    <!-- Статистика -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.2s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-chart-line text-discord-accent"></i>
@@ -150,7 +147,6 @@ export function render() {
                         </div>
                     </div>
 
-                    <!-- Метрики -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.35s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-trophy text-yellow-400"></i>
@@ -176,7 +172,6 @@ export function render() {
                         </div>
                     </div>
 
-                    <!-- Быстрые ссылки -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.5s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-link text-discord-accent"></i>
@@ -203,10 +198,8 @@ export function render() {
                     </div>
                 </div>
 
-                <!-- ===== Центральная колонка ===== -->
                 <div class="lg:col-span-6 space-y-5">
 
-                    <!-- Профиль-карточка -->
                     <div class="card fade-in" style="animation-delay: 0.1s">
                         <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
 
@@ -220,13 +213,11 @@ export function render() {
                             <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
                             <p class="text-discord-text text-sm mt-1">Python-разработчик · Discord-боты · Веб-приложения</p>
 
-                            <!-- Аниме-теги с пояснением -->
                             <div class="mt-3 flex flex-wrap justify-center gap-2">
                                 <span class="tag tag-primary" title="Никнеймы в аниме-сообществах">チェリー | せんちゃ</span>
                                 <span class="tag bg-discord-light text-white/80" title="Любимый персонаж / отсылка к аниме">ベテルギウス</span>
                             </div>
 
-                            <!-- CTA кнопки -->
                             <div class="mt-5 flex flex-wrap justify-center gap-3">
                                 <a href="/projects"
                                    class="inline-flex items-center gap-2 bg-discord-accent hover:bg-discord-accent/80 text-white font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-discord-accent/25">
@@ -241,7 +232,6 @@ export function render() {
                             </div>
                         </div>
 
-                        <!-- Блок обо мне -->
                         <div class="bg-discord-light px-6 py-6 space-y-6">
                             <section class="fade-in" style="animation-delay: 0.3s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
@@ -294,7 +284,6 @@ export function render() {
                                 </div>
                             </section>
 
-                            <!-- Соцсети -->
                             <div class="flex justify-center gap-3 pt-2">
                                 <a href="https://vk.com/remod3" target="_blank" rel="noopener noreferrer"
                                    class="social-link" aria-label="VKontakte">
@@ -320,7 +309,6 @@ export function render() {
                         </div>
                     </div>
 
-                    <!-- Featured Projects -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.7s">
                         <div class="flex items-center justify-between mb-5">
                             <h2 class="text-white font-bold flex items-center gap-2">
@@ -355,10 +343,8 @@ export function render() {
                     </div>
                 </div>
 
-                <!-- ===== Правая колонка ===== -->
                 <div class="lg:col-span-3 space-y-5">
 
-                    <!-- Услуги -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.4s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-briefcase text-discord-green"></i>
@@ -399,7 +385,6 @@ export function render() {
                         </div>
                     </div>
 
-                    <!-- Любимые аниме -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.8s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-tv text-pink-400"></i>
@@ -456,7 +441,6 @@ export function render() {
                         </div>
                     </div>
 
-                    <!-- Игры -->
                     <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 1s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-gamepad text-discord-accent"></i>
@@ -469,11 +453,11 @@ export function render() {
                             </div>
                             <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-darker transition">
                                 <span class="text-discord-green text-xs">▶</span>
-                                <span class="text-discord-text text-sm">Apex Legends</span>
+                                <span class="text-discord-text text-sm">Arknights: Endfield</span>
                             </div>
                             <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-darker transition">
                                 <span class="text-discord-green text-xs">▶</span>
-                                <span class="text-discord-text text-sm">Genshin Impact</span>
+                                <span class="text-discord-text text-sm">PUBG Mobile</span>
                             </div>
                         </div>
                     </div>
