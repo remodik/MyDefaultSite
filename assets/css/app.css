@@ -1412,3 +1412,9 @@ a.social-link:hover::before {
     background: none !important;
     border-radius: 0 !important;
 }
+
+pre code .token {
+    padding: 0 !important;
+    background: none !important;
+    border-radius: 0 !important;
+}
