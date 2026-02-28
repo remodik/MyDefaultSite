@@ -1,4 +1,6 @@
--e 
-# Environment files
 *.env
 *.env.*
+/.github
+/.vscode
+/.idea
+/.venv
