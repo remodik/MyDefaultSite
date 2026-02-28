@@ -1408,13 +1408,9 @@ a.social-link:hover::before {
 }
 
 .token.tag,
-.token.tag .token.punctuation {
-    background: none !important;
-    border-radius: 0 !important;
-}
-
-pre code .token {
-    padding: 0 !important;
+.token.tag .token.punctuation,
+.token.tag .token.attr-name,
+.token.tag .token.attr-value {
     background: none !important;
     border-radius: 0 !important;
 }
