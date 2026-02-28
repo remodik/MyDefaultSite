@@ -46,9 +46,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+_allowed_origins_env = os.getenv("CORS_ORIGINS", "https://remod3.ru,http://localhost:3000,http://localhost:5173,https://www.remod3.ru")
+ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -422,7 +425,6 @@ async def send_reset_link_email(email: str, token: str) -> bool:
 """
 
     loop = asyncio.get_running_loop()
-    # noinspection PyUnresolvedReferences,PyTypeChecker
     return await loop.run_in_executor(
         None,
         _send_email_via_resend,
@@ -1291,7 +1293,6 @@ Email: {contact.email}{phone_text}
 """
 
     loop = asyncio.get_running_loop()
-    # noinspection PyUnresolvedReferences,PyTypeChecker
     success = await loop.run_in_executor(
         None,
         _send_email_via_resend,
@@ -1305,34 +1306,6 @@ Email: {contact.email}{phone_text}
         return {"success": True, "message": "Сообщение отправлено"}
     else:
         raise HTTPException(status_code=500, detail="Failed to send email")
-
-
-@app.get("/api/wakatime/stats")
-async def get_wakatime_stats() -> dict[str, Any]:
-    try:
-        print(f"🌐 Fetching public Wakatime data...")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://wakatime.com/api/v1/users/remodik/stats/all_time",
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Referer": "https://wakatime.com/@remodik"
-                },
-                timeout=10.0
-            )
-            print(f"📡 Wakatime response status: {response.status_code}")
-            response.raise_for_status()
-            data = response.json()
-
-            print("✅ Successfully fetched Wakatime data")
-            return {
-                **data
-            }
-    except httpx.HTTPError as e:
-        print(f"❌ Wakatime API error: {str(e)}")
-        raise HTTPException(status_code=503, detail=f"Wakatime public API error: {str(e)}")
 
 
 if __name__ == "__main__":
