@@ -82,7 +82,7 @@ const FEATURED_PROJECTS = [
         bg: 'bg-yellow-500/15',
         name: 'Lentik',
         desc: 'Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.',
-        tags: ['Python', 'FastAPI', 'Next.js', 'WebSocket', 'Docker'],
+        tags: ['Python', 'FastAPI', 'Next.js', 'WebSocket', 'TSX', 'Docker'],
         link: 'https://github.com/remodik/Lentik'
     }
 ];
