@@ -658,7 +658,9 @@ code[class*="language-"] {
 }
 
 .markdown-content table {
-    width: 100%;
+    width: auto;
+    min-width: 50%;
+    max-width: 100%;
     border-collapse: collapse;
     margin: 20px 0;
     font-size: 0.93em;
@@ -683,6 +685,16 @@ code[class*="language-"] {
     padding: 10px 14px;
     border-bottom: 1px solid #404249;
     color: #dcddde;
+}
+
+.markdown-content th,
+.markdown-content td {
+    text-align: unset;
+}
+
+.markdown-content th:not([align]),
+.markdown-content td:not([align]) {
+    text-align: left;
 }
 
 .markdown-content tbody tr:nth-child(even) td {
@@ -1398,6 +1410,5 @@ a.social-link:hover::before {
 .token.tag,
 .token.tag .token.punctuation {
     background: none !important;
-    padding: 0 !important;
     border-radius: 0 !important;
 }
