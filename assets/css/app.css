@@ -1394,3 +1394,10 @@ a.social-link::before {
 a.social-link:hover::before {
     left: 100%;
 }
+
+.token.tag,
+.token.tag .token.punctuation {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
