@@ -50,40 +50,40 @@ function updateBirthdayCountdown() {
 
 const FEATURED_PROJECTS = [
     {
-        icon: 'fa-robot',
-        color: 'text-discord-accent',
-        bg: 'bg-discord-accent/15',
-        name: 'Клан-бот',
-        desc: 'Discord-бот для управления кланами с экономикой, рейтингами и сезонными соревнованиями.',
-        tags: ['py-cord', 'SQLite', 'async'],
-        link: 'https://github.com/remodik'
+        icon: 'fa-calculator',
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/15',
+        name: 'Calc',
+        desc: 'Веб-калькулятор с поддержкой сложных выражений и историей вычислений.',
+        tags: ['C++'],
+        link: 'https://github.com/remodik/calc'
     },
     {
-        icon: 'fa-music',
-        color: 'text-pink-400',
-        bg: 'bg-pink-500/15',
-        name: 'Музыкальный бот',
-        desc: 'Продвинутый плеер для Discord с аудио-эффектами, очередями и фильтрами.',
-        tags: ['wavelink', 'Lavalink', 'FFmpeg'],
-        link: 'https://github.com/remodik'
+        icon: 'fa-bomb',
+        color: 'text-red-400',
+        bg: 'bg-red-500/15',
+        name: 'Minesweeper.WEB',
+        desc: 'Классический сапёр в браузере с разными уровнями сложности и таймером.',
+        tags: ['C#', 'WPF', 'ASP.NET'],
+        link: 'https://github.com/remodik/minesweeper.web'
     },
     {
-        icon: 'fa-shield-halved',
-        color: 'text-discord-green',
-        bg: 'bg-green-500/15',
-        name: 'Staff Manager',
-        desc: 'HR-система для Discord-серверов: trust-score, авто-статусы, журнал активности.',
-        tags: ['FastAPI', 'PostgreSQL', 'WebSocket'],
-        link: 'https://github.com/remodik'
+        icon: 'fa-globe',
+        color: 'text-purple-400',
+        bg: 'bg-purple-500/15',
+        name: 'Landing',
+        desc: 'Современный анимированный лендинг с glassmorphism-эффектами и адаптивной вёрсткой.',
+        tags: ['HTML', 'CSS', 'JS', 'Three.js', 'WebGL'],
+        link: 'https://github.com/remodik/Landing'
     },
     {
         icon: 'fa-message',
         color: 'text-yellow-400',
         bg: 'bg-yellow-500/15',
         name: 'Lentik',
-        desc: 'Семейный мессенджер на FastAPI + Next.js с файлами и уведомлениями в реальном времени.',
-        tags: ['Next.js', 'FastAPI', 'Docker'],
-        link: 'https://github.com/remodik'
+        desc: 'Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.',
+        tags: ['Python', 'FastAPI', 'Next.js', 'WebSocket', 'Docker'],
+        link: 'https://github.com/remodik/Lentik'
     }
 ];
 
