@@ -1,94 +1,101 @@
 const birthdayTimestamp = 1791406800;
 
 function formatRelativeTime(seconds) {
-    if (seconds <= 0) return "сегодня! 🎉";
+  if (seconds <= 0) return "сегодня! 🎉";
 
-    const pluralRules = new Intl.PluralRules("ru");
-    const forms = {
-        год: ["год", "года", "лет"],
-        месяц: ["месяц", "месяца", "месяцев"],
-        неделя: ["неделя", "недели", "недель"],
-        день: ["день", "дня", "дней"],
-        час: ["час", "часа", "часов"],
-        минута: ["минута", "минуты", "минут"]
-    };
-    const intervals = {
-        год: 31536000,
-        месяц: 2592000,
-        неделя: 604800,
-        день: 86400,
-        час: 3600,
-        минута: 60
-    };
+  const pluralRules = new Intl.PluralRules("ru");
+  const forms = {
+    год: ["год", "года", "лет"],
+    месяц: ["месяц", "месяца", "месяцев"],
+    неделя: ["неделя", "недели", "недель"],
+    день: ["день", "дня", "дней"],
+    час: ["час", "часа", "часов"],
+    минута: ["минута", "минуты", "минут"],
+  };
+  const intervals = {
+    год: 31536000,
+    месяц: 2592000,
+    неделя: 604800,
+    день: 86400,
+    час: 3600,
+    минута: 60,
+  };
 
-    for (const [unit, secs] of Object.entries(intervals)) {
-        const count = Math.floor(seconds / secs);
-        if (count >= 1) {
-            const form = forms[unit][
-                pluralRules.select(count) === "one" ? 0 :
-                    pluralRules.select(count) === "few" ? 1 : 2
-            ];
-            return `через ${count} ${form}`;
-        }
+  for (const [unit, secs] of Object.entries(intervals)) {
+    const count = Math.floor(seconds / secs);
+    if (count >= 1) {
+      const form =
+        forms[unit][
+          pluralRules.select(count) === "one"
+            ? 0
+            : pluralRules.select(count) === "few"
+              ? 1
+              : 2
+        ];
+      return `через ${count} ${form}`;
     }
-    return "скоро!";
+  }
+  return "скоро!";
 }
 
 function updateBirthdayCountdown() {
-    const el = document.getElementById('birthday-countdown');
-    if (!el) return;
-    const now = Math.floor(Date.now() / 1000);
-    const diff = birthdayTimestamp - now;
-    const relativeTime = formatRelativeTime(diff);
-    const fullDate = new Date(birthdayTimestamp * 1000).toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-    el.innerHTML = `<span class="text-discord-accent font-bold">${relativeTime}</span> <span class="text-discord-text/60 text-xs">(${fullDate})</span>`;
+  const el = document.getElementById("birthday-countdown");
+  if (!el) return;
+  const now = Math.floor(Date.now() / 1000);
+  const diff = birthdayTimestamp - now;
+  const relativeTime = formatRelativeTime(diff);
+  const fullDate = new Date(birthdayTimestamp * 1000).toLocaleDateString(
+    "ru-RU",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
+  el.innerHTML = `<span class="text-discord-accent font-bold">${relativeTime}</span> <span class="text-discord-text/60 text-xs">(${fullDate})</span>`;
 }
 
 const FEATURED_PROJECTS = [
-    {
-        icon: 'fa-calculator',
-        color: 'text-blue-400',
-        bg: 'bg-blue-500/15',
-        name: 'Calc',
-        desc: 'Веб-калькулятор с поддержкой сложных выражений и историей вычислений.',
-        tags: ['C++'],
-        link: 'https://github.com/remodik/calc'
-    },
-    {
-        icon: 'fa-bomb',
-        color: 'text-red-400',
-        bg: 'bg-red-500/15',
-        name: 'Minesweeper.WEB',
-        desc: 'Классический сапёр в браузере с разными уровнями сложности и таймером.',
-        tags: ['C#', 'WPF', 'ASP.NET'],
-        link: 'https://github.com/remodik/minesweeper.web'
-    },
-    {
-        icon: 'fa-globe',
-        color: 'text-purple-400',
-        bg: 'bg-purple-500/15',
-        name: 'Landing',
-        desc: 'Современный анимированный лендинг с glassmorphism-эффектами и адаптивной вёрсткой.',
-        tags: ['HTML', 'CSS', 'JS', 'Three.js', 'WebGL'],
-        link: 'https://github.com/remodik/Landing'
-    },
-    {
-        icon: 'fa-message',
-        color: 'text-yellow-400',
-        bg: 'bg-yellow-500/15',
-        name: 'Lentik',
-        desc: 'Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.',
-        tags: ['Python', 'FastAPI', 'Next.js', 'WebSocket', 'TSX', 'Docker'],
-        link: 'https://github.com/remodik/Lentik'
-    }
+  {
+    icon: "fa-calculator",
+    color: "text-blue-400",
+    bg: "bg-blue-500/15",
+    name: "Calc",
+    desc: "Веб-калькулятор с поддержкой сложных выражений и историей вычислений.",
+    tags: ["C++"],
+    link: "https://github.com/remodik/calc",
+  },
+  {
+    icon: "fa-bomb",
+    color: "text-red-400",
+    bg: "bg-red-500/15",
+    name: "Minesweeper.WEB",
+    desc: "Классический сапёр в браузере с разными уровнями сложности и таймером.",
+    tags: ["C#", "WPF", "ASP.NET"],
+    link: "https://github.com/remodik/minesweeper.web",
+  },
+  {
+    icon: "fa-globe",
+    color: "text-purple-400",
+    bg: "bg-purple-500/15",
+    name: "Landing",
+    desc: "Современный анимированный лендинг с glassmorphism-эффектами и адаптивной вёрсткой.",
+    tags: ["HTML", "CSS", "JS", "Three.js", "WebGL"],
+    link: "https://github.com/remodik/Landing",
+  },
+  {
+    icon: "fa-message",
+    color: "text-yellow-400",
+    bg: "bg-yellow-500/15",
+    name: "Lentik",
+    desc: "Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.",
+    tags: ["Python", "FastAPI", "Next.js", "WebSocket", "TSX", "Docker"],
+    link: "https://github.com/remodik/Lentik",
+  },
 ];
 
 export function render() {
-    return `
+  return `
         <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation" aria-hidden="true">
             <div class="absolute inset-0 opacity-20">
                 <div class="absolute top-20 left-10 w-72 h-72 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob"></div>
@@ -162,12 +169,8 @@ export function render() {
                                 <div class="text-xs text-discord-text mt-0.5">года опыта</div>
                             </div>
                             <div class="bg-discord-darker rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-pink-400">5+</div>
-                                <div class="text-xs text-discord-text mt-0.5">ботов в деле</div>
-                            </div>
-                            <div class="bg-discord-darker rounded-lg p-3 text-center">
                                 <div class="text-2xl font-bold text-purple-400">24/7</div>
-                                <div class="text-xs text-discord-text mt-0.5">поддержка</div>
+                                <div class="text-xs text-discord-text mt-0.5">онлайн</div>
                             </div>
                         </div>
                     </div>
@@ -239,10 +242,10 @@ export function render() {
                                     Обо мне
                                 </h2>
                                 <p class="text-discord-text text-sm leading-relaxed mb-3">
-                                    Привет! Меня зовут Никита, мне 18 лет. Живу в <span class="text-white font-medium">Тояме, Япония</span> и занимаюсь разработкой на Python.
+                                    Привет! Меня зовут Илья, мне 18 лет. Я занимаюсь разработкой на Python.
                                 </p>
                                 <p class="text-discord-text text-sm leading-relaxed mb-3">
-                                    Специализируюсь на <span class="text-discord-accent font-medium">Discord-ботах</span> (py-cord / discord.py): системы рейтингов, управление кланами, музыкальные боты, HR-инструменты для модерации. Также строю фулстек-веб-приложения на <span class="text-white font-medium">FastAPI + Next.js</span>.
+                                    Специализируюсь на <span class="text-discord-accent font-medium">Discord-ботах</span> (py-cord / discord.py): системы рейтингов, управление кланами, HR-инструменты для модерации. Также строю фулстек-веб-приложения на <span class="text-white font-medium">FastAPI + Next.js</span>.
                                 </p>
                                 <p class="text-discord-text text-sm leading-relaxed">
                                     День рождения: <span id="birthday-countdown"></span>
@@ -260,8 +263,9 @@ export function render() {
                                     <span class="tag">py-cord</span>
                                     <span class="tag">discord.py</span>
                                     <span class="tag">Next.js</span>
-                                    <span class="tag">SQLite / Turso</span>
+                                    <span class="tag">SQLite</span>
                                     <span class="tag">Docker</span>
+                                    <span class="tag">C++</span>
                                     <span class="tag">WebSocket</span>
                                     <span class="tag">HTML / CSS / JS</span>
                                 </div>
@@ -279,7 +283,7 @@ export function render() {
                                     </div>
                                     <div class="flex items-center gap-3 text-discord-text text-sm">
                                         <i class="fas fa-map-marker-alt text-discord-accent w-5 text-center"></i>
-                                        <span>Тояма, Япония 🇯🇵</span>
+                                        <span>Тояма, Япония 🇯🇵 (Мечтаю там побывать!)</span>
                                     </div>
                                 </div>
                             </section>
@@ -321,7 +325,8 @@ export function render() {
                             </a>
                         </div>
                         <div class="grid sm:grid-cols-2 gap-3" id="featured-projects">
-                            ${FEATURED_PROJECTS.map((p, i) => `
+                            ${FEATURED_PROJECTS.map(
+                              (p, i) => `
                                 <a href="${p.link}" target="_blank" rel="noopener noreferrer"
                                    class="group bg-discord-darker hover:bg-discord-darker/70 rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/30 border border-transparent hover:border-discord-lighter fade-in"
                                    style="animation-delay: ${0.75 + i * 0.1}s">
@@ -335,10 +340,11 @@ export function render() {
                                         </div>
                                     </div>
                                     <div class="flex flex-wrap gap-1.5">
-                                        ${p.tags.map(t => `<span class="text-xs bg-discord-light px-2 py-0.5 rounded-md text-discord-text/80">${t}</span>`).join('')}
+                                        ${p.tags.map((t) => `<span class="text-xs bg-discord-light px-2 py-0.5 rounded-md text-discord-text/80">${t}</span>`).join("")}
                                     </div>
                                 </a>
-                            `).join('')}
+                            `,
+                            ).join("")}
                         </div>
                     </div>
                 </div>
@@ -468,14 +474,14 @@ export function render() {
 }
 
 export function mount() {
-    updateBirthdayCountdown();
-    const interval = setInterval(updateBirthdayCountdown, 60000);
-    window._homeCleanup = () => clearInterval(interval);
+  updateBirthdayCountdown();
+  const interval = setInterval(updateBirthdayCountdown, 60000);
+  window._homeCleanup = () => clearInterval(interval);
 }
 
 export function unmount() {
-    if (window._homeCleanup) {
-        window._homeCleanup();
-        delete window._homeCleanup;
-    }
+  if (window._homeCleanup) {
+    window._homeCleanup();
+    delete window._homeCleanup;
+  }
 }
