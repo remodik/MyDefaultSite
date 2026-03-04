@@ -1457,6 +1457,13 @@ a.social-link:hover::before {
     color: #f2f3f5;
     font-size: clamp(30px, 4vw, 42px);
     line-height: 1.15;
+    margin-bottom: 10px;
+}
+
+.bot-subheading {
+    color: #d6daf4;
+    font-size: clamp(18px, 2.3vw, 26px);
+    line-height: 1.35;
     margin-bottom: 14px;
 }
 
@@ -1488,6 +1495,36 @@ a.social-link:hover::before {
     color: #f2f3f5;
     font-size: clamp(24px, 3vw, 30px);
     margin-bottom: 14px;
+}
+
+.bot-mini-stats {
+    margin-top: -6px;
+}
+
+.bot-mini-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.bot-mini-stat-card {
+    background: rgba(30, 31, 34, 0.74);
+    border: 1px solid #3a3e47;
+    border-radius: 12px;
+    padding: 14px 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.bot-mini-stat-card i {
+    color: #23a559;
+    margin-top: 3px;
+}
+
+.bot-mini-stat-card p {
+    color: #d3d7dd;
+    line-height: 1.45;
 }
 
 .bot-grid {
@@ -1644,6 +1681,10 @@ a.social-link:hover::before {
 }
 
 @media (max-width: 900px) {
+    .bot-mini-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .bot-grid {
         grid-template-columns: 1fr;
     }
@@ -1656,6 +1697,10 @@ a.social-link:hover::before {
 @media (max-width: 640px) {
     .bot-hero-content {
         padding: 22px;
+    }
+
+    .bot-mini-stats-grid {
+        grid-template-columns: 1fr;
     }
 
     .bot-subtitle {
