@@ -94,9 +94,43 @@ const FEATURED_PROJECTS = [
   },
 ];
 
+let birthdayIntervalId = null;
+let revealObserver = null;
+
+function initRevealOnScroll() {
+  const revealItems = document.querySelectorAll(".reveal-on-scroll");
+  if (!revealItems.length) return;
+
+  if (!("IntersectionObserver" in window)) {
+    revealItems.forEach((item) => item.classList.add("is-visible"));
+    return;
+  }
+
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        revealObserver.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.18, rootMargin: "0px 0px -8% 0px" },
+  );
+
+  revealItems.forEach((item) => revealObserver.observe(item));
+}
+
+function cleanupRevealOnScroll() {
+  if (revealObserver) {
+    revealObserver.disconnect();
+    revealObserver = null;
+  }
+}
+
 export function render() {
   return `
         <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation" aria-hidden="true">
+            <div class="home-depth-gradient absolute inset-0"></div>
             <div class="absolute inset-0 opacity-20">
                 <div class="absolute top-20 left-10 w-72 h-72 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob"></div>
                 <div class="absolute top-40 right-10 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-2000"></div>
@@ -104,12 +138,12 @@ export function render() {
             </div>
         </div>
 
-        <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10">
+        <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10 home-page">
             <div class="grid lg:grid-cols-12 gap-6">
 
                 <div class="lg:col-span-3 space-y-5">
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.2s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.2s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-chart-line text-discord-accent"></i>
                             Статистика
@@ -154,7 +188,7 @@ export function render() {
                         </div>
                     </div>
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.35s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.35s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-trophy text-yellow-400"></i>
                             Результаты
@@ -175,7 +209,7 @@ export function render() {
                         </div>
                     </div>
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.5s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.5s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-link text-discord-accent"></i>
                             Навигация
@@ -203,7 +237,7 @@ export function render() {
 
                 <div class="lg:col-span-6 space-y-5">
 
-                    <div class="card fade-in" style="animation-delay: 0.1s">
+                    <div class="card home-hero-card reveal-on-scroll" style="animation-delay: 0.1s">
                         <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
 
                         <div class="relative -mt-16 px-6 pb-6 text-center">
@@ -213,30 +247,28 @@ export function render() {
                                 <div class="avatar-decoration"></div>
                             </div>
 
-                            <h1 class="text-2xl font-bold text-white mt-4">remod3</h1>
-                            <p class="text-discord-text text-sm mt-1">Python-разработчик · Discord-боты · Веб-приложения</p>
+                            <h1 class="home-hero-title text-white mt-4">remod3</h1>
+                            <p class="home-hero-subtitle mt-2">Python Developer • Discord Bots • Web Applications</p>
+                            <p class="home-hero-description mt-3">
+                                Создаю сложные системы для Discord-серверов, рейтинговые системы, кланы, модерацию и веб-панели.
+                            </p>
 
                             <div class="mt-3 flex flex-wrap justify-center gap-2">
                                 <span class="tag tag-primary" title="Никнеймы в аниме-сообществах">チェリー | せんちゃ</span>
                                 <span class="tag bg-discord-light text-white/80" title="Любимый персонаж / отсылка к аниме">ベテルギウス</span>
                             </div>
 
-                            <div class="mt-5 flex flex-wrap justify-center gap-3">
+                            <div class="mt-6 flex flex-wrap justify-center gap-3">
                                 <a href="/projects"
-                                   class="inline-flex items-center gap-2 bg-discord-accent hover:bg-discord-accent/80 text-white font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-discord-accent/25">
+                                   class="btn btn-primary btn-lg hero-projects-btn">
                                     <i class="fas fa-folder-open text-sm"></i>
                                     Смотреть проекты
-                                </a>
-                                <a href="/contact"
-                                   class="inline-flex items-center gap-2 bg-discord-light hover:bg-discord-lighter text-white font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 border border-discord-lighter">
-                                    <i class="fas fa-paper-plane text-sm"></i>
-                                    Связаться
                                 </a>
                             </div>
                         </div>
 
                         <div class="bg-discord-light px-6 py-6 space-y-6">
-                            <section class="fade-in" style="animation-delay: 0.3s">
+                            <section class="reveal-on-scroll" style="animation-delay: 0.3s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
                                     <i class="fas fa-user text-pink-400"></i>
                                     Обо мне
@@ -252,7 +284,7 @@ export function render() {
                                 </p>
                             </section>
 
-                            <section class="fade-in" style="animation-delay: 0.45s">
+                            <section class="reveal-on-scroll" style="animation-delay: 0.45s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
                                     <i class="fas fa-wrench text-yellow-400"></i>
                                     Технологии
@@ -271,7 +303,7 @@ export function render() {
                                 </div>
                             </section>
 
-                            <section class="fade-in" style="animation-delay: 0.55s">
+                            <section class="reveal-on-scroll" style="animation-delay: 0.55s">
                                 <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
                                     <i class="fas fa-location-dot text-discord-green"></i>
                                     Контакты
@@ -313,7 +345,7 @@ export function render() {
                         </div>
                     </div>
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.7s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.7s">
                         <div class="flex items-center justify-between mb-5">
                             <h2 class="text-white font-bold flex items-center gap-2">
                                 <i class="fas fa-rocket text-discord-accent"></i>
@@ -351,7 +383,7 @@ export function render() {
 
                 <div class="lg:col-span-3 space-y-5">
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.4s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.4s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-briefcase text-discord-green"></i>
                             Что делаю
@@ -391,7 +423,7 @@ export function render() {
                         </div>
                     </div>
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 0.8s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.8s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-tv text-pink-400"></i>
                             Любимые аниме
@@ -447,7 +479,7 @@ export function render() {
                         </div>
                     </div>
 
-                    <div class="bg-discord-light rounded-xl p-5 fade-in border border-discord-lighter/40" style="animation-delay: 1s">
+                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 1s">
                         <h3 class="text-white font-bold mb-4 flex items-center gap-2">
                             <i class="fas fa-gamepad text-discord-accent"></i>
                             Играю сейчас
@@ -475,13 +507,15 @@ export function render() {
 
 export function mount() {
   updateBirthdayCountdown();
-  const interval = setInterval(updateBirthdayCountdown, 60000);
-  window._homeCleanup = () => clearInterval(interval);
+  birthdayIntervalId = setInterval(updateBirthdayCountdown, 60000);
+  initRevealOnScroll();
 }
 
 export function unmount() {
-  if (window._homeCleanup) {
-    window._homeCleanup();
-    delete window._homeCleanup;
+  if (birthdayIntervalId) {
+    clearInterval(birthdayIntervalId);
+    birthdayIntervalId = null;
   }
+
+  cleanupRevealOnScroll();
 }
