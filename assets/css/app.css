@@ -1414,3 +1414,251 @@ a.social-link:hover::before {
     background: none !important;
     border-radius: 0 !important;
 }
+
+.bot-page {
+    min-height: calc(100vh - 64px);
+}
+
+.bot-glow {
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(80px);
+    opacity: 0.16;
+    z-index: 0;
+}
+
+.bot-glow-left {
+    background: #5865f2;
+    top: -140px;
+    left: -140px;
+}
+
+.bot-glow-right {
+    background: #23a559;
+    right: -180px;
+    top: 260px;
+}
+
+.bot-hero {
+    border-radius: 20px;
+    background: linear-gradient(145deg, #232632 0%, #1f222b 50%, #1a1d25 100%);
+    border: 1px solid rgba(88, 101, 242, 0.35);
+    margin-bottom: 32px;
+}
+
+.bot-hero-content {
+    padding: 36px;
+}
+
+.bot-title {
+    color: #f2f3f5;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.15;
+    margin-bottom: 14px;
+}
+
+.bot-subtitle {
+    color: #c8ccd2;
+    font-size: 17px;
+    line-height: 1.65;
+    max-width: 860px;
+    margin-bottom: 18px;
+}
+
+.bot-cta-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.bot-note {
+    font-size: 13px;
+    color: #949ba4;
+    margin-top: 14px;
+}
+
+.bot-section {
+    margin-bottom: 28px;
+}
+
+.bot-section-title {
+    color: #f2f3f5;
+    font-size: clamp(24px, 3vw, 30px);
+    margin-bottom: 14px;
+}
+
+.bot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.bot-card {
+    background: rgba(43, 45, 49, 0.75);
+    border: 1px solid #3c4049;
+    border-radius: 14px;
+    padding: 18px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.bot-card:hover {
+    border-color: #5865f2;
+    transform: translateY(-2px);
+}
+
+.bot-card-title {
+    color: #f2f3f5;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.bot-card-text {
+    color: #c7cbd1;
+    line-height: 1.6;
+}
+
+.bot-chip {
+    margin-top: 12px;
+    display: inline-block;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    color: #a8b0ff;
+    background: rgba(88, 101, 242, 0.15);
+    border: 1px solid rgba(88, 101, 242, 0.4);
+    border-radius: 999px;
+    padding: 5px 10px;
+}
+
+.bot-list {
+    display: grid;
+    gap: 10px;
+}
+
+.bot-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid #3a3e47;
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: rgba(30, 31, 34, 0.72);
+}
+
+.bot-list-item i {
+    margin-top: 4px;
+    color: #23a559;
+}
+
+.bot-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.bot-step-card {
+    background: rgba(43, 45, 49, 0.82);
+    border: 1px solid #3c4049;
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+}
+
+.bot-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #5865f2;
+    color: #fff;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.bot-step-card p {
+    line-height: 1.6;
+}
+
+.bot-faq-list {
+    display: grid;
+    gap: 10px;
+}
+
+.bot-faq-item {
+    background: rgba(30, 31, 34, 0.78);
+    border: 1px solid #404249;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.bot-faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    color: #f2f3f5;
+    font-weight: 600;
+    position: relative;
+}
+
+.bot-faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.bot-faq-item summary::after {
+    content: '+';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #5865f2;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.bot-faq-item[open] summary::after {
+    content: '−';
+}
+
+.bot-faq-item p {
+    padding: 0 16px 14px;
+    color: #c8ccd2;
+    line-height: 1.6;
+}
+
+.bot-bottom-cta {
+    margin-top: 12px;
+    padding: 24px;
+    border-radius: 16px;
+    background: linear-gradient(150deg, rgba(88, 101, 242, 0.19), rgba(35, 165, 89, 0.14));
+    border: 1px solid rgba(88, 101, 242, 0.35);
+}
+
+.bot-bottom-cta h2 {
+    color: #f2f3f5;
+    font-size: clamp(24px, 3vw, 32px);
+    margin-bottom: 14px;
+}
+
+@media (max-width: 900px) {
+    .bot-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bot-steps {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .bot-hero-content {
+        padding: 22px;
+    }
+
+    .bot-subtitle {
+        font-size: 15px;
+    }
+}

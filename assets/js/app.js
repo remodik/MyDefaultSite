@@ -11,6 +11,7 @@ import * as projectsPage from './pages/projects.js';
 import * as projectDetailPage from './pages/project-detail.js';
 import * as chatPage from './pages/chat.js';
 import * as contactPage from './pages/contact.js';
+import * as botPage from './pages/bot.js';
 import * as adminPanelPage from './pages/admin-panel.js';
 import * as notFoundPage from './pages/not-found.js';
 
@@ -27,6 +28,7 @@ router.addRoute('/projects', projectsPage, { requireAuth: true });
 router.addRoute('/projects/:id', projectDetailPage, { requireAuth: true });
 router.addRoute('/chat', chatPage, { requireAuth: true });
 router.addRoute('/contact', contactPage);
+router.addRoute('/bot', botPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
 
 router.setNotFound(notFoundPage);
