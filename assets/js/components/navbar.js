@@ -18,6 +18,7 @@ export function renderNavbar() {
         { path: '/bot', label: 'Бот', icon: 'fa-robot', public: true },
         { path: '/projects', label: 'Проекты', icon: 'fa-folder', requireAuth: true },
         { path: '/chat', label: 'Чат', icon: 'fa-comments', requireAuth: true },
+        { path: '/profile', label: 'Профиль', icon: 'fa-user-circle', requireAuth: true },
         { path: '/contact', label: 'Контакты', icon: 'fa-envelope', public: true },
         { path: '/admin', label: 'Админ', icon: 'fa-shield-alt', requireAdmin: true },
     ];
@@ -50,6 +51,9 @@ export function renderNavbar() {
                 <div class="flex items-center gap-2 ml-4">
                     ${authenticated ? `
                         <div class="flex items-center gap-3">
+                            <a href="/profile" class="text-discord-text hover:text-white transition" aria-label="Профиль">
+                                <i class="fas fa-user-circle text-lg"></i>
+                            </a>
                             <span class="text-sm text-discord-text hidden sm:inline">
                                 <i class="fas fa-user mr-1"></i>${user?.username || 'User'}
                                 ${admin ? '<span class="tag tag-primary ml-1">Admin</span>' : ''}

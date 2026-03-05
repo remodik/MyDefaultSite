@@ -7,7 +7,7 @@ from typing import AsyncIterator
 import ssl
 
 from dotenv import load_dotenv
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -113,6 +113,43 @@ class ChatMessage(Base):
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    display_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    bio: Mapped[str] = mapped_column(Text, default="")
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    accent_color: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    privacy_dm: Mapped[str] = mapped_column(String(20), default="all")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+    __table_args__ = (
+        UniqueConstraint("user_a", "user_b", name="uq_conversations_pair"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_a: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_b: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class DirectMessage(Base):
+    __tablename__ = "direct_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    sender_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
 class Service(Base):

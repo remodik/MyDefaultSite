@@ -257,6 +257,58 @@ export const adminApi = {
     },
 };
 
+export const meApi = {
+    async get() {
+        return apiRequest('/api/me');
+    },
+
+    async getProfile() {
+        return apiRequest('/api/me/profile');
+    },
+
+    async updateProfile(data) {
+        return apiRequest('/api/me/profile', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
+    async getConversations() {
+        return apiRequest('/api/me/conversations');
+    },
+};
+
+export const usersApi = {
+    async search(query, limit = 20) {
+        const q = (query || '').trim();
+        if (!q) return [];
+        return apiRequest(`/api/users/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(limit)}`);
+    },
+};
+
+export const conversationsApi = {
+    async createOrGet(userId) {
+        return apiRequest('/api/conversations', {
+            method: 'POST',
+            body: JSON.stringify({ user_id: userId }),
+        });
+    },
+
+    async getMessages(conversationId, { limit = 50, before = null } = {}) {
+        const params = new URLSearchParams();
+        params.set('limit', String(limit));
+        if (before) params.set('before', before);
+        return apiRequest(`/api/conversations/${conversationId}/messages?${params.toString()}`);
+    },
+
+    async sendMessage(conversationId, text) {
+        return apiRequest(`/api/conversations/${conversationId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({ text }),
+        });
+    },
+};
+
 export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) {
     let wsUrl;
     if (API_URL) {

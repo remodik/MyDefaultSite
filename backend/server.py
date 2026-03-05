@@ -18,18 +18,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import and_, delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import (
     AdminResetRequest,
     ChatMessage,
+    Conversation,
+    DirectMessage,
     File as FileModel,
     PasswordReset as PasswordResetModel,
     Project,
     Service,
     User,
+    UserProfile,
     async_session_factory,
     get_session,
     init_models,
@@ -71,6 +74,10 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 else:
     print("WARNING: RESEND_API_KEY is not set. Emails will not be sent.")
+
+VALID_DM_PRIVACY_VALUES = {"all", "none"}
+DEFAULT_DM_PRIVACY = "all"
+MAX_DM_MESSAGE_LENGTH = 1000
 
 
 class ConnectionManager:
@@ -171,6 +178,22 @@ class FileMove(BaseModel):
 
 class ChatMessagePayload(BaseModel):
     message: str
+
+
+class ProfileUpdatePayload(BaseModel):
+    display_name: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
+    accent_color: str | None = None
+    privacy_dm: str | None = None
+
+
+class ConversationCreatePayload(BaseModel):
+    user_id: str
+
+
+class DirectMessageCreatePayload(BaseModel):
+    text: str
 
 
 class ServiceCreate(BaseModel):
@@ -292,8 +315,163 @@ async def ensure_db_connection(session: AsyncSession) -> None:
         ) from exc
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)) -> dict[
-    str, Any]:
+def _normalize_display_name(display_name: str | None, username: str) -> str:
+    clean_name = (display_name or "").strip()
+    return clean_name or username
+
+
+def _normalize_privacy_dm(privacy_dm: str | None) -> str:
+    value = (privacy_dm or DEFAULT_DM_PRIVACY).strip().lower()
+    if value not in VALID_DM_PRIVACY_VALUES:
+        raise HTTPException(status_code=400, detail="Invalid privacy_dm value. Allowed: all, none")
+    return value
+
+
+def profile_to_dict(user: User, profile: UserProfile | None) -> dict[str, Any]:
+    display_name = _normalize_display_name(profile.display_name if profile else None, user.username)
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "display_name": display_name,
+        "bio": (profile.bio if profile else "") or "",
+        "avatar_url": profile.avatar_url if profile else None,
+        "accent_color": profile.accent_color if profile else None,
+        "privacy_dm": _normalize_privacy_dm(profile.privacy_dm if profile else DEFAULT_DM_PRIVACY),
+        "created_at": _to_iso(profile.created_at if profile else user.created_at),
+        "updated_at": _to_iso(profile.updated_at if profile else user.created_at),
+    }
+
+
+def direct_message_to_dict(
+    message: DirectMessage,
+    sender_user: User,
+    sender_profile: UserProfile | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "sender_id": message.sender_id,
+        "user_id": message.sender_id,
+        "username": sender_user.username,
+        "display_name": _normalize_display_name(sender_profile.display_name if sender_profile else None, sender_user.username),
+        "text": message.text,
+        "message": message.text,
+        "created_at": _to_iso(message.created_at),
+        "timestamp": _to_iso(message.created_at),
+    }
+
+
+def get_partner_id(conversation: Conversation, current_user_id: str) -> str:
+    return conversation.user_b if conversation.user_a == current_user_id else conversation.user_a
+
+
+def _conversation_pair(user_id_1: str, user_id_2: str) -> tuple[str, str]:
+    ordered = sorted([user_id_1, user_id_2])
+    return ordered[0], ordered[1]
+
+
+async def get_or_create_profile(
+    session: AsyncSession,
+    user: User,
+    commit_on_create: bool = True,
+) -> UserProfile:
+    result = await session.execute(select(UserProfile).where(UserProfile.user_id == user.id))
+    profile = result.scalar_one_or_none()
+    if profile:
+        return profile
+
+    profile = UserProfile(
+        user_id=user.id,
+        display_name=user.username,
+        bio="",
+        avatar_url=None,
+        accent_color=None,
+        privacy_dm=DEFAULT_DM_PRIVACY,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(profile)
+
+    if commit_on_create:
+        await session.commit()
+        await session.refresh(profile)
+    else:
+        await session.flush()
+
+    return profile
+
+
+async def get_conversation_for_user_or_404(
+    session: AsyncSession,
+    conversation_id: str,
+    user_id: str,
+) -> Conversation:
+    result = await session.execute(select(Conversation).where(Conversation.id == conversation_id))
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if conversation.user_a != user_id and conversation.user_b != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return conversation
+
+
+async def ensure_user_accepts_dm(
+    session: AsyncSession,
+    target_user: User,
+) -> UserProfile | None:
+    target_profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == target_user.id))
+    target_profile = target_profile_result.scalar_one_or_none()
+    privacy_dm = _normalize_privacy_dm(target_profile.privacy_dm if target_profile else DEFAULT_DM_PRIVACY)
+    if privacy_dm == "none":
+        raise HTTPException(status_code=403, detail="User does not accept direct messages")
+    return target_profile
+
+
+async def build_conversation_summary(
+    session: AsyncSession,
+    conversation: Conversation,
+    current_user_id: str,
+) -> dict[str, Any]:
+    partner_id = get_partner_id(conversation, current_user_id)
+    partner_user = await session.get(User, partner_id)
+    if not partner_user:
+        raise HTTPException(status_code=404, detail="Conversation participant not found")
+
+    partner_profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == partner_id))
+    partner_profile = partner_profile_result.scalar_one_or_none()
+
+    last_message_result = await session.execute(
+        select(DirectMessage)
+        .where(DirectMessage.conversation_id == conversation.id)
+        .order_by(DirectMessage.created_at.desc())
+        .limit(1)
+    )
+    last_message = last_message_result.scalar_one_or_none()
+
+    partner_display_name = _normalize_display_name(partner_profile.display_name if partner_profile else None, partner_user.username)
+    return {
+        "id": conversation.id,
+        "user_a": conversation.user_a,
+        "user_b": conversation.user_b,
+        "created_at": _to_iso(conversation.created_at),
+        "partner": {
+            "id": partner_user.id,
+            "username": partner_user.username,
+            "display_name": partner_display_name,
+            "avatar_url": partner_profile.avatar_url if partner_profile else None,
+        },
+        "last_message": last_message.text if last_message else "",
+        "last_message_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
+        "updated_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
+    }
+
+
+async def get_current_user_model(
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User:
     await ensure_db_connection(session)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -312,7 +490,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
-    return user_to_public_dict(user)
+    return user
+
+
+async def get_current_user(current_user: User = Depends(get_current_user_model)) -> dict[str, Any]:
+    return user_to_public_dict(current_user)
 
 
 async def get_current_admin(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
@@ -465,6 +647,18 @@ async def register(user: UserCreate, session: AsyncSession = Depends(get_session
         created_at=datetime.now(),
     )
     session.add(user_obj)
+    session.add(
+        UserProfile(
+            user_id=user_id,
+            display_name=user.username,
+            bio="",
+            avatar_url=None,
+            accent_color=None,
+            privacy_dm=DEFAULT_DM_PRIVACY,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+    )
     await session.commit()
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -502,6 +696,271 @@ async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -
 @app.get("/api/auth/me")
 async def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return current_user
+
+
+@app.get("/api/me")
+async def get_me_short(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    return current_user
+
+
+@app.get("/api/me/profile")
+async def get_my_profile(
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    profile = await get_or_create_profile(session, current_user)
+    return profile_to_dict(current_user, profile)
+
+
+@app.put("/api/me/profile")
+async def update_my_profile(
+    payload: ProfileUpdatePayload,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    profile = await get_or_create_profile(session, current_user, commit_on_create=False)
+
+    if payload.display_name is not None:
+        profile.display_name = _normalize_display_name(payload.display_name, current_user.username)
+
+    if payload.bio is not None:
+        profile.bio = payload.bio.strip()[:400]
+
+    if payload.avatar_url is not None:
+        profile.avatar_url = payload.avatar_url.strip()[:512] or None
+
+    if payload.accent_color is not None:
+        profile.accent_color = payload.accent_color.strip()[:32] or None
+
+    if payload.privacy_dm is not None:
+        profile.privacy_dm = _normalize_privacy_dm(payload.privacy_dm)
+
+    profile.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(profile)
+
+    return profile_to_dict(current_user, profile)
+
+
+@app.get("/api/users/search")
+async def search_users(
+    q: str = "",
+    limit: int = 20,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    search_query = q.strip()
+    if not search_query:
+        return []
+
+    safe_limit = min(max(limit, 1), 50)
+    users_result = await session.execute(
+        select(User)
+        .where(
+            User.id != current_user.id,
+            User.username.ilike(f"%{search_query}%"),
+        )
+        .order_by(User.username.asc())
+        .limit(safe_limit)
+    )
+    users = users_result.scalars().all()
+    if not users:
+        return []
+
+    user_ids = [user.id for user in users]
+    profiles_result = await session.execute(select(UserProfile).where(UserProfile.user_id.in_(user_ids)))
+    profiles_map = {profile.user_id: profile for profile in profiles_result.scalars().all()}
+
+    payload: list[dict[str, Any]] = []
+    for user in users:
+        profile = profiles_map.get(user.id)
+        privacy_dm = _normalize_privacy_dm(profile.privacy_dm if profile else DEFAULT_DM_PRIVACY)
+        payload.append({
+            "id": user.id,
+            "username": user.username,
+            "display_name": _normalize_display_name(profile.display_name if profile else None, user.username),
+            "avatar_url": profile.avatar_url if profile else None,
+            "privacy_dm": privacy_dm,
+            "can_receive_dm": privacy_dm != "none",
+        })
+
+    return payload
+
+
+@app.post("/api/conversations")
+async def create_or_get_conversation(
+    payload: ConversationCreatePayload,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    target_user_id = payload.user_id.strip()
+    if not target_user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    if target_user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot create conversation with yourself")
+
+    target_user = await session.get(User, target_user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await ensure_user_accepts_dm(session, target_user)
+
+    user_a, user_b = _conversation_pair(current_user.id, target_user_id)
+    conversation_result = await session.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.user_a == user_a,
+                Conversation.user_b == user_b,
+            )
+        )
+    )
+    conversation = conversation_result.scalar_one_or_none()
+
+    if not conversation:
+        conversation = Conversation(
+            id=str(uuid.uuid4()),
+            user_a=user_a,
+            user_b=user_b,
+            created_at=datetime.now(),
+        )
+        session.add(conversation)
+        await session.commit()
+        await session.refresh(conversation)
+
+    return await build_conversation_summary(session, conversation, current_user.id)
+
+
+@app.get("/api/me/conversations")
+async def get_my_conversations(
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    conversations_result = await session.execute(
+        select(Conversation).where(
+            or_(
+                Conversation.user_a == current_user.id,
+                Conversation.user_b == current_user.id,
+            )
+        )
+    )
+    conversations = conversations_result.scalars().all()
+
+    summaries: list[dict[str, Any]] = []
+    for conversation in conversations:
+        try:
+            summaries.append(await build_conversation_summary(session, conversation, current_user.id))
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                continue
+            raise
+
+    summaries.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
+    return summaries
+
+
+@app.get("/api/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: str,
+    limit: int = 50,
+    before: str | None = None,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    await get_conversation_for_user_or_404(session, conversation_id, current_user.id)
+
+    safe_limit = min(max(limit, 1), 100)
+    query = (
+        select(DirectMessage)
+        .where(DirectMessage.conversation_id == conversation_id)
+        .order_by(DirectMessage.created_at.desc())
+        .limit(safe_limit)
+    )
+
+    if before:
+        try:
+            before_dt = datetime.fromisoformat(before.replace("Z", "+00:00"))
+            if before_dt.tzinfo is not None:
+                before_dt = before_dt.replace(tzinfo=None)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid 'before' datetime format") from exc
+        query = (
+            select(DirectMessage)
+            .where(
+                DirectMessage.conversation_id == conversation_id,
+                DirectMessage.created_at < before_dt,
+            )
+            .order_by(DirectMessage.created_at.desc())
+            .limit(safe_limit)
+        )
+
+    messages_result = await session.execute(query)
+    direct_messages = list(messages_result.scalars().all())[::-1]
+
+    sender_ids = {msg.sender_id for msg in direct_messages}
+    if not sender_ids:
+        return []
+
+    users_result = await session.execute(select(User).where(User.id.in_(sender_ids)))
+    users_map = {user.id: user for user in users_result.scalars().all()}
+
+    profiles_result = await session.execute(select(UserProfile).where(UserProfile.user_id.in_(sender_ids)))
+    profiles_map = {profile.user_id: profile for profile in profiles_result.scalars().all()}
+
+    payload: list[dict[str, Any]] = []
+    for message in direct_messages:
+        sender = users_map.get(message.sender_id)
+        if not sender:
+            continue
+        payload.append(direct_message_to_dict(message, sender, profiles_map.get(message.sender_id)))
+
+    return payload
+
+
+@app.post("/api/conversations/{conversation_id}/messages")
+async def send_conversation_message(
+    conversation_id: str,
+    payload: DirectMessageCreatePayload,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    conversation = await get_conversation_for_user_or_404(session, conversation_id, current_user.id)
+
+    text_value = payload.text.strip()
+    if not text_value:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(text_value) > MAX_DM_MESSAGE_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Message too long (max {MAX_DM_MESSAGE_LENGTH} chars)")
+
+    partner_id = get_partner_id(conversation, current_user.id)
+    partner_user = await session.get(User, partner_id)
+    if not partner_user:
+        raise HTTPException(status_code=404, detail="Conversation participant not found")
+
+    await ensure_user_accepts_dm(session, partner_user)
+
+    current_user_profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+    current_user_profile = current_user_profile_result.scalar_one_or_none()
+
+    message = DirectMessage(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation.id,
+        sender_id=current_user.id,
+        text=text_value,
+        created_at=datetime.now(),
+    )
+    session.add(message)
+    await session.commit()
+    await session.refresh(message)
+
+    return direct_message_to_dict(message, current_user, current_user_profile)
 
 
 @app.post("/api/auth/password-reset-request")
