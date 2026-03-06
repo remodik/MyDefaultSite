@@ -4,14 +4,12 @@
     box-sizing: border-box;
 }
 
-
-
 html {
     scroll-behavior: smooth;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background-color: #111214;
     color: #b5bac1;
 }
@@ -35,23 +33,44 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .fade-in {
@@ -71,11 +90,19 @@ body {
 }
 
 .card {
-    background: linear-gradient(to bottom, #5865F2 0%, #5865F2 200px, #2b2d31 260px, #2b2d31 100%);
+    background: linear-gradient(
+        to bottom,
+        #5865f2 0%,
+        #5865f2 200px,
+        #2b2d31 260px,
+        #2b2d31 100%
+    );
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition:
+        transform 0.3s,
+        box-shadow 0.3s;
     border: 1px solid #404249;
 }
 
@@ -112,7 +139,8 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 2;
-    background: url("https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true") no-repeat center;
+    background: url("https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true")
+        no-repeat center;
     background-size: contain;
     pointer-events: none;
 }
@@ -126,7 +154,7 @@ body {
 .banner {
     height: 200px;
     background-size: cover;
-    background: linear-gradient(135deg, #5865F2 0%, #7289DA 100%) center;
+    background: linear-gradient(135deg, #5865f2 0%, #7289da 100%) center;
 }
 
 .btn {
@@ -219,7 +247,9 @@ body {
     border-radius: 8px;
     color: #f2f3f5;
     font-size: 16px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
 .input:focus {
@@ -446,7 +476,7 @@ textarea.input {
     .mobile-menu-btn {
         display: block;
     }
-    
+
     .nav-links {
         display: none;
         position: absolute;
@@ -458,11 +488,11 @@ textarea.input {
         padding: 16px;
         border-bottom: 1px solid #404249;
     }
-    
+
     .nav-links.open {
         display: flex;
     }
-    
+
     .nav-link {
         width: 100%;
         text-align: center;
@@ -478,7 +508,7 @@ pre[class*="language-"] {
 }
 
 code[class*="language-"] {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
     font-size: 14px;
 }
 
@@ -513,10 +543,21 @@ code[class*="language-"] {
     border-bottom: 1px solid #404249;
 }
 
-.markdown-content h3 { font-size: 1.25em; }
-.markdown-content h4 { font-size: 1.1em;  color: #b5bac1; }
-.markdown-content h5 { font-size: 1em;    color: #949ba4; }
-.markdown-content h6 { font-size: 0.9em;  color: #72767d; }
+.markdown-content h3 {
+    font-size: 1.25em;
+}
+.markdown-content h4 {
+    font-size: 1.1em;
+    color: #b5bac1;
+}
+.markdown-content h5 {
+    font-size: 1em;
+    color: #949ba4;
+}
+.markdown-content h6 {
+    font-size: 0.9em;
+    color: #72767d;
+}
 
 .markdown-content > h1:first-child,
 .markdown-content > h2:first-child {
@@ -531,7 +572,9 @@ code[class*="language-"] {
     color: #5865f2;
     text-decoration: none;
     border-bottom: 1px solid transparent;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+        border-color 0.15s,
+        color 0.15s;
 }
 
 .markdown-content a:hover {
@@ -608,7 +651,7 @@ code[class*="language-"] {
 }
 
 .markdown-content input[type="checkbox"]:checked::after {
-    content: '';
+    content: "";
     position: absolute;
     left: 3px;
     top: 0px;
@@ -637,7 +680,8 @@ code[class*="language-"] {
     background: rgba(30, 31, 34, 0.8);
     padding: 2px 7px;
     border-radius: 5px;
-    font-family: 'Consolas', 'JetBrains Mono', 'Monaco', 'Courier New', monospace;
+    font-family:
+        "Consolas", "JetBrains Mono", "Monaco", "Courier New", monospace;
     font-size: 0.875em;
     color: #eb459e;
     border: 1px solid #404249;
@@ -747,7 +791,7 @@ code[class*="language-"] {
 .markdown-content h1[id]::before,
 .markdown-content h2[id]::before,
 .markdown-content h3[id]::before {
-    content: '#';
+    content: "#";
     color: #5865f2;
     margin-right: 8px;
     font-weight: 400;
@@ -789,7 +833,11 @@ code[class*="language-"] {
     flex-direction: column;
     height: calc(100vh - 64px);
     min-height: 0;
-    background: linear-gradient(180deg, rgba(30, 31, 34, 0.7) 0%, rgba(17, 18, 20, 0.95) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(30, 31, 34, 0.7) 0%,
+        rgba(17, 18, 20, 0.95) 100%
+    );
 }
 
 .chat-topbar {
@@ -889,8 +937,16 @@ code[class*="language-"] {
     flex-direction: column;
     gap: 10px;
     background:
-        radial-gradient(1200px 320px at 50% -10%, rgba(88, 101, 242, 0.09), transparent 70%),
-        radial-gradient(700px 240px at 0% 100%, rgba(35, 165, 89, 0.06), transparent 75%),
+        radial-gradient(
+            1200px 320px at 50% -10%,
+            rgba(88, 101, 242, 0.09),
+            transparent 70%
+        ),
+        radial-gradient(
+            700px 240px at 0% 100%,
+            rgba(35, 165, 89, 0.06),
+            transparent 75%
+        ),
         linear-gradient(180deg, rgba(30, 31, 34, 0.2), rgba(17, 18, 20, 0.18));
 }
 
@@ -989,7 +1045,10 @@ code[class*="language-"] {
     white-space: normal;
     word-break: break-word;
     line-height: 1.5;
-    transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
 }
 
 .chat-group.is-other .chat-bubble:hover {
@@ -1053,7 +1112,12 @@ code[class*="language-"] {
     z-index: 5;
     padding: 10px 14px 14px;
     border-top: 1px solid #404249;
-    background: linear-gradient(180deg, rgba(43, 45, 49, 0.35), rgba(43, 45, 49, 0.92) 35%, #2b2d31 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(43, 45, 49, 0.35),
+        rgba(43, 45, 49, 0.92) 35%,
+        #2b2d31 100%
+    );
     backdrop-filter: blur(10px);
 }
 
@@ -1174,7 +1238,9 @@ code[class*="language-"] {
     background: #2b2d31;
     border-radius: 12px;
     padding: 24px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
     border: 1px solid #404249;
 }
 
@@ -1187,7 +1253,9 @@ code[class*="language-"] {
     background: #2b2d31;
     border-radius: 12px;
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
     border: 1px solid #404249;
     cursor: pointer;
 }
@@ -1325,7 +1393,7 @@ code[class*="language-"] {
     .container {
         padding: 16px;
     }
-    
+
     .modal {
         margin: 16px;
         max-height: calc(100vh - 32px);
@@ -1346,7 +1414,13 @@ code[class*="language-"] {
     }
 
     .card {
-        background: linear-gradient(to bottom, #5865F2 0%, #5865F2 150px, #2b2d31 210px, #2b2d31 100%);
+        background: linear-gradient(
+            to bottom,
+            #5865f2 0%,
+            #5865f2 150px,
+            #2b2d31 210px,
+            #2b2d31 100%
+        );
     }
 }
 
@@ -1574,7 +1648,8 @@ code[class*="language-"] {
 }
 
 @keyframes blob {
-    0%, 100% {
+    0%,
+    100% {
         transform: translate(0, 0) scale(1);
     }
     33% {
@@ -1619,7 +1694,8 @@ code[class*="language-"] {
 }
 
 @keyframes pulse-dot {
-    0%, 100% {
+    0%,
+    100% {
         opacity: 1;
         box-shadow: 0 0 0 0 currentColor;
     }
@@ -1661,12 +1737,17 @@ code[class*="language-"] {
 }
 
 .bg-discord-light::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: -1px;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, transparent, rgba(88, 101, 242, 0.1), transparent);
+    background: linear-gradient(
+        135deg,
+        transparent,
+        rgba(88, 101, 242, 0.1),
+        transparent
+    );
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
@@ -1721,13 +1802,18 @@ a.social-link {
 }
 
 a.social-link::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
     transition: left 0.5s;
 }
 
@@ -1866,7 +1952,9 @@ a.social-link:hover::before {
     border: 1px solid #3c4049;
     border-radius: 14px;
     padding: 18px;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .bot-card:hover {
@@ -1888,7 +1976,7 @@ a.social-link:hover::before {
 .bot-chip {
     margin-top: 12px;
     display: inline-block;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
     font-size: 12px;
     color: #a8b0ff;
     background: rgba(88, 101, 242, 0.15);
@@ -1974,7 +2062,7 @@ a.social-link:hover::before {
 }
 
 .bot-faq-item summary::after {
-    content: '+';
+    content: "+";
     position: absolute;
     right: 16px;
     top: 50%;
@@ -1985,7 +2073,7 @@ a.social-link:hover::before {
 }
 
 .bot-faq-item[open] summary::after {
-    content: '−';
+    content: "−";
 }
 
 .bot-faq-item p {
@@ -1998,7 +2086,11 @@ a.social-link:hover::before {
     margin-top: 12px;
     padding: 24px;
     border-radius: 16px;
-    background: linear-gradient(150deg, rgba(88, 101, 242, 0.19), rgba(35, 165, 89, 0.14));
+    background: linear-gradient(
+        150deg,
+        rgba(88, 101, 242, 0.19),
+        rgba(35, 165, 89, 0.14)
+    );
     border: 1px solid rgba(88, 101, 242, 0.35);
 }
 
@@ -2038,13 +2130,32 @@ a.social-link:hover::before {
 
 .home-depth-gradient {
     background:
-        radial-gradient(58% 42% at 50% 12%, rgba(88, 101, 242, 0.22) 0%, rgba(88, 101, 242, 0) 100%),
-        radial-gradient(40% 34% at 15% 82%, rgba(35, 165, 89, 0.16) 0%, rgba(35, 165, 89, 0) 100%),
-        linear-gradient(180deg, rgba(16, 19, 28, 0.84) 0%, rgba(17, 18, 20, 0.97) 60%, #111214 100%);
+        radial-gradient(
+            58% 42% at 50% 12%,
+            rgba(88, 101, 242, 0.22) 0%,
+            rgba(88, 101, 242, 0) 100%
+        ),
+        radial-gradient(
+            40% 34% at 15% 82%,
+            rgba(35, 165, 89, 0.16) 0%,
+            rgba(35, 165, 89, 0) 100%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(16, 19, 28, 0.84) 0%,
+            rgba(17, 18, 20, 0.97) 60%,
+            #111214 100%
+        );
 }
 
 .home-hero-card {
-    background: linear-gradient(to bottom, #5865f2 0%, #5865f2 200px, #272b35 260px, #1f232e 100%);
+    background: linear-gradient(
+        to bottom,
+        #5865f2 0%,
+        #5865f2 200px,
+        #272b35 260px,
+        #1f232e 100%
+    );
     border-color: rgba(120, 130, 255, 0.4);
     box-shadow:
         0 20px 44px rgba(0, 0, 0, 0.42),
@@ -2059,8 +2170,8 @@ a.social-link:hover::before {
 }
 
 .home-hero-title {
-    font-size: clamp(2.35rem, 5vw, 3.7rem);
-    font-weight: 800;
+    font-size: clamp(2.35rem, 2vw, 3.7rem);
+    font-weight: 700;
     letter-spacing: 0.02em;
     line-height: 1.05;
     text-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
@@ -2087,7 +2198,10 @@ a.social-link:hover::before {
 
 .home-soft-card {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
 }
 
 .home-soft-card:hover {
@@ -2101,7 +2215,11 @@ a.social-link:hover::before {
     flex-direction: column;
     height: calc(100vh - 64px);
     min-height: 0;
-    background: linear-gradient(180deg, rgba(30, 31, 34, 0.7) 0%, rgba(17, 18, 20, 0.96) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(30, 31, 34, 0.7) 0%,
+        rgba(17, 18, 20, 0.96) 100%
+    );
 }
 
 .chat-layout {
@@ -2119,7 +2237,11 @@ a.social-link:hover::before {
 
 .chat-sidebar {
     border-left: 1px solid #404249;
-    background: linear-gradient(180deg, rgba(30, 31, 34, 0.98), rgba(24, 25, 28, 0.98));
+    background: linear-gradient(
+        180deg,
+        rgba(30, 31, 34, 0.98),
+        rgba(24, 25, 28, 0.98)
+    );
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -2363,7 +2485,11 @@ a.social-link:hover::before {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(145deg, rgba(88, 101, 242, 0.9), rgba(70, 78, 190, 0.95));
+    background: linear-gradient(
+        145deg,
+        rgba(88, 101, 242, 0.9),
+        rgba(70, 78, 190, 0.95)
+    );
     color: #fff;
     font-size: 34px;
     font-weight: 700;
@@ -2456,7 +2582,9 @@ a.social-link:hover::before {
 .reveal-on-scroll {
     opacity: 0;
     transform: translateY(24px);
-    transition: opacity 0.55s ease, transform 0.55s ease;
+    transition:
+        opacity 0.55s ease,
+        transform 0.55s ease;
     will-change: opacity, transform;
 }
 

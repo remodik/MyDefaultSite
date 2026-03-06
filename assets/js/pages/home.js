@@ -247,15 +247,15 @@ export function render() {
                                 <div class="avatar-decoration"></div>
                             </div>
 
-                            <h1 class="home-hero-title text-white mt-4">remod3</h1>
+                            <h2 class="home-hero-title text-white mt-4">remod3</h2>
                             <p class="home-hero-subtitle mt-2">Python Developer • Discord Bots • Web Applications</p>
                             <p class="home-hero-description mt-3">
                                 Создаю сложные системы для Discord-серверов, рейтинговые системы, кланы, модерацию и веб-панели.
                             </p>
 
                             <div class="mt-3 flex flex-wrap justify-center gap-2">
-                                <span class="tag tag-primary" title="Никнеймы в аниме-сообществах">チェリー | せんちゃ</span>
-                                <span class="tag bg-discord-light text-white/80" title="Любимый персонаж / отсылка к аниме">ベテルギウス</span>
+                                <span class="tag tag-primary">チェリー | せんちゃ</span>
+                                <span class="tag bg-discord-light text-white/80">ベテルギウスロマネ・コンティ</span>
                             </div>
 
                             <div class="mt-6 flex flex-wrap justify-center gap-3">
