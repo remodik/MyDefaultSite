@@ -421,7 +421,7 @@ function showSbpModal(sbp, onClosed) {
 
 async function handlePurchaseCourse(button) {
     if (!isAuthenticated()) {
-        router.navigate('/login');
+        await router.navigate('/login');
         return;
     }
 
@@ -454,7 +454,7 @@ async function handlePurchaseCourse(button) {
 
 async function handlePurchasePart(partId, button) {
     if (!isAuthenticated()) {
-        router.navigate('/login');
+        await router.navigate('/login');
         return;
     }
 
