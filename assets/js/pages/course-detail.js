@@ -8,8 +8,8 @@ let course = null;
 let purchases = [];
 let currentCourseId = null;
 
-const SBP_PHONE_FALLBACK = '+70000000000';
-const SBP_BANK_FALLBACK = 'Тинькофф';
+const SBP_PHONE_FALLBACK = '+7 987 745 65 36';
+const SBP_BANK_FALLBACK = 'Тинькофф / Сбер';
 
 function formatPrice(amount) {
     return `${Number(amount || 0).toLocaleString('ru-RU')} ₽`;
