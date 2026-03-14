@@ -132,7 +132,7 @@ export function mount() {
                 const response = await authApi.register(username, password, email);
                 login(response.access_token, response.user);
                 showToast('Регистрация успешна!', 'success');
-                router.navigate('/');
+                await router.navigate('/');
             } catch (error) {
                 errorDiv.textContent = error.message || 'Ошибка регистрации';
                 errorDiv.classList.remove('hidden');

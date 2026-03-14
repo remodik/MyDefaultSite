@@ -212,7 +212,7 @@ async function handleResetSubmit(e) {
     try {
         await authApi.resetPassword(resetToken, newPassword);
         showToast('Пароль успешно изменён!', 'success');
-        router.navigate('/login');
+        await router.navigate('/login');
     } catch (error) {
         errorDiv.textContent = error.message || 'Ошибка сброса пароля';
         errorDiv.classList.remove('hidden');

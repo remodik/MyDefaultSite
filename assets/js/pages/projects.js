@@ -1,6 +1,5 @@
 import { projectsApi } from '../api.js';
 import { isAdmin } from '../auth.js';
-import { router } from '../router.js';
 import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
 
@@ -164,7 +163,7 @@ async function saveProject(id = null) {
             showToast('Проект создан', 'success');
         }
         closeModal();
-        loadProjects();
+        await loadProjects();
     } catch (error) {
         showToast(error.message || 'Ошибка сохранения', 'error');
     }
@@ -175,7 +174,7 @@ async function deleteProject(id) {
         try {
             await projectsApi.delete(id);
             showToast('Проект удалён', 'success');
-            loadProjects();
+            await loadProjects();
         } catch (error) {
             showToast(error.message || 'Ошибка удаления', 'error');
         }

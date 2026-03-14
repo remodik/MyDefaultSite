@@ -92,7 +92,7 @@ export function mount() {
                 const response = await authApi.login(username, password);
                 login(response.access_token, response.user);
                 showToast(`Добро пожаловать, ${response.user.username}!`, 'success');
-                router.navigate('/');
+                await router.navigate('/');
             } catch (error) {
                 errorDiv.textContent = error.message || 'Ошибка входа. Проверьте данные.';
                 errorDiv.classList.remove('hidden');

@@ -1,7 +1,6 @@
-import { filesApi } from '../api.js';
-import { getFileTypeFromName } from '../utils.js';
-import { showToast } from '../utils.js';
-import { showModal, closeModal } from './modal.js';
+import {filesApi} from '../api.js';
+import {getFileTypeFromName, showToast} from '../utils.js';
+import {closeModal, showModal} from './modal.js';
 
 let expandedFolders = new Set();
 let selectedItem = null;
@@ -76,7 +75,7 @@ function renderTreeItem(item, onSelect, onContextMenu, projectId) {
     const isSelected = selectedItem?.id === item.id;
     const hasChildren = item.is_folder && item.children.length > 0;
 
-    const itemHtml = `
+    return `
         <div class="file-tree-item" data-item-id="${item.id}">
             <div
                 class="file-tree-item-content ${isSelected ? 'selected' : ''}"
@@ -103,8 +102,6 @@ function renderTreeItem(item, onSelect, onContextMenu, projectId) {
             ` : ''}
         </div>
     `;
-
-    return itemHtml;
 }
 
 export function renderFileTree(files, containerId, onSelect, projectId) {
@@ -113,16 +110,14 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
 
     const tree = buildFileTree(files);
 
-    const html = `
+    container.innerHTML = `
         <div class="file-tree">
             ${tree.length > 0
-                ? tree.map(item => renderTreeItem(item, onSelect, null, projectId)).join('')
-                : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No files yet</p></div>'
-            }
+        ? tree.map(item => renderTreeItem(item, onSelect, null, projectId)).join('')
+        : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No files yet</p></div>'
+    }
         </div>
     `;
-
-    container.innerHTML = html;
     attachTreeEventListeners(container, files, onSelect, projectId);
 }
 

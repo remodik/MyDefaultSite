@@ -203,7 +203,7 @@ async function saveService(id = null) {
             showToast('Услуга создана', 'success');
         }
         closeModal();
-        loadServices();
+        await loadServices();
     } catch (error) {
         showToast(error.message || 'Ошибка сохранения', 'error');
     }
@@ -214,7 +214,7 @@ async function deleteService(id) {
         try {
             await servicesApi.delete(id);
             showToast('Услуга удалена', 'success');
-            loadServices();
+            await loadServices();
         } catch (error) {
             showToast(error.message || 'Ошибка удаления', 'error');
         }
