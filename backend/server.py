@@ -13,11 +13,11 @@ from typing import Any
 import bcrypt
 import resend
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import and_, delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,10 +26,13 @@ from backend.database import (
     AdminResetRequest,
     ChatMessage,
     Conversation,
+    Course,
+    CoursePart,
     DirectMessage,
     File as FileModel,
     PasswordReset as PasswordResetModel,
     Project,
+    Purchase,
     Service,
     User,
     UserProfile,
@@ -69,6 +72,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "dev@remod3.ru")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://remod3.ru")
+SBP_PHONE = os.getenv("SBP_PHONE", "+70000000000")
+SBP_BANK = os.getenv("SBP_BANK", "Тинькофф")
+SBP_RECIPIENT = os.getenv("SBP_RECIPIENT", "Получатель не указан")
 
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
@@ -220,6 +226,200 @@ class ContactMessage(BaseModel):
     phone: str | None = None
     subject: str
     message: str
+
+
+class _StrictSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CourseCreate(_StrictSchema):
+    title: str = Field(..., min_length=1, max_length=255)
+    short_description: str = Field("", max_length=512)
+    description: str = Field("", max_length=50000)
+    price: int = Field(0, ge=0)
+    cover_url: str | None = Field(None, max_length=512)
+    is_published: bool = False
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Название курса не может быть пустым")
+        return cleaned
+
+    @field_validator("short_description", "description")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("cover_url")
+    @classmethod
+    def normalize_cover_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class CourseUpdate(_StrictSchema):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    short_description: str | None = Field(None, max_length=512)
+    description: str | None = Field(None, max_length=50000)
+    price: int | None = Field(None, ge=0)
+    cover_url: str | None = None
+    is_published: bool | None = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Название курса не может быть пустым")
+        return cleaned
+
+    @field_validator("short_description", "description")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return value.strip()
+
+    @field_validator("cover_url")
+    @classmethod
+    def normalize_optional_cover_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class CourseResponse(_StrictSchema):
+    id: str
+    title: str
+    short_description: str
+    description: str
+    price: int
+    cover_url: str | None
+    is_published: bool
+    created_at: str
+    updated_at: str
+    parts: list["CoursePartResponse"] | None = None
+
+
+class CoursePartCreate(_StrictSchema):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str = Field("", max_length=512)
+    content: str = Field("", max_length=500000)
+    price: int = Field(0, ge=0)
+    order: int = Field(0, ge=0)
+    is_preview: bool = False
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Название раздела не может быть пустым")
+        return cleaned
+
+    @field_validator("description")
+    @classmethod
+    def strip_description(cls, value: str) -> str:
+        return value.strip()
+
+
+class CoursePartUpdate(_StrictSchema):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=512)
+    content: str | None = Field(None, max_length=500000)
+    price: int | None = Field(None, ge=0)
+    order: int | None = Field(None, ge=0)
+    is_preview: bool | None = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Название раздела не может быть пустым")
+        return cleaned
+
+    @field_validator("description")
+    @classmethod
+    def strip_optional_description(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return value.strip()
+
+
+class CoursePartResponse(_StrictSchema):
+    id: str
+    course_id: str
+    title: str
+    description: str
+    price: int
+    order: int
+    is_preview: bool
+    has_access: bool
+    created_at: str
+    updated_at: str
+
+
+class CoursePartContentResponse(CoursePartResponse):
+    content: str
+
+
+class PurchaseResponse(_StrictSchema):
+    id: str
+    user_id: str
+    course_id: str | None
+    part_id: str | None
+    amount: int
+    status: str
+    sbp_comment: str | None
+    created_at: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        allowed = {"pending", "completed", "cancelled"}
+        if value not in allowed:
+            raise ValueError("Недопустимый статус покупки")
+        return value
+
+
+class SbpDetails(_StrictSchema):
+    phone: str
+    bank: str
+    recipient: str
+    amount: int
+    comment: str
+    instruction: str
+
+
+class PurchaseWithSbpResponse(_StrictSchema):
+    purchase: PurchaseResponse
+    sbp: SbpDetails | None
+
+    @model_validator(mode="after")
+    def validate_sbp_payload(self) -> "PurchaseWithSbpResponse":
+        if self.purchase.status == "pending" and self.sbp is None:
+            raise ValueError("Для ожидающей покупки требуются реквизиты СБП")
+        return self
+
+
+class AdminPurchaseResponse(PurchaseResponse):
+    username: str
+    course_title: str | None
+    part_title: str | None
+
+
+CourseResponse.model_rebuild()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -501,6 +701,133 @@ async def get_current_admin(current_user: dict[str, Any] = Depends(get_current_u
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
+
+
+VALID_PURCHASE_STATUSES = {"pending", "completed", "cancelled"}
+
+
+def _course_to_response(
+    course: Course,
+    parts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": course.id,
+        "title": course.title,
+        "short_description": course.short_description or "",
+        "description": course.description or "",
+        "price": int(course.price),
+        "cover_url": course.cover_url,
+        "is_published": bool(course.is_published),
+        "created_at": _to_iso(course.created_at),
+        "updated_at": _to_iso(course.updated_at),
+    }
+    if parts is not None:
+        payload["parts"] = parts
+    return payload
+
+
+def _course_part_to_response(
+    part: CoursePart,
+    has_access: bool,
+    include_content: bool = False,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": part.id,
+        "course_id": part.course_id,
+        "title": part.title,
+        "description": part.description or "",
+        "price": int(part.price),
+        "order": int(part.order),
+        "is_preview": bool(part.is_preview),
+        "has_access": bool(has_access),
+        "created_at": _to_iso(part.created_at),
+        "updated_at": _to_iso(part.updated_at),
+    }
+    if include_content:
+        payload["content"] = part.content or ""
+    return payload
+
+
+def _purchase_to_response(purchase: Purchase) -> dict[str, Any]:
+    return {
+        "id": purchase.id,
+        "user_id": purchase.user_id,
+        "course_id": purchase.course_id,
+        "part_id": purchase.part_id,
+        "amount": int(purchase.amount),
+        "status": purchase.status,
+        "sbp_comment": purchase.sbp_comment,
+        "created_at": _to_iso(purchase.created_at),
+    }
+
+
+def _admin_purchase_to_response(
+    purchase: Purchase,
+    username: str,
+    course_title: str | None,
+    part_title: str | None,
+) -> dict[str, Any]:
+    payload = _purchase_to_response(purchase)
+    payload["username"] = username
+    payload["course_title"] = course_title
+    payload["part_title"] = part_title
+    return payload
+
+
+def _build_sbp_details(amount: int, comment: str) -> dict[str, Any]:
+    return {
+        "phone": SBP_PHONE,
+        "bank": SBP_BANK,
+        "recipient": SBP_RECIPIENT,
+        "amount": int(amount),
+        "comment": comment,
+        "instruction": f"Переведите {amount} ₽ на {SBP_PHONE} ({SBP_BANK}) с комментарием {comment}",
+    }
+
+
+async def _get_optional_user_from_request(request: Request, session: AsyncSession) -> User | None:
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header:
+        return None
+
+    scheme, _, token = auth_header.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+
+    try:
+        return await get_current_user_model(token=token.strip(), session=session)
+    except HTTPException:
+        return None
+
+
+async def _has_access_to_part(
+    session: AsyncSession,
+    user_id: str,
+    part: CoursePart,
+    is_admin_user: bool = False,
+) -> bool:
+    if is_admin_user or part.is_preview:
+        return True
+
+    result = await session.execute(
+        select(Purchase).where(
+            Purchase.user_id == user_id,
+            Purchase.course_id == part.course_id,
+            Purchase.part_id.is_(None),
+            Purchase.status == "completed",
+        )
+    )
+    if result.scalar_one_or_none():
+        return True
+
+    result = await session.execute(
+        select(Purchase).where(
+            Purchase.user_id == user_id,
+            Purchase.part_id == part.id,
+            Purchase.status == "completed",
+        )
+    )
+    return result.scalar_one_or_none() is not None
 
 
 def generate_reset_token() -> str:
@@ -1765,6 +2092,454 @@ Email: {contact.email}{phone_text}
         return {"success": True, "message": "Сообщение отправлено"}
     else:
         raise HTTPException(status_code=500, detail="Failed to send email")
+
+
+@app.get("/api/courses", response_model=list[CourseResponse])
+async def get_courses_catalog(
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    result = await session.execute(
+        select(Course)
+        .where(Course.is_published.is_(True))
+        .order_by(Course.created_at.desc())
+    )
+    courses = result.scalars().all()
+    return [_course_to_response(course) for course in courses]
+
+
+@app.get("/api/courses/all", response_model=list[CourseResponse])
+async def get_all_courses_admin(
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    result = await session.execute(select(Course).order_by(Course.created_at.desc()))
+    courses = result.scalars().all()
+    return [_course_to_response(course) for course in courses]
+
+
+@app.get("/api/courses/{course_id}", response_model=CourseResponse)
+async def get_course_detail(
+    course_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    course = await session.get(Course, course_id)
+    optional_user = await _get_optional_user_from_request(request, session)
+    is_admin_user = bool(optional_user and optional_user.role == "admin")
+
+    if not course or (not course.is_published and not is_admin_user):
+        raise HTTPException(status_code=404, detail="Курс не найден")
+
+    parts_result = await session.execute(
+        select(CoursePart)
+        .where(CoursePart.course_id == course.id)
+        .order_by(CoursePart.order.asc(), CoursePart.created_at.asc())
+    )
+    parts = parts_result.scalars().all()
+
+    serialized_parts: list[dict[str, Any]] = []
+    for part in parts:
+        if optional_user:
+            has_access = await _has_access_to_part(
+                session,
+                optional_user.id,
+                part,
+                is_admin_user=is_admin_user,
+            )
+        else:
+            has_access = bool(part.is_preview)
+        serialized_parts.append(_course_part_to_response(part, has_access=has_access))
+
+    return _course_to_response(course, parts=serialized_parts)
+
+
+@app.post("/api/courses", response_model=CourseResponse, status_code=201)
+async def create_course(
+    payload: CourseCreate,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    now = datetime.now()
+
+    course = Course(
+        id=str(uuid.uuid4()),
+        title=payload.title,
+        short_description=payload.short_description,
+        description=payload.description,
+        price=int(payload.price),
+        cover_url=payload.cover_url,
+        is_published=bool(payload.is_published),
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(course)
+    await session.commit()
+    await session.refresh(course)
+
+    return _course_to_response(course)
+
+
+@app.put("/api/courses/{course_id}", response_model=CourseResponse)
+async def update_course(
+    course_id: str,
+    payload: CourseUpdate,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    course = await session.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Курс не найден")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(course, key, value)
+    course.updated_at = datetime.now()
+
+    await session.commit()
+    await session.refresh(course)
+    return _course_to_response(course)
+
+
+@app.delete("/api/courses/{course_id}")
+async def delete_course(
+    course_id: str,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    await ensure_db_connection(session)
+
+    course = await session.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Курс не найден")
+
+    parts_subquery = select(CoursePart.id).where(CoursePart.course_id == course_id)
+    await session.execute(
+        delete(Purchase).where(
+            or_(
+                Purchase.course_id == course_id,
+                Purchase.part_id.in_(parts_subquery),
+            )
+        )
+    )
+    await session.execute(delete(CoursePart).where(CoursePart.course_id == course_id))
+    await session.delete(course)
+    await session.commit()
+
+    return {"message": "Курс удалён"}
+
+
+@app.post("/api/courses/{course_id}/parts", response_model=CoursePartContentResponse, status_code=201)
+async def create_course_part(
+    course_id: str,
+    payload: CoursePartCreate,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    course = await session.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Курс не найден")
+
+    now = datetime.now()
+    part = CoursePart(
+        id=str(uuid.uuid4()),
+        course_id=course_id,
+        title=payload.title,
+        description=payload.description,
+        content=payload.content,
+        price=int(payload.price),
+        order=int(payload.order),
+        is_preview=bool(payload.is_preview),
+        created_at=now,
+        updated_at=now,
+    )
+
+    session.add(part)
+    await session.commit()
+    await session.refresh(part)
+
+    return _course_part_to_response(part, has_access=True, include_content=True)
+
+
+@app.put("/api/courses/{course_id}/parts/{part_id}", response_model=CoursePartContentResponse)
+async def update_course_part(
+    course_id: str,
+    part_id: str,
+    payload: CoursePartUpdate,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    part = await session.get(CoursePart, part_id)
+    if not part or part.course_id != course_id:
+        raise HTTPException(status_code=404, detail="Раздел не найден")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(part, key, value)
+    part.updated_at = datetime.now()
+
+    await session.commit()
+    await session.refresh(part)
+
+    return _course_part_to_response(part, has_access=True, include_content=True)
+
+
+@app.delete("/api/courses/{course_id}/parts/{part_id}")
+async def delete_course_part(
+    course_id: str,
+    part_id: str,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    await ensure_db_connection(session)
+
+    part = await session.get(CoursePart, part_id)
+    if not part or part.course_id != course_id:
+        raise HTTPException(status_code=404, detail="Раздел не найден")
+
+    await session.execute(delete(Purchase).where(Purchase.part_id == part_id))
+    await session.delete(part)
+    await session.commit()
+
+    return {"message": "Раздел удалён"}
+
+
+@app.get("/api/courses/{course_id}/parts/{part_id}/content", response_model=CoursePartContentResponse)
+async def get_course_part_content(
+    course_id: str,
+    part_id: str,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    part = await session.get(CoursePart, part_id)
+    if not part or part.course_id != course_id:
+        raise HTTPException(status_code=404, detail="Раздел не найден")
+
+    has_access = await _has_access_to_part(
+        session,
+        current_user.id,
+        part,
+        is_admin_user=current_user.role == "admin",
+    )
+    if not has_access:
+        raise HTTPException(status_code=403, detail="Требуется покупка")
+
+    return _course_part_to_response(part, has_access=True, include_content=True)
+
+
+@app.post("/api/courses/{course_id}/purchase", response_model=PurchaseWithSbpResponse)
+async def purchase_course(
+    course_id: str,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    result = await session.execute(
+        select(Course).where(
+            Course.id == course_id,
+            Course.is_published.is_(True),
+        )
+    )
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Курс не найден")
+
+    existing = await session.execute(
+        select(Purchase).where(
+            Purchase.user_id == current_user.id,
+            Purchase.course_id == course.id,
+            Purchase.part_id.is_(None),
+            Purchase.status.in_(["pending", "completed"]),
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Уже существует активная или завершённая покупка",
+        )
+
+    amount = int(course.price)
+    is_free = amount == 0
+    sbp_comment = None if is_free else f"CRS-{uuid.uuid4().hex[:8].upper()}"
+
+    purchase = Purchase(
+        id=str(uuid.uuid4()),
+        user_id=current_user.id,
+        course_id=course.id,
+        part_id=None,
+        amount=amount,
+        status="completed" if is_free else "pending",
+        sbp_comment=sbp_comment,
+        created_at=datetime.now(),
+    )
+    session.add(purchase)
+    await session.commit()
+    await session.refresh(purchase)
+
+    sbp_payload = _build_sbp_details(amount, sbp_comment) if sbp_comment else None
+    return {
+        "purchase": _purchase_to_response(purchase),
+        "sbp": sbp_payload,
+    }
+
+
+@app.post("/api/courses/{course_id}/parts/{part_id}/purchase", response_model=PurchaseWithSbpResponse)
+async def purchase_course_part(
+    course_id: str,
+    part_id: str,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    part_result = await session.execute(
+        select(CoursePart).where(
+            CoursePart.id == part_id,
+            CoursePart.course_id == course_id,
+        )
+    )
+    part = part_result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(status_code=404, detail="Раздел не найден")
+
+    course_purchase_result = await session.execute(
+        select(Purchase).where(
+            Purchase.user_id == current_user.id,
+            Purchase.course_id == course_id,
+            Purchase.part_id.is_(None),
+            Purchase.status == "completed",
+        )
+    )
+    if course_purchase_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="У вас уже есть доступ через покупку курса")
+
+    part_purchase_result = await session.execute(
+        select(Purchase).where(
+            Purchase.user_id == current_user.id,
+            Purchase.part_id == part_id,
+            Purchase.status.in_(["pending", "completed"]),
+        )
+    )
+    if part_purchase_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Уже существует активная или завершённая покупка",
+        )
+
+    amount = int(part.price)
+    should_complete = amount == 0 or part.is_preview
+    sbp_comment = None if should_complete else f"PRT-{uuid.uuid4().hex[:8].upper()}"
+
+    purchase = Purchase(
+        id=str(uuid.uuid4()),
+        user_id=current_user.id,
+        course_id=None,
+        part_id=part.id,
+        amount=amount,
+        status="completed" if should_complete else "pending",
+        sbp_comment=sbp_comment,
+        created_at=datetime.now(),
+    )
+
+    session.add(purchase)
+    await session.commit()
+    await session.refresh(purchase)
+
+    sbp_payload = _build_sbp_details(amount, sbp_comment) if sbp_comment else None
+    return {
+        "purchase": _purchase_to_response(purchase),
+        "sbp": sbp_payload,
+    }
+
+
+@app.get("/api/me/purchases", response_model=list[PurchaseResponse])
+async def get_my_purchases(
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    result = await session.execute(
+        select(Purchase)
+        .where(Purchase.user_id == current_user.id)
+        .order_by(Purchase.created_at.desc())
+    )
+    purchases = result.scalars().all()
+    return [_purchase_to_response(purchase) for purchase in purchases]
+
+
+@app.get("/api/admin/purchases", response_model=list[AdminPurchaseResponse])
+async def get_admin_purchases(
+    status: str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+
+    if status is not None and status not in VALID_PURCHASE_STATUSES:
+        raise HTTPException(status_code=400, detail="Недопустимый статус")
+
+    query = (
+        select(Purchase, User, Course, CoursePart)
+        .select_from(Purchase)
+        .outerjoin(User, Purchase.user_id == User.id)
+        .outerjoin(Course, Purchase.course_id == Course.id)
+        .outerjoin(CoursePart, Purchase.part_id == CoursePart.id)
+        .order_by(Purchase.created_at.desc())
+    )
+    if status is not None:
+        query = query.where(Purchase.status == status)
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    payload: list[dict[str, Any]] = []
+    for purchase, user, course, part in rows:
+        payload.append(
+            _admin_purchase_to_response(
+                purchase=purchase,
+                username=user.username if user else "Удалённый пользователь",
+                course_title=course.title if course else None,
+                part_title=part.title if part else None,
+            )
+        )
+
+    return payload
+
+
+@app.put("/api/admin/purchases/{purchase_id}/status", response_model=PurchaseResponse)
+async def update_purchase_status(
+    purchase_id: str,
+    status: str,
+    current_user: dict[str, Any] = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    if status not in VALID_PURCHASE_STATUSES:
+        raise HTTPException(status_code=400, detail="Недопустимый статус")
+
+    purchase = await session.get(Purchase, purchase_id)
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Покупка не найдена")
+
+    purchase.status = status
+    await session.commit()
+    await session.refresh(purchase)
+
+    return _purchase_to_response(purchase)
 
 
 if __name__ == "__main__":

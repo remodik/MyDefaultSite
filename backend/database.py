@@ -7,7 +7,7 @@ from typing import AsyncIterator
 import ssl
 
 from dotenv import load_dotenv
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -164,6 +164,76 @@ class Service(Base):
     frameworks: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Course(Base):
+    __tablename__ = "courses"
+    __table_args__ = (
+        Index("ix_courses_is_published", "is_published"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    short_description: Mapped[str] = mapped_column(String(512), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    price: Mapped[int] = mapped_column(default=0)
+    cover_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class CoursePart(Base):
+    __tablename__ = "course_parts"
+    __table_args__ = (
+        Index("ix_course_parts_course_order", "course_id", "order"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    course_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(512), default="")
+    content: Mapped[str] = mapped_column(Text, default="")
+    price: Mapped[int] = mapped_column(default=0)
+    order: Mapped[int] = mapped_column(default=0)
+    is_preview: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Purchase(Base):
+    __tablename__ = "purchases"
+    __table_args__ = (
+        CheckConstraint(
+            "(course_id IS NOT NULL AND part_id IS NULL) OR "
+            "(course_id IS NULL AND part_id IS NOT NULL)",
+            name="ck_purchase_target",
+        ),
+        CheckConstraint("amount >= 0", name="ck_purchase_amount"),
+        CheckConstraint(
+            "status IN ('pending', 'completed', 'cancelled')",
+            name="ck_purchase_status",
+        ),
+        Index("ix_purchases_user_id", "user_id"),
+        Index("ix_purchases_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    course_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("courses.id", ondelete="SET NULL"), nullable=True
+    )
+    part_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("course_parts.id", ondelete="SET NULL"), nullable=True
+    )
+    amount: Mapped[int] = mapped_column(default=0)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    sbp_comment: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
 async def init_models() -> None:

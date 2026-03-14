@@ -1,10 +1,13 @@
 import { adminApi } from '../api.js';
+import { adminPurchasesApi } from '../api.js';
 import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { confirmModal } from '../components/modal.js';
 
 let users = [];
 let resetRequests = [];
+let purchases = [];
 let activeTab = 'users';
+let purchasesFilter = '';
 
 export function render() {
     return `
@@ -26,6 +29,10 @@ export function render() {
                     <i class="fas fa-key"></i>
                     Запросы на сброс
                     <span id="requests-badge" class="hidden ml-2 px-2 py-0.5 bg-discord-red rounded-full text-xs">0</span>
+                </button>
+                <button class="btn ${activeTab === 'purchases' ? 'btn-primary' : 'btn-secondary'}" id="tab-purchases">
+                    <i class="fas fa-shopping-cart"></i>
+                    Покупки курсов
                 </button>
             </div>
             
@@ -175,6 +182,133 @@ function renderResetRequests() {
     });
 }
 
+function getPurchaseStatusClass(status) {
+    if (status === 'pending') return 'tag-warning';
+    if (status === 'completed') return 'tag-success';
+    if (status === 'cancelled') return 'tag-danger';
+    return 'tag';
+}
+
+function getPurchaseStatusLabel(status) {
+    if (status === 'pending') return 'Ожидает';
+    if (status === 'completed') return 'Подтверждена';
+    if (status === 'cancelled') return 'Отклонена';
+    return status;
+}
+
+function getPurchaseTargetLabel(purchase) {
+    if (purchase.part_title) {
+        const courseTitle = purchase.course_title || 'Курс удалён';
+        return `${courseTitle} / ${purchase.part_title}`;
+    }
+
+    if (purchase.course_title) {
+        return purchase.course_title;
+    }
+
+    return 'Курс/раздел удалён';
+}
+
+function renderPurchases() {
+    const container = document.getElementById('admin-content');
+    if (!container) return;
+
+    if (purchases.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-shopping-cart"></i>
+                <h3 class="text-xl font-semibold text-white mt-4">Покупок пока нет</h3>
+                <p class="text-discord-text mt-2">Здесь будут отображаться оплаты курсов и разделов</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex justify-end">
+                <select id="purchases-status-filter" class="input max-w-xs">
+                    <option value="" ${purchasesFilter === '' ? 'selected' : ''}>Все статусы</option>
+                    <option value="pending" ${purchasesFilter === 'pending' ? 'selected' : ''}>pending</option>
+                    <option value="completed" ${purchasesFilter === 'completed' ? 'selected' : ''}>completed</option>
+                    <option value="cancelled" ${purchasesFilter === 'cancelled' ? 'selected' : ''}>cancelled</option>
+                </select>
+            </div>
+
+            <div class="bg-discord-light rounded-lg overflow-hidden">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Курс/раздел</th>
+                            <th>Сумма</th>
+                            <th>Комментарий СБП</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${purchases.map(purchase => `
+                            <tr>
+                                <td>${escapeHtml(purchase.username)}</td>
+                                <td>${escapeHtml(getPurchaseTargetLabel(purchase))}</td>
+                                <td>${Number(purchase.amount || 0).toLocaleString('ru-RU')} ₽</td>
+                                <td>${purchase.sbp_comment ? escapeHtml(purchase.sbp_comment) : '<span class="text-discord-text/60">—</span>'}</td>
+                                <td>
+                                    <span class="tag ${getPurchaseStatusClass(purchase.status)}">
+                                        ${escapeHtml(getPurchaseStatusLabel(purchase.status))}
+                                    </span>
+                                </td>
+                                <td>${formatDate(purchase.created_at)}</td>
+                                <td>
+                                    ${purchase.status === 'pending' ? `
+                                        <div class="flex gap-2">
+                                            <button class="btn btn-success btn-sm purchase-complete-btn" data-id="${escapeHtml(purchase.id)}">
+                                                ✓ Подтвердить
+                                            </button>
+                                            <button class="btn btn-danger btn-sm purchase-cancel-btn" data-id="${escapeHtml(purchase.id)}">
+                                                ✗ Отклонить
+                                            </button>
+                                        </div>
+                                    ` : '<span class="text-discord-text/60">—</span>'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    const filterSelect = document.getElementById('purchases-status-filter');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', async () => {
+            purchasesFilter = filterSelect.value;
+            await loadPurchases(purchasesFilter || null);
+        });
+    }
+
+    container.querySelectorAll('.purchase-complete-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const purchaseId = btn.dataset.id;
+            if (!purchaseId) return;
+            await updatePurchaseStatus(purchaseId, 'completed', btn);
+        });
+    });
+
+    container.querySelectorAll('.purchase-cancel-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const purchaseId = btn.dataset.id;
+            if (!purchaseId) return;
+
+            confirmModal('Отклонить покупку?', async () => {
+                await updatePurchaseStatus(purchaseId, 'cancelled', btn);
+            });
+        });
+    });
+}
+
 function updateRequestsBadge() {
     const badge = document.getElementById('requests-badge');
     if (badge) {
@@ -192,6 +326,7 @@ function switchTab(tab) {
 
     const tabUsers = document.getElementById('tab-users');
     const tabRequests = document.getElementById('tab-requests');
+    const tabPurchases = document.getElementById('tab-purchases');
 
     if (tabUsers) {
         tabUsers.className = `btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`;
@@ -199,11 +334,16 @@ function switchTab(tab) {
     if (tabRequests) {
         tabRequests.className = `btn ${tab === 'requests' ? 'btn-primary' : 'btn-secondary'}`;
     }
+    if (tabPurchases) {
+        tabPurchases.className = `btn ${tab === 'purchases' ? 'btn-primary' : 'btn-secondary'}`;
+    }
 
     if (tab === 'users') {
         renderUsers();
-    } else {
+    } else if (tab === 'requests') {
         renderResetRequests();
+    } else if (tab === 'purchases') {
+        renderPurchases();
     }
 }
 
@@ -262,6 +402,27 @@ async function approveResetRequest(userId, username) {
     });
 }
 
+async function updatePurchaseStatus(purchaseId, status, button = null) {
+    const initialText = button ? button.innerHTML : '';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<div class="spinner"></div>';
+    }
+
+    try {
+        await adminPurchasesApi.updateStatus(purchaseId, status);
+        showToast('Статус покупки обновлён', 'success');
+        await loadPurchases(purchasesFilter || null);
+    } catch (error) {
+        showToast(error.message || 'Ошибка обновления статуса', 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = initialText;
+        }
+    }
+}
+
 async function loadUsers() {
     try {
         users = await adminApi.getUsers();
@@ -285,22 +446,39 @@ async function loadResetRequests() {
     }
 }
 
+async function loadPurchases(status = null) {
+    try {
+        purchases = await adminPurchasesApi.getAll(status);
+        if (activeTab === 'purchases') {
+            renderPurchases();
+        }
+    } catch (error) {
+        showToast(error.message || 'Ошибка загрузки покупок', 'error');
+    }
+}
+
 export async function mount() {
     activeTab = 'users';
+    purchasesFilter = '';
 
     await Promise.all([
         loadUsers(),
         loadResetRequests(),
+        loadPurchases(),
     ]);
 
     const tabUsers = document.getElementById('tab-users');
     const tabRequests = document.getElementById('tab-requests');
+    const tabPurchases = document.getElementById('tab-purchases');
 
     if (tabUsers) {
         tabUsers.addEventListener('click', () => switchTab('users'));
     }
     if (tabRequests) {
         tabRequests.addEventListener('click', () => switchTab('requests'));
+    }
+    if (tabPurchases) {
+        tabPurchases.addEventListener('click', () => switchTab('purchases'));
     }
 
     renderUsers();
@@ -309,5 +487,7 @@ export async function mount() {
 export function unmount() {
     users = [];
     resetRequests = [];
+    purchases = [];
     activeTab = 'users';
+    purchasesFilter = '';
 }

@@ -16,6 +16,7 @@ export function renderNavbar() {
         { path: '/', label: 'Главная', icon: 'fa-home', public: true },
         { path: '/services', label: 'Услуги', icon: 'fa-briefcase', public: true },
         { path: '/bot', label: 'Бот', icon: 'fa-robot', public: true },
+        { path: '/courses', label: 'Курсы', icon: 'fa-graduation-cap', public: true },
         { path: '/projects', label: 'Проекты', icon: 'fa-folder', requireAuth: true },
         { path: '/chat', label: 'Чат', icon: 'fa-comments', requireAuth: true },
         { path: '/contact', label: 'Контакты', icon: 'fa-envelope', public: true },

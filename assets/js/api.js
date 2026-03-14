@@ -346,3 +346,75 @@ export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) 
 }
 
 export { API_URL, getToken };
+
+export const coursesApi = {
+    async getAll() {
+        return apiRequest('/api/courses');
+    },
+    async getAllAdmin() {
+        return apiRequest('/api/courses/all');
+    },
+    async getById(id) {
+        return apiRequest(`/api/courses/${id}`);
+    },
+    async create(data) {
+        return apiRequest('/api/courses', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    async update(id, data) {
+        return apiRequest(`/api/courses/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    async delete(id) {
+        return apiRequest(`/api/courses/${id}`, { method: 'DELETE' });
+    },
+    async createPart(courseId, data) {
+        return apiRequest(`/api/courses/${courseId}/parts`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    async updatePart(courseId, partId, data) {
+        return apiRequest(`/api/courses/${courseId}/parts/${partId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    async deletePart(courseId, partId) {
+        return apiRequest(`/api/courses/${courseId}/parts/${partId}`, {
+            method: 'DELETE',
+        });
+    },
+    async getPartContent(courseId, partId) {
+        return apiRequest(`/api/courses/${courseId}/parts/${partId}/content`);
+    },
+    async purchaseCourse(courseId) {
+        return apiRequest(`/api/courses/${courseId}/purchase`, { method: 'POST' });
+    },
+    async purchasePart(courseId, partId) {
+        return apiRequest(
+            `/api/courses/${courseId}/parts/${partId}/purchase`,
+            { method: 'POST' },
+        );
+    },
+    async getMyPurchases() {
+        return apiRequest('/api/me/purchases');
+    },
+};
+
+export const adminPurchasesApi = {
+    async getAll(status = null) {
+        const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+        return apiRequest(`/api/admin/purchases${qs}`);
+    },
+    async updateStatus(purchaseId, status) {
+        return apiRequest(
+            `/api/admin/purchases/${purchaseId}/status?status=${encodeURIComponent(status)}`,
+            { method: 'PUT' },
+        );
+    },
+};
