@@ -15,9 +15,6 @@ import * as settingsPage from './pages/settings.js';
 import * as contactPage from './pages/contact.js';
 import * as botPage from './pages/bot.js';
 import * as adminPanelPage from './pages/admin-panel.js';
-import * as coursesPage from './pages/courses.js';
-import * as courseDetailPage from './pages/course-detail.js';
-import * as courseReaderPage from './pages/course-reader.js';
 import * as notFoundPage from './pages/not-found.js';
 
 window.APP_CONFIG = {
@@ -37,13 +34,27 @@ router.addRoute('/settings', settingsPage, { requireAuth: true });
 router.addRoute('/contact', contactPage);
 router.addRoute('/bot', botPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
-router.addRoute('/courses', coursesPage);
-router.addRoute('/courses/:id', courseDetailPage);
-router.addRoute('/courses/:courseId/parts/:partId', courseReaderPage);
 
 router.setNotFound(notFoundPage);
 
-function initApp() {
+async function registerOptionalCourseRoutes() {
+    try {
+        const [coursesPage, courseDetailPage, courseReaderPage] = await Promise.all([
+            import('./pages/courses.js'),
+            import('./pages/course-detail.js'),
+            import('./pages/course-reader.js'),
+        ]);
+
+        router.addRoute('/courses', coursesPage);
+        router.addRoute('/courses/:id', courseDetailPage);
+        router.addRoute('/courses/:courseId/parts/:partId', courseReaderPage);
+    } catch (error) {
+        console.warn('Courses pages are unavailable, skipping courses routes:', error);
+    }
+}
+
+async function initApp() {
+    await registerOptionalCourseRoutes();
     renderNavbar();
     router.init();
 }
