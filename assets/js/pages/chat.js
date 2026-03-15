@@ -1,6 +1,6 @@
 import { conversationsApi, createChatWebSocket, getToken, meApi, usersApi } from '../api.js';
 import { getUser } from '../auth.js';
-import { debounce, escapeHtml, formatRelativeTime, formatTime, showToast } from '../utils.js';
+import { debounce, escapeHtml, formatRelativeTime, formatTime, renderMarkdown, showToast } from '../utils.js';
 
 const MAX_RECONNECT_ATTEMPTS = 5;
 const DM_POLL_INTERVAL_MS = 2500;
@@ -142,6 +142,23 @@ function renderEmptyState() {
     `;
 }
 
+function renderChatMessageContent(message) {
+    const text = String(message ?? '');
+    if (!window.marked) {
+        return {
+            html: escapeHtml(text).replace(/\n/g, '<br>'),
+            hasEmbeddedLink: false,
+        };
+    }
+
+    // Escape raw HTML first, then parse markdown to avoid injecting arbitrary tags from user messages.
+    const html = String(renderMarkdown(escapeHtml(text)) || '');
+    return {
+        html,
+        hasEmbeddedLink: /<a\s/i.test(html),
+    };
+}
+
 function renderMessages(forceBottom = false) {
     if (!messagesEl) return;
     const beforeHeight = messagesEl.scrollHeight;
@@ -167,13 +184,16 @@ function renderMessages(forceBottom = false) {
         }
 
         const own = item.user_id === currentUserId;
+        const renderedMessage = renderChatMessageContent(item.message);
         return `
             <div class="chat-group ${own ? 'is-own' : 'is-other'}">
                 ${own ? '' : `<div class="chat-avatar"><span>${escapeHtml(item.username.charAt(0).toUpperCase())}</span></div>`}
                 <div class="chat-group-content">
                     ${own ? '' : `<div class="chat-group-author">${escapeHtml(item.username)}</div>`}
                     <div class="chat-group-bubbles">
-                        <div class="chat-bubble is-single">${escapeHtml(item.message).replace(/\n/g, '<br>')}</div>
+                        <div class="chat-bubble is-single ${renderedMessage.hasEmbeddedLink ? 'has-embedded-link' : ''}">
+                            <div class="chat-bubble-markdown">${renderedMessage.html}</div>
+                        </div>
                     </div>
                     <div class="chat-group-time">${formatTime(item.timestamp)}</div>
                 </div>

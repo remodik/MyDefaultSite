@@ -1051,6 +1051,62 @@ code[class*="language-"] {
         background-color 0.18s ease;
 }
 
+.chat-bubble-markdown {
+    overflow-wrap: anywhere;
+}
+
+.chat-bubble-markdown > :first-child {
+    margin-top: 0;
+}
+
+.chat-bubble-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.chat-bubble-markdown p {
+    margin: 0;
+}
+
+.chat-bubble-markdown p + p {
+    margin-top: 8px;
+}
+
+.chat-bubble-markdown a {
+    color: #9cc3ff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(156, 195, 255, 0.7);
+}
+
+.chat-bubble-markdown a:hover {
+    border-bottom-color: currentColor;
+}
+
+.chat-group.is-own .chat-bubble-markdown a {
+    color: #f7fbff;
+    border-bottom-color: rgba(247, 251, 255, 0.82);
+}
+
+.chat-bubble.has-embedded-link {
+    position: relative;
+    padding-bottom: 14px;
+}
+
+.chat-bubble.has-embedded-link::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 5px;
+    height: 2px;
+    border-radius: 999px;
+    background: #4fa3ff;
+    opacity: 0.95;
+}
+
+.chat-group.is-own .chat-bubble.has-embedded-link::after {
+    background: #b7dbff;
+}
+
 .chat-group.is-other .chat-bubble:hover {
     background: #333844;
     border-color: #4a5261;
