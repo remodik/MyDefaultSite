@@ -571,7 +571,7 @@ code[class*="language-"] {
 .markdown-content a {
     color: #5865f2;
     text-decoration: none;
-    border-bottom: 1px solid transparent;
+    border-bottom: 2px solid rgba(79, 163, 255, 0.72);
     transition:
         border-color 0.15s,
         color 0.15s;
@@ -580,17 +580,6 @@ code[class*="language-"] {
 .markdown-content a:hover {
     color: #7983f5;
     border-bottom-color: #7983f5;
-}
-
-.markdown-content p:has(a[href]),
-.markdown-content li:has(a[href]) {
-    padding-bottom: 4px;
-    border-bottom: 2px solid rgba(79, 163, 255, 0.85);
-}
-
-.markdown-content li p:has(a[href]) {
-    padding-bottom: 0;
-    border-bottom: none;
 }
 
 .markdown-content ul {
@@ -1060,6 +1049,41 @@ code[class*="language-"] {
         transform 0.18s ease,
         border-color 0.18s ease,
         background-color 0.18s ease;
+}
+
+.chat-bubble-markdown {
+    overflow-wrap: anywhere;
+}
+
+.chat-bubble-markdown > :first-child {
+    margin-top: 0;
+}
+
+.chat-bubble-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.chat-bubble-markdown p {
+    margin: 0;
+}
+
+.chat-bubble-markdown p + p {
+    margin-top: 8px;
+}
+
+.chat-bubble-markdown a {
+    color: #9cc3ff;
+    text-decoration: none;
+    border-bottom: 2px solid rgba(156, 195, 255, 0.74);
+}
+
+.chat-bubble-markdown a:hover {
+    border-bottom-color: currentColor;
+}
+
+.chat-group.is-own .chat-bubble-markdown a {
+    color: #f7fbff;
+    border-bottom-color: rgba(247, 251, 255, 0.84);
 }
 
 .chat-group.is-other .chat-bubble:hover {
