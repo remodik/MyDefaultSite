@@ -1,4 +1,4 @@
-import { conversationsApi, createChatWebSocket, getToken, meApi, usersApi } from '../api.js';
+import { conversationsApi, createChatWebSocket, getToken, meApi, resolveApiUrl, usersApi } from '../api.js';
 import { getUser } from '../auth.js';
 import { hideUserPopup, showUserPopup } from '../components/user-popup.js';
 import { debounce, escapeHtml, formatRelativeTime, formatTime, renderMarkdown, showToast } from '../utils.js';
@@ -178,7 +178,7 @@ function getInitial(source) {
 
 function chatAvatarHtml(item) {
     if (item?.avatar_url) {
-        return `<img src="${escapeHtml(item.avatar_url)}" alt="" class="chat-avatar-image">`;
+        return `<img src="${escapeHtml(resolveApiUrl(item.avatar_url))}" alt="" class="chat-avatar-image">`;
     }
     return `<span class="chat-avatar-fallback">${escapeHtml(getInitial(item?.username))}</span>`;
 }
@@ -188,7 +188,7 @@ function roomAvatarHtml(partner) {
         return '<i class="fas fa-hashtag chat-room-icon-symbol"></i>';
     }
     if (partner.avatar_url) {
-        return `<img src="${escapeHtml(partner.avatar_url)}" alt="" class="chat-room-avatar-image">`;
+        return `<img src="${escapeHtml(resolveApiUrl(partner.avatar_url))}" alt="" class="chat-room-avatar-image">`;
     }
     const source = partner.display_name || partner.username || '?';
     return `<span class="chat-room-avatar-fallback">${escapeHtml(getInitial(source))}</span>`;
@@ -302,7 +302,7 @@ function setDmInUrl(userId = null) {
 
 function avatarHtml(partner) {
     if (partner?.avatar_url) {
-        return `<img src="${escapeHtml(partner.avatar_url)}" alt="" class="dm-item-avatar-image">`;
+        return `<img src="${escapeHtml(resolveApiUrl(partner.avatar_url))}" alt="" class="dm-item-avatar-image">`;
     }
     const source = partner?.display_name || partner?.username || '?';
     return `<span class="dm-item-avatar-fallback">${escapeHtml(getInitial(source))}</span>`;

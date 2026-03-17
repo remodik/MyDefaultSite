@@ -1,4 +1,4 @@
-import { meApi } from '../api.js';
+import { meApi, resolveApiUrl } from '../api.js';
 import { applyUserAccentColor, escapeHtml, showToast } from '../utils.js';
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -33,7 +33,7 @@ function renderAvatarPreview(profile) {
     if (!avatarPreviewEl) return;
 
     if (profile?.avatar_url) {
-        avatarPreviewEl.innerHTML = `<img src="${escapeHtml(profile.avatar_url)}" alt="Аватар" class="settings-avatar-image">`;
+        avatarPreviewEl.innerHTML = `<img src="${escapeHtml(resolveApiUrl(profile.avatar_url))}" alt="Аватар" class="settings-avatar-image">`;
     } else {
         avatarPreviewEl.innerHTML = `<span class="settings-avatar-fallback">${escapeHtml(getAvatarInitial(profile))}</span>`;
     }

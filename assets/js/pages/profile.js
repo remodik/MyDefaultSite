@@ -1,4 +1,4 @@
-import { meApi } from '../api.js';
+import { meApi, resolveApiUrl } from '../api.js';
 import { applyUserAccentColor, escapeHtml, showToast } from '../utils.js';
 
 let profile = null;
@@ -10,7 +10,7 @@ function getInitialLetter(data) {
 
 function renderAvatar(data) {
     if (data?.avatar_url) {
-        const safeUrl = escapeHtml(data.avatar_url);
+        const safeUrl = escapeHtml(resolveApiUrl(data.avatar_url));
         return `<img src="${safeUrl}" alt="Avatar" class="profile-avatar-image">`;
     }
 

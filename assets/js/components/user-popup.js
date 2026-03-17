@@ -1,4 +1,4 @@
-import { usersApi } from '../api.js';
+import { resolveApiUrl, usersApi } from '../api.js';
 import { getUser } from '../auth.js';
 import { escapeHtml } from '../utils.js';
 
@@ -99,7 +99,7 @@ function renderProfile(profile) {
         <div class="user-popup-head">
             <div class="user-popup-avatar-wrap">
                 ${profile?.avatar_url
-        ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="user-popup-avatar-image">`
+        ? `<img src="${escapeHtml(resolveApiUrl(profile.avatar_url))}" alt="" class="user-popup-avatar-image">`
         : `<span class="user-popup-avatar-fallback">${escapeHtml(getInitial(profile))}</span>`}
             </div>
             <div class="user-popup-meta">

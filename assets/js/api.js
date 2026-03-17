@@ -5,6 +5,29 @@ const API_URL = (function() {
     return '';
 })();
 
+export function resolveApiUrl(url) {
+    const value = String(url || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+        return value;
+    }
+
+    if (value.startsWith('//')) {
+        return `${window.location.protocol}${value}`;
+    }
+
+    if (!API_URL) {
+        return value;
+    }
+
+    const base = API_URL.replace(/\/+$/, '');
+    if (value.startsWith('/')) {
+        return `${base}${value}`;
+    }
+
+    return `${base}/${value}`;
+}
+
 function getToken() {
     return localStorage.getItem('auth_token');
 }
