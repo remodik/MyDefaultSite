@@ -1,6 +1,8 @@
 import { router } from './router.js';
 import { renderNavbar } from './components/navbar.js';
-import { API_URL } from './api.js';
+import { API_URL, meApi } from './api.js';
+import { isAuthenticated } from './auth.js';
+import { applyUserAccentColor } from './utils.js';
 
 import * as homePage from './pages/home.js';
 import * as loginPage from './pages/login.js';
@@ -56,8 +58,27 @@ async function registerOptionalCourseRoutes() {
 async function initApp() {
     await registerOptionalCourseRoutes();
     renderNavbar();
+    syncUserAccentColor();
     router.init();
 }
+
+async function syncUserAccentColor() {
+    if (!isAuthenticated()) {
+        applyUserAccentColor(null);
+        return;
+    }
+
+    try {
+        const profile = await meApi.getProfile();
+        applyUserAccentColor(profile?.accent_color || null);
+    } catch {
+        applyUserAccentColor(null);
+    }
+}
+
+window.addEventListener('auth-changed', () => {
+    syncUserAccentColor();
+});
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);

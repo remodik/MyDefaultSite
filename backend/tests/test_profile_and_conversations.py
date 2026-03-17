@@ -99,6 +99,50 @@ class ProfileAndConversationApiTests(unittest.TestCase):
         self.assertEqual(final_profile["display_name"], "Alice Cooper")
         self.assertEqual(final_profile["privacy_dm"], "none")
 
+    def test_public_profile_endpoint(self):
+        viewer = asyncio.run(self._create_user("viewer"))
+        target = asyncio.run(self._create_user("target"))
+
+        target_headers = self._auth_headers(target.id)
+        viewer_headers = self._auth_headers(viewer.id)
+
+        update_response = self.client.put(
+            "/api/me/profile",
+            headers=target_headers,
+            json={
+                "display_name": "Target User",
+                "bio": "Public bio",
+                "accent_color": "#112233",
+                "privacy_dm": "none",
+            },
+        )
+        self.assertEqual(update_response.status_code, 200)
+
+        public_response = self.client.get(f"/api/users/{target.id}/profile", headers=viewer_headers)
+        self.assertEqual(public_response.status_code, 200)
+        payload = public_response.json()
+
+        self.assertEqual(payload["id"], target.id)
+        self.assertEqual(payload["username"], "target")
+        self.assertEqual(payload["display_name"], "Target User")
+        self.assertEqual(payload["bio"], "Public bio")
+        self.assertEqual(payload["accent_color"], "#112233")
+        self.assertFalse(payload["can_receive_dm"])
+        self.assertNotIn("email", payload)
+
+    def test_delete_avatar_endpoint(self):
+        user = asyncio.run(self._create_user("avatar_owner"))
+        headers = self._auth_headers(user.id)
+
+        response = self.client.delete("/api/me/avatar", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIsNone(payload["avatar_url"])
+
+        repeat_response = self.client.delete("/api/me/avatar", headers=headers)
+        self.assertEqual(repeat_response.status_code, 200)
+        self.assertIsNone(repeat_response.json()["avatar_url"])
+
     def test_conversations_list(self):
         user_a = asyncio.run(self._create_user("alice"))
         user_b = asyncio.run(self._create_user("bob"))

@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import io
 import os
 import random
 import secrets
@@ -8,6 +9,7 @@ import uuid
 import httpx
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import bcrypt
@@ -16,6 +18,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import and_, delete, or_, select, text, update
@@ -84,6 +87,14 @@ else:
 VALID_DM_PRIVACY_VALUES = {"all", "none"}
 DEFAULT_DM_PRIVACY = "all"
 MAX_DM_MESSAGE_LENGTH = 1000
+MAX_AVATAR_FILE_SIZE_BYTES = 5 * 1024 * 1024
+AVATAR_IMAGE_SIZE = (256, 256)
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+AVATARS_DIR = UPLOADS_DIR / "avatars"
+
+AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 class ConnectionManager:
@@ -495,11 +506,12 @@ def file_to_dict(file: FileModel) -> dict[str, Any]:
     }
 
 
-def chat_message_to_dict(message: ChatMessage) -> dict[str, Any]:
+def chat_message_to_dict(message: ChatMessage, avatar_url: str | None = None) -> dict[str, Any]:
     return {
         "id": message.id,
         "user_id": message.user_id,
         "username": message.username,
+        "avatar_url": avatar_url,
         "message": message.message,
         "timestamp": _to_iso(message.timestamp),
     }
@@ -542,6 +554,39 @@ def profile_to_dict(user: User, profile: UserProfile | None) -> dict[str, Any]:
     }
 
 
+def public_profile_to_dict(user: User, profile: UserProfile | None) -> dict[str, Any]:
+    privacy_dm = _normalize_privacy_dm(profile.privacy_dm if profile else DEFAULT_DM_PRIVACY)
+    return {
+        "id": user.id,
+        "username": user.username,
+        "display_name": _normalize_display_name(profile.display_name if profile else None, user.username),
+        "bio": (profile.bio if profile else "") or "",
+        "avatar_url": profile.avatar_url if profile else None,
+        "accent_color": profile.accent_color if profile else None,
+        "can_receive_dm": privacy_dm != "none",
+    }
+
+
+def _prepare_avatar_image(raw_bytes: bytes) -> Any:
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Avatar file is empty")
+    if len(raw_bytes) > MAX_AVATAR_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Avatar file is too large (max 5 MB)")
+
+    try:
+        from PIL import Image, ImageOps, UnidentifiedImageError
+    except ModuleNotFoundError as exc:
+        raise HTTPException(status_code=503, detail="Avatar processing is unavailable") from exc
+
+    try:
+        with Image.open(io.BytesIO(raw_bytes)) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+        resample = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
+        return ImageOps.fit(image, AVATAR_IMAGE_SIZE, method=resample)
+    except (UnidentifiedImageError, OSError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid image file") from exc
+
+
 def direct_message_to_dict(
     message: DirectMessage,
     sender_user: User,
@@ -554,6 +599,7 @@ def direct_message_to_dict(
         "user_id": message.sender_id,
         "username": sender_user.username,
         "display_name": _normalize_display_name(sender_profile.display_name if sender_profile else None, sender_user.username),
+        "avatar_url": sender_profile.avatar_url if sender_profile else None,
         "text": message.text,
         "message": message.text,
         "created_at": _to_iso(message.created_at),
@@ -1069,6 +1115,77 @@ async def update_my_profile(
     await session.refresh(profile)
 
     return profile_to_dict(current_user, profile)
+
+
+@app.post("/api/me/avatar")
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    profile = await get_or_create_profile(session, current_user, commit_on_create=False)
+
+    if not file:
+        raise HTTPException(status_code=400, detail="Avatar file is required")
+
+    if file.content_type and not file.content_type.lower().startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+
+    raw_bytes = await file.read()
+    avatar = _prepare_avatar_image(raw_bytes)
+
+    avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
+    avatar.save(avatar_path, format="JPEG", quality=90, optimize=True)
+
+    profile.avatar_url = f"/uploads/avatars/{current_user.id}.jpg"
+    profile.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(profile)
+
+    return profile_to_dict(current_user, profile)
+
+
+@app.delete("/api/me/avatar")
+async def delete_my_avatar(
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    profile = await get_or_create_profile(session, current_user, commit_on_create=False)
+
+    avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
+    with suppress(FileNotFoundError):
+        avatar_path.unlink()
+
+    profile.avatar_url = None
+    profile.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(profile)
+
+    return profile_to_dict(current_user, profile)
+
+
+@app.get("/api/users/{user_id}/profile")
+async def get_user_public_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user_model),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    _ = current_user
+
+    target_user_id = user_id.strip()
+    if not target_user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+
+    target_user = await session.get(User, target_user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == target_user.id))
+    profile = profile_result.scalar_one_or_none()
+    return public_profile_to_dict(target_user, profile)
 
 
 @app.get("/api/users/search")
@@ -1891,9 +2008,20 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
                 .order_by(ChatMessage.timestamp.desc())
                 .limit(50)
             )
+            history_messages = history_result.scalars().all()
+            history_user_ids = {item.user_id for item in history_messages}
+            history_avatars: dict[str, str | None] = {}
+            if history_user_ids:
+                history_profiles_result = await session.execute(
+                    select(UserProfile).where(UserProfile.user_id.in_(history_user_ids))
+                )
+                history_avatars = {
+                    profile.user_id: profile.avatar_url
+                    for profile in history_profiles_result.scalars().all()
+                }
             messages = [
-                chat_message_to_dict(msg)
-                for msg in history_result.scalars().all()
+                chat_message_to_dict(msg, avatar_url=history_avatars.get(msg.user_id))
+                for msg in history_messages
             ][::-1]
 
             await websocket.send_json({
@@ -1921,9 +2049,13 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
                 session.add(chat_message)
                 await session.commit()
 
+                sender_avatar_result = await session.execute(
+                    select(UserProfile.avatar_url).where(UserProfile.user_id == user_id)
+                )
+                sender_avatar_url = sender_avatar_result.scalar_one_or_none()
                 await manager.broadcast({
                     "type": "message",
-                    "data": chat_message_to_dict(chat_message)
+                    "data": chat_message_to_dict(chat_message, avatar_url=sender_avatar_url)
                 })
 
     except WebSocketDisconnect:

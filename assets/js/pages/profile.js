@@ -1,5 +1,5 @@
 import { meApi } from '../api.js';
-import { escapeHtml, showToast } from '../utils.js';
+import { applyUserAccentColor, escapeHtml, showToast } from '../utils.js';
 
 let profile = null;
 
@@ -26,7 +26,8 @@ function renderProfileContent() {
     if (!container || !profile) return;
 
     const displayName = profile.display_name || profile.username;
-    const bio = profile.bio?.trim() ? profile.bio : 'Пользователь пока не добавил описание.';
+    const hasBio = Boolean(profile.bio?.trim());
+    const bio = hasBio ? profile.bio : '«Пользователь пока ничего не написал о себе»';
     const status = profile.status?.trim() ? profile.status : 'Не указан';
 
     container.innerHTML = `
@@ -56,7 +57,7 @@ function renderProfileContent() {
                     <i class="fas fa-user mr-2 text-discord-accent"></i>
                     О себе
                 </h2>
-                <p class="profile-bio">${escapeHtml(bio)}</p>
+                <p class="profile-bio ${hasBio ? '' : 'is-placeholder'}">${escapeHtml(bio)}</p>
             </section>
 
             <section class="profile-info-card">
@@ -85,6 +86,7 @@ async function loadProfile() {
 
     try {
         profile = await meApi.getProfile();
+        applyUserAccentColor(profile?.accent_color || null);
         renderProfileContent();
     } catch (error) {
         container.innerHTML = `

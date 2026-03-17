@@ -1,5 +1,6 @@
 import { conversationsApi, createChatWebSocket, getToken, meApi, usersApi } from '../api.js';
 import { getUser } from '../auth.js';
+import { hideUserPopup, showUserPopup } from '../components/user-popup.js';
 import { debounce, escapeHtml, formatRelativeTime, formatTime, renderMarkdown, showToast } from '../utils.js';
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -26,16 +27,20 @@ let shouldStickToBottom = true;
 let isSending = false;
 
 let messagesEl = null;
+let messagesInnerEl = null;
 let formEl = null;
 let inputEl = null;
 let scrollBottomBtnEl = null;
-let roomIconEl = null;
+let roomAvatarTriggerEl = null;
+let roomAvatarEl = null;
+let roomTitleTriggerEl = null;
 let roomTitleEl = null;
 let roomSubtitleEl = null;
 let connectionStatusEl = null;
 let conversationsListEl = null;
 let searchInputEl = null;
 let searchResultsEl = null;
+let popupWriteHandler = null;
 
 function normalizeMessage(raw) {
     return {
@@ -43,6 +48,7 @@ function normalizeMessage(raw) {
         type: raw?.type === 'system' ? 'system' : 'message',
         user_id: raw?.user_id || raw?.sender_id || '',
         username: raw?.display_name || raw?.username || 'Unknown',
+        avatar_url: raw?.avatar_url || null,
         message: String(raw?.message ?? raw?.text ?? ''),
         timestamp: raw?.timestamp || raw?.created_at || new Date().toISOString(),
         systemType: raw?.systemType || 'info',
@@ -146,26 +152,83 @@ function renderChatMessageContent(message) {
     const text = String(message ?? '');
     if (!window.marked) return escapeHtml(text).replace(/\n/g, '<br>');
 
-    // Escape raw HTML first, then apply markdown formatting in chat bubbles.
     return String(renderMarkdown(escapeHtml(text)) || '');
 }
 
+function stripMarkdownToPlainText(value) {
+    return String(value || '')
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/(^|\s)#{1,6}\s+/gm, '$1')
+        .replace(/(^|\s)>\s?/gm, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/_([^_]+)_/g, '$1')
+        .replace(/~~([^~]+)~~/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\n+/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function getInitial(source) {
+    return String(source || '?').charAt(0).toUpperCase();
+}
+
+function chatAvatarHtml(item) {
+    if (item?.avatar_url) {
+        return `<img src="${escapeHtml(item.avatar_url)}" alt="" class="chat-avatar-image">`;
+    }
+    return `<span class="chat-avatar-fallback">${escapeHtml(getInitial(item?.username))}</span>`;
+}
+
+function roomAvatarHtml(partner) {
+    if (!partner) {
+        return '<i class="fas fa-hashtag chat-room-icon-symbol"></i>';
+    }
+    if (partner.avatar_url) {
+        return `<img src="${escapeHtml(partner.avatar_url)}" alt="" class="chat-room-avatar-image">`;
+    }
+    const source = partner.display_name || partner.username || '?';
+    return `<span class="chat-room-avatar-fallback">${escapeHtml(getInitial(source))}</span>`;
+}
+
+function applyRoomUserTrigger(userId) {
+    const normalizedUserId = String(userId || '').trim();
+    const canOpen = Boolean(normalizedUserId);
+
+    if (roomAvatarTriggerEl) {
+        roomAvatarTriggerEl.disabled = !canOpen;
+        roomAvatarTriggerEl.classList.toggle('is-clickable', canOpen);
+        if (canOpen) roomAvatarTriggerEl.dataset.userPopupId = normalizedUserId;
+        else delete roomAvatarTriggerEl.dataset.userPopupId;
+    }
+
+    if (roomTitleTriggerEl) {
+        roomTitleTriggerEl.disabled = !canOpen;
+        roomTitleTriggerEl.classList.toggle('is-clickable', canOpen);
+        if (canOpen) roomTitleTriggerEl.dataset.userPopupId = normalizedUserId;
+        else delete roomTitleTriggerEl.dataset.userPopupId;
+    }
+}
+
 function renderMessages(forceBottom = false) {
-    if (!messagesEl) return;
+    if (!messagesEl || !messagesInnerEl) return;
     const beforeHeight = messagesEl.scrollHeight;
     const beforeTop = messagesEl.scrollTop;
     const wasNearBottom = isNearBottom(messagesEl);
     const items = activeMessages();
 
     if (!items.length) {
-        messagesEl.innerHTML = renderEmptyState();
+        messagesInnerEl.innerHTML = renderEmptyState();
         shouldStickToBottom = true;
         updateScrollButton();
         return;
     }
 
     const currentUserId = getUser()?.id;
-    messagesEl.innerHTML = items.map((item) => {
+    messagesInnerEl.innerHTML = items.map((item) => {
         if (item.type === 'system') {
             return `
                 <div class="chat-notification chat-notification-${escapeHtml(item.systemType)}">
@@ -176,11 +239,12 @@ function renderMessages(forceBottom = false) {
 
         const own = item.user_id === currentUserId;
         const renderedMessage = renderChatMessageContent(item.message);
+        const popupDataAttr = item.user_id ? ` data-user-popup-id="${escapeHtml(item.user_id)}"` : '';
         return `
             <div class="chat-group ${own ? 'is-own' : 'is-other'}">
-                ${own ? '' : `<div class="chat-avatar"><span>${escapeHtml(item.username.charAt(0).toUpperCase())}</span></div>`}
+                ${own ? '' : `<div class="chat-avatar"${popupDataAttr}>${chatAvatarHtml(item)}</div>`}
                 <div class="chat-group-content">
-                    ${own ? '' : `<div class="chat-group-author">${escapeHtml(item.username)}</div>`}
+                    ${own ? '' : `<div class="chat-group-author"${popupDataAttr}>${escapeHtml(item.username)}</div>`}
                     <div class="chat-group-bubbles">
                         <div class="chat-bubble is-single">
                             <div class="chat-bubble-markdown">${renderedMessage}</div>
@@ -208,19 +272,22 @@ function currentConversation() {
 }
 
 function updateHeader() {
-    if (!roomIconEl || !roomTitleEl || !roomSubtitleEl) return;
+    if (!roomAvatarEl || !roomTitleEl || !roomSubtitleEl) return;
+
     if (mode === 'dm') {
-        const dialogName = currentConversation()?.partner?.display_name
-            || currentConversation()?.partner?.username
-            || 'пользователем';
-        roomIconEl.className = 'fas fa-user chat-room-icon';
-        roomTitleEl.textContent = `Диалог с ${dialogName}`;
+        const partner = currentConversation()?.partner || null;
+        const dialogName = partner?.display_name || partner?.username || 'Пользователь';
+        roomAvatarEl.innerHTML = roomAvatarHtml(partner);
+        roomTitleEl.textContent = dialogName;
         roomSubtitleEl.textContent = 'Личные сообщения';
+        applyRoomUserTrigger(partner?.id || '');
     } else {
-        roomIconEl.className = 'fas fa-hashtag chat-room-icon';
+        roomAvatarEl.innerHTML = roomAvatarHtml(null);
         roomTitleEl.textContent = 'Общая комната';
         roomSubtitleEl.textContent = 'Сообщения в реальном времени';
+        applyRoomUserTrigger('');
     }
+
     renderConnectionStatus();
     syncInputState();
 }
@@ -238,7 +305,7 @@ function avatarHtml(partner) {
         return `<img src="${escapeHtml(partner.avatar_url)}" alt="" class="dm-item-avatar-image">`;
     }
     const source = partner?.display_name || partner?.username || '?';
-    return `<span class="dm-item-avatar-fallback">${escapeHtml(source.charAt(0).toUpperCase())}</span>`;
+    return `<span class="dm-item-avatar-fallback">${escapeHtml(getInitial(source))}</span>`;
 }
 
 function renderConversationsList() {
@@ -257,18 +324,19 @@ function renderConversationsList() {
             const active = mode === 'dm' && item.id === activeConversationId;
             const partner = item.partner || {};
             const name = partner.display_name || partner.username || 'Пользователь';
-            const preview = item.last_message?.trim() || 'Нет сообщений';
+            const previewText = stripMarkdownToPlainText(item.last_message || '') || 'Нет сообщений';
             const time = item.last_message_at ? formatRelativeTime(item.last_message_at) : '';
+            const partnerId = partner.id ? escapeHtml(partner.id) : '';
 
             return `
                 <button class="dm-item ${active ? 'is-active' : ''}" data-conversation-id="${escapeHtml(item.id)}">
-                    <div class="dm-item-avatar">${avatarHtml(partner)}</div>
+                    <div class="dm-item-avatar"${partnerId ? ` data-user-popup-id="${partnerId}"` : ''}>${avatarHtml(partner)}</div>
                     <div class="dm-item-content">
                         <div class="dm-item-row">
                             <span class="dm-item-name">${escapeHtml(name)}</span>
                             <span class="dm-item-time">${escapeHtml(time)}</span>
                         </div>
-                        <div class="dm-item-preview">${escapeHtml(preview)}</div>
+                        <div class="dm-item-preview">${escapeHtml(previewText)}</div>
                     </div>
                 </button>
             `;
@@ -291,7 +359,7 @@ function renderSearchResults() {
     }
     if (!searchResults.length) {
         searchResultsEl.classList.remove('hidden');
-        searchResultsEl.innerHTML = `<div class="dm-search-empty">Ничего не найдено</div>`;
+        searchResultsEl.innerHTML = '<div class="dm-search-empty">Ничего не найдено</div>';
         return;
     }
     searchResultsEl.classList.remove('hidden');
@@ -309,6 +377,7 @@ async function loadConversations(silent = false) {
         conversations = await meApi.getConversations();
         conversations.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
         renderConversationsList();
+        updateHeader();
     } catch (error) {
         if (!silent) showToast(error.message || 'Не удалось загрузить диалоги', 'error');
     }
@@ -341,6 +410,7 @@ function startDmPolling() {
 }
 
 function activateGlobal(updateUrl = true) {
+    hideUserPopup();
     mode = 'global';
     activeConversationId = null;
     activeDmUserId = null;
@@ -353,6 +423,7 @@ function activateGlobal(updateUrl = true) {
 
 async function activateConversation(conversation, updateUrl = true) {
     if (!conversation?.id) return;
+    hideUserPopup();
     mode = 'dm';
     activeConversationId = conversation.id;
     activeDmUserId = conversation.partner?.id || null;
@@ -365,13 +436,17 @@ async function activateConversation(conversation, updateUrl = true) {
 }
 
 async function startConversationWithUser(userId) {
-    const existing = conversations.find((item) => item.partner?.id === userId);
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId) return;
+
+    const existing = conversations.find((item) => item.partner?.id === normalizedUserId);
     if (existing) {
         await activateConversation(existing);
         return;
     }
+
     try {
-        const conversation = await conversationsApi.createOrGet(userId);
+        const conversation = await conversationsApi.createOrGet(normalizedUserId);
         conversations = [conversation, ...conversations.filter((item) => item.id !== conversation.id)];
         renderConversationsList();
         await activateConversation(conversation);
@@ -435,12 +510,22 @@ function connectWebSocket() {
                 return;
             }
             if (data.type === 'user_joined') {
-                globalMessages.push(normalizeMessage({ type: 'system', message: `${data.username} присоединился к чату`, systemType: 'join', systemIcon: 'user-plus' }));
+                globalMessages.push(normalizeMessage({
+                    type: 'system',
+                    message: `${data.username} присоединился к чату`,
+                    systemType: 'join',
+                    systemIcon: 'user-plus',
+                }));
                 if (mode === 'global') renderMessages();
                 return;
             }
             if (data.type === 'user_left') {
-                globalMessages.push(normalizeMessage({ type: 'system', message: `${data.username} покинул чат`, systemType: 'leave', systemIcon: 'user-minus' }));
+                globalMessages.push(normalizeMessage({
+                    type: 'system',
+                    message: `${data.username} покинул чат`,
+                    systemType: 'leave',
+                    systemIcon: 'user-minus',
+                }));
                 if (mode === 'global') renderMessages();
             }
         },
@@ -474,6 +559,12 @@ async function applyModeFromUrl() {
     await activateConversation(conversation, false);
 }
 
+function showPopupFromTrigger(triggerEl) {
+    const userId = String(triggerEl?.dataset?.userPopupId || '').trim();
+    if (!userId) return;
+    showUserPopup(userId, triggerEl);
+}
+
 const handleSearchInput = debounce(async () => {
     if (!searchInputEl) return;
     const query = searchInputEl.value.trim();
@@ -496,9 +587,15 @@ export function render() {
         <div class="chat-shell">
             <div class="chat-topbar">
                 <div class="chat-topbar-main">
-                    <i id="chat-room-icon" class="fas fa-hashtag chat-room-icon"></i>
-                    <div>
-                        <h1 id="chat-room-title" class="chat-room-title">Общая комната</h1>
+                    <button type="button" id="chat-room-avatar-trigger" class="chat-room-avatar-trigger" aria-label="Открыть профиль пользователя">
+                        <span id="chat-room-avatar" class="chat-room-icon">
+                            <i class="fas fa-hashtag chat-room-icon-symbol"></i>
+                        </span>
+                    </button>
+                    <div class="chat-room-header-meta">
+                        <button type="button" id="chat-room-title-trigger" class="chat-room-title-trigger" aria-label="Открыть профиль пользователя">
+                            <span id="chat-room-title" class="chat-room-title">Общая комната</span>
+                        </button>
                         <p id="chat-room-subtitle" class="chat-room-subtitle">Сообщения в реальном времени</p>
                     </div>
                 </div>
@@ -508,7 +605,10 @@ export function render() {
             <div class="chat-layout">
                 <section class="chat-column">
                     <div class="chat-main">
-                        <div class="chat-messages" id="chat-messages"></div>
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-messages-spacer"></div>
+                            <div class="chat-messages-inner" id="chat-messages-inner"></div>
+                        </div>
                         <button type="button" id="chat-scroll-bottom-btn" class="chat-scroll-bottom-btn" aria-label="Прокрутить вниз">
                             <i class="fas fa-chevron-down"></i><span>Вниз</span>
                         </button>
@@ -548,10 +648,13 @@ export async function mount() {
     activeDmUserId = null;
 
     messagesEl = document.getElementById('chat-messages');
+    messagesInnerEl = document.getElementById('chat-messages-inner');
     formEl = document.getElementById('chat-form');
     inputEl = document.getElementById('message-input');
     scrollBottomBtnEl = document.getElementById('chat-scroll-bottom-btn');
-    roomIconEl = document.getElementById('chat-room-icon');
+    roomAvatarTriggerEl = document.getElementById('chat-room-avatar-trigger');
+    roomAvatarEl = document.getElementById('chat-room-avatar');
+    roomTitleTriggerEl = document.getElementById('chat-room-title-trigger');
     roomTitleEl = document.getElementById('chat-room-title');
     roomSubtitleEl = document.getElementById('chat-room-subtitle');
     connectionStatusEl = document.getElementById('connection-status');
@@ -596,6 +699,12 @@ export async function mount() {
         updateScrollButton();
     }, { passive: true });
 
+    messagesEl?.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-user-popup-id]');
+        if (!trigger) return;
+        showPopupFromTrigger(trigger);
+    });
+
     scrollBottomBtnEl?.addEventListener('click', () => {
         shouldStickToBottom = true;
         scrollToBottom(true);
@@ -603,15 +712,32 @@ export async function mount() {
     });
 
     conversationsListEl?.addEventListener('click', (event) => {
+        const avatarTrigger = event.target.closest('.dm-item-avatar[data-user-popup-id]');
+        if (avatarTrigger) {
+            event.preventDefault();
+            event.stopPropagation();
+            showPopupFromTrigger(avatarTrigger);
+            return;
+        }
+
         const globalBtn = event.target.closest('[data-action="global-room"]');
         if (globalBtn) {
             activateGlobal();
             return;
         }
+
         const item = event.target.closest('[data-conversation-id]');
         if (!item) return;
         const conversation = conversations.find((entry) => entry.id === item.dataset.conversationId);
         if (conversation) activateConversation(conversation);
+    });
+
+    roomAvatarTriggerEl?.addEventListener('click', () => {
+        showPopupFromTrigger(roomAvatarTriggerEl);
+    });
+
+    roomTitleTriggerEl?.addEventListener('click', () => {
+        showPopupFromTrigger(roomTitleTriggerEl);
     });
 
     searchResultsEl?.addEventListener('click', (event) => {
@@ -626,6 +752,13 @@ export async function mount() {
         searchInputEl?.focus();
     });
 
+    popupWriteHandler = (event) => {
+        const userId = String(event.detail?.userId || '').trim();
+        if (!userId) return;
+        startConversationWithUser(userId);
+    };
+    window.addEventListener('user-popup:write', popupWriteHandler);
+
     updateHeader();
     renderMessages();
     renderConversationsList();
@@ -638,7 +771,12 @@ export async function mount() {
 
 export function unmount() {
     mounted = false;
+    hideUserPopup();
     stopDmPolling();
+    if (popupWriteHandler) {
+        window.removeEventListener('user-popup:write', popupWriteHandler);
+        popupWriteHandler = null;
+    }
     if (ws) {
         ws.close();
         ws = null;
@@ -647,4 +785,11 @@ export function unmount() {
     dmMessages = [];
     conversations = [];
     searchResults = [];
+    messagesEl = null;
+    messagesInnerEl = null;
+    roomAvatarTriggerEl = null;
+    roomAvatarEl = null;
+    roomTitleTriggerEl = null;
+    roomTitleEl = null;
+    roomSubtitleEl = null;
 }

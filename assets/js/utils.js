@@ -75,6 +75,27 @@ export function escapeHtml(text) {
     return div.innerHTML;
 }
 
+export function applyUserAccentColor(accentColor) {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    if (!root) return;
+
+    const value = String(accentColor || '').trim();
+    const isValidColor = Boolean(
+        value
+        && typeof CSS !== 'undefined'
+        && typeof CSS.supports === 'function'
+        && CSS.supports('color', value),
+    );
+
+    if (isValidColor) {
+        root.style.setProperty('--user-accent', value);
+        return;
+    }
+
+    root.style.removeProperty('--user-accent');
+}
+
 export function getFileIcon(fileType) {
     const icons = {
         'py': 'fab fa-python',

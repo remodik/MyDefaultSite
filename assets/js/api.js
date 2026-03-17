@@ -43,6 +43,37 @@ async function apiRequest(endpoint, options = {}) {
     return response.json();
 }
 
+async function formDataRequest(endpoint, formData, options = {}) {
+    const token = getToken();
+    const headers = {
+        ...options.headers,
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+        body: formData,
+    });
+
+    if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        window.dispatchEvent(new CustomEvent('auth-changed'));
+        throw new Error('Unauthorized');
+    }
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+        throw new Error(error.detail || 'Request failed');
+    }
+
+    return response.json();
+}
+
 export const authApi = {
     async register(username, password, email = null) {
         const body = { username, password };
@@ -273,6 +304,20 @@ export const meApi = {
         });
     },
 
+    async uploadAvatar(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return formDataRequest('/api/me/avatar', formData, {
+            method: 'POST',
+        });
+    },
+
+    async deleteAvatar() {
+        return apiRequest('/api/me/avatar', {
+            method: 'DELETE',
+        });
+    },
+
     async getConversations() {
         return apiRequest('/api/me/conversations');
     },
@@ -283,6 +328,10 @@ export const usersApi = {
         const q = (query || '').trim();
         if (!q) return [];
         return apiRequest(`/api/users/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(limit)}`);
+    },
+
+    async getProfile(userId) {
+        return apiRequest(`/api/users/${encodeURIComponent(userId)}/profile`);
     },
 };
 

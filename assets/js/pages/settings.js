@@ -1,8 +1,20 @@
 import { meApi } from '../api.js';
-import { escapeHtml, showToast } from '../utils.js';
+import { applyUserAccentColor, escapeHtml, showToast } from '../utils.js';
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
 let formEl = null;
+let avatarPreviewEl = null;
+let avatarInputEl = null;
+let avatarUploadBtnEl = null;
+let avatarDeleteBtnEl = null;
+
 let submitHandler = null;
+let avatarChangeHandler = null;
+let avatarPickHandler = null;
+let avatarDeleteHandler = null;
+
+let currentProfile = null;
 
 function setFormDisabled(disabled) {
     if (!formEl) return;
@@ -12,12 +24,34 @@ function setFormDisabled(disabled) {
     });
 }
 
+function getAvatarInitial(profile) {
+    const source = profile?.display_name || profile?.username || '?';
+    return source.charAt(0).toUpperCase();
+}
+
+function renderAvatarPreview(profile) {
+    if (!avatarPreviewEl) return;
+
+    if (profile?.avatar_url) {
+        avatarPreviewEl.innerHTML = `<img src="${escapeHtml(profile.avatar_url)}" alt="Аватар" class="settings-avatar-image">`;
+    } else {
+        avatarPreviewEl.innerHTML = `<span class="settings-avatar-fallback">${escapeHtml(getAvatarInitial(profile))}</span>`;
+    }
+
+    if (avatarDeleteBtnEl) {
+        avatarDeleteBtnEl.disabled = !profile?.avatar_url;
+    }
+}
+
 function fillForm(profile) {
     if (!formEl || !profile) return;
+    currentProfile = profile;
     formEl.display_name.value = profile.display_name || '';
     formEl.bio.value = profile.bio || '';
     formEl.accent_color.value = profile.accent_color || '';
     formEl.privacy_dm.value = profile.privacy_dm === 'none' ? 'none' : 'all';
+    renderAvatarPreview(profile);
+    applyUserAccentColor(profile.accent_color || null);
 }
 
 async function loadSettings() {
@@ -44,6 +78,57 @@ async function loadSettings() {
     }
 }
 
+function validateAvatar(file) {
+    if (!file) return 'Файл не выбран';
+    if (!file.type || !file.type.startsWith('image/')) return 'Можно загружать только изображения';
+    if (file.size > AVATAR_MAX_BYTES) return 'Размер файла должен быть до 5MB';
+    return '';
+}
+
+function openAvatarPicker() {
+    avatarInputEl?.click();
+}
+
+async function handleAvatarSelected(event) {
+    const file = event.target.files?.[0];
+    const validationError = validateAvatar(file);
+    if (validationError) {
+        if (file) showToast(validationError, 'warning');
+        if (avatarInputEl) avatarInputEl.value = '';
+        return;
+    }
+
+    setFormDisabled(true);
+    try {
+        const profile = await meApi.uploadAvatar(file);
+        fillForm(profile);
+        showToast('Аватар обновлён', 'success');
+    } catch (error) {
+        showToast(error.message || 'Не удалось загрузить аватар', 'error');
+    } finally {
+        if (avatarInputEl) avatarInputEl.value = '';
+        setFormDisabled(false);
+    }
+}
+
+async function handleDeleteAvatar() {
+    if (!currentProfile?.avatar_url) {
+        showToast('Аватар уже удалён', 'info');
+        return;
+    }
+
+    setFormDisabled(true);
+    try {
+        const profile = await meApi.deleteAvatar();
+        fillForm(profile);
+        showToast('Аватар удалён', 'success');
+    } catch (error) {
+        showToast(error.message || 'Не удалось удалить аватар', 'error');
+    } finally {
+        setFormDisabled(false);
+    }
+}
+
 async function handleSubmit(event) {
     event.preventDefault();
     if (!formEl) return;
@@ -57,7 +142,8 @@ async function handleSubmit(event) {
 
     setFormDisabled(true);
     try {
-        await meApi.updateProfile(payload);
+        const profile = await meApi.updateProfile(payload);
+        fillForm(profile);
         showToast('Настройки сохранены', 'success');
     } catch (error) {
         showToast(error.message || 'Не удалось сохранить настройки', 'error');
@@ -90,6 +176,27 @@ export function render() {
 
                 <div id="settings-body" class="hidden">
                     <form id="profile-settings-form" class="space-y-5">
+                        <section class="settings-avatar-section">
+                            <label class="label">Аватар</label>
+                            <div class="settings-avatar-row">
+                                <button type="button" id="settings-avatar-preview" class="settings-avatar-preview" aria-label="Выбрать фото профиля"></button>
+                                <div class="settings-avatar-actions">
+                                    <input id="settings-avatar-input" type="file" accept="image/*" class="hidden">
+                                    <div class="settings-avatar-buttons">
+                                        <button type="button" id="settings-avatar-upload" class="btn btn-secondary btn-sm">
+                                            <i class="fas fa-upload"></i>
+                                            Загрузить фото
+                                        </button>
+                                        <button type="button" id="settings-avatar-delete" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                            Удалить
+                                        </button>
+                                    </div>
+                                    <p class="settings-avatar-hint">Поддерживаются только изображения, размер до 5MB.</p>
+                                </div>
+                            </div>
+                        </section>
+
                         <div>
                             <label class="label" for="display-name">Публичное имя</label>
                             <input
@@ -124,7 +231,6 @@ export function render() {
                                 maxlength="32"
                                 placeholder="#5865f2"
                             >
-                            <p class="text-xs text-discord-text mt-2">Пока используется как заготовка для будущей персонализации UI.</p>
                         </div>
 
                         <div>
@@ -151,19 +257,40 @@ export function render() {
 
 export function mount() {
     formEl = document.getElementById('profile-settings-form');
-    submitHandler = handleSubmit;
+    avatarPreviewEl = document.getElementById('settings-avatar-preview');
+    avatarInputEl = document.getElementById('settings-avatar-input');
+    avatarUploadBtnEl = document.getElementById('settings-avatar-upload');
+    avatarDeleteBtnEl = document.getElementById('settings-avatar-delete');
 
-    if (formEl) {
-        formEl.addEventListener('submit', submitHandler);
-    }
+    submitHandler = handleSubmit;
+    avatarChangeHandler = handleAvatarSelected;
+    avatarPickHandler = openAvatarPicker;
+    avatarDeleteHandler = handleDeleteAvatar;
+
+    formEl?.addEventListener('submit', submitHandler);
+    avatarInputEl?.addEventListener('change', avatarChangeHandler);
+    avatarPreviewEl?.addEventListener('click', avatarPickHandler);
+    avatarUploadBtnEl?.addEventListener('click', avatarPickHandler);
+    avatarDeleteBtnEl?.addEventListener('click', avatarDeleteHandler);
 
     loadSettings();
 }
 
 export function unmount() {
-    if (formEl && submitHandler) {
-        formEl.removeEventListener('submit', submitHandler);
-    }
+    formEl?.removeEventListener('submit', submitHandler);
+    avatarInputEl?.removeEventListener('change', avatarChangeHandler);
+    avatarPreviewEl?.removeEventListener('click', avatarPickHandler);
+    avatarUploadBtnEl?.removeEventListener('click', avatarPickHandler);
+    avatarDeleteBtnEl?.removeEventListener('click', avatarDeleteHandler);
+
     formEl = null;
+    avatarPreviewEl = null;
+    avatarInputEl = null;
+    avatarUploadBtnEl = null;
+    avatarDeleteBtnEl = null;
     submitHandler = null;
+    avatarChangeHandler = null;
+    avatarPickHandler = null;
+    avatarDeleteHandler = null;
+    currentProfile = null;
 }
