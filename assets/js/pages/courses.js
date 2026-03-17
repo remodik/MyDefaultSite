@@ -17,13 +17,22 @@ function formatPrice(price) {
 function renderCover(course) {
     if (course.cover_url) {
         return `
-            <div class="h-40 rounded-lg mb-4 bg-cover bg-center border border-discord-lighter/40"
-                 style="background-image: url('${escapeHtml(course.cover_url)}');"></div>
+            <div class="course-card-cover-frame mb-4">
+                <img
+                    src="${escapeHtml(course.cover_url)}"
+                    alt="${escapeHtml(course.title)}"
+                    class="course-card-cover-image"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <div class="course-card-cover-fallback hidden">
+                    <i class="fas fa-graduation-cap text-4xl text-discord-text/70"></i>
+                </div>
+            </div>
         `;
     }
 
     return `
-        <div class="h-40 rounded-lg mb-4 bg-gradient-to-br from-discord-accent/40 to-discord-dark border border-discord-lighter/40 flex items-center justify-center">
+        <div class="course-card-cover-frame course-card-cover-fallback mb-4">
             <i class="fas fa-graduation-cap text-4xl text-discord-text/70"></i>
         </div>
     `;

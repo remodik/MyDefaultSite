@@ -18,14 +18,14 @@ function formatPrice(amount) {
 function renderCover() {
     if (course?.cover_url) {
         return `
-            <div class="relative rounded-xl overflow-hidden border border-discord-lighter/40 mb-6 bg-discord-darker">
+            <div class="relative course-detail-cover-frame">
                 <img
                     src="${escapeHtml(course.cover_url)}"
                     alt="${escapeHtml(course.title)}"
-                    class="w-full h-64 object-cover"
+                    class="course-detail-cover-image"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
-                <div class="hidden h-64 items-center justify-center bg-gradient-to-br from-discord-accent/40 to-discord-dark">
+                <div class="course-detail-cover-fallback hidden">
                     <i class="fas fa-graduation-cap text-5xl text-discord-text/80"></i>
                 </div>
             </div>
@@ -33,7 +33,7 @@ function renderCover() {
     }
 
     return `
-        <div class="h-64 rounded-xl mb-6 bg-gradient-to-br from-discord-accent/40 to-discord-dark border border-discord-lighter/40 flex items-center justify-center">
+        <div class="course-detail-cover-frame course-detail-cover-fallback">
             <i class="fas fa-graduation-cap text-5xl text-discord-text/80"></i>
         </div>
     `;
