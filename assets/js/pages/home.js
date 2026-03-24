@@ -26,11 +26,8 @@ function formatRelativeTime(seconds) {
     if (count >= 1) {
       const form =
         forms[unit][
-          pluralRules.select(count) === "one"
-            ? 0
-            : pluralRules.select(count) === "few"
-              ? 1
-              : 2
+          pluralRules.select(count) === "one" ? 0
+            : pluralRules.select(count) === "few" ? 1 : 2
         ];
       return `через ${count} ${form}`;
     }
@@ -61,7 +58,7 @@ const FEATURED_PROJECTS = [
     color: "text-blue-400",
     bg: "bg-blue-500/15",
     name: "Calc",
-    desc: "Веб-калькулятор с поддержкой сложных выражений и историей вычислений.",
+    desc: "Калькулятор с поддержкой сложных выражений и историей вычислений.",
     tags: ["C++"],
     link: "https://github.com/remodik/calc",
   },
@@ -71,7 +68,7 @@ const FEATURED_PROJECTS = [
     bg: "bg-red-500/15",
     name: "Minesweeper.WEB",
     desc: "Классический сапёр в браузере с разными уровнями сложности и таймером.",
-    tags: ["C#", "WPF", "ASP.NET"],
+    tags: ["C#", "ASP.NET"],
     link: "https://github.com/remodik/minesweeper.web",
   },
   {
@@ -89,7 +86,7 @@ const FEATURED_PROJECTS = [
     bg: "bg-yellow-500/15",
     name: "Lentik",
     desc: "Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.",
-    tags: ["Python", "FastAPI", "Next.js", "WebSocket", "TSX", "Docker"],
+    tags: ["Python", "FastAPI", "Next.js", "TSX", "Docker"],
     link: "https://github.com/remodik/Lentik",
   },
 ];
@@ -199,7 +196,7 @@ export function render() {
                                 <div class="text-xs text-discord-text mt-0.5">проектов</div>
                             </div>
                             <div class="bg-discord-darker rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-discord-green">1.5+</div>
+                                <div class="text-2xl font-bold text-discord-green">2+</div>
                                 <div class="text-xs text-discord-text mt-0.5">года опыта</div>
                             </div>
                             <div class="bg-discord-darker rounded-lg p-3 text-center">

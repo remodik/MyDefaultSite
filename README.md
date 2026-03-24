@@ -87,6 +87,7 @@
 ### Backend
 
 ```bash
+
 cd /app/backend
 
 # Установка зависимостей
@@ -106,6 +107,7 @@ uvicorn server:app --host 0.0.0.0 --port 8001
 ### Frontend
 
 ```bash
+
 cd /app
 python -m http.server 3000
 # или
