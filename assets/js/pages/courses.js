@@ -1,4 +1,4 @@
-import { coursesApi } from '../api.js';
+import { coursesApi, resolveApiUrl } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { router } from '../router.js';
 import { showToast, escapeHtml } from '../utils.js';
@@ -19,7 +19,7 @@ function renderCover(course) {
         return `
             <div class="course-card-cover-frame mb-4">
                 <img
-                    src="${escapeHtml(course.cover_url)}"
+                    src="${escapeHtml(resolveApiUrl(course.cover_url))}"
                     alt="${escapeHtml(course.title)}"
                     class="course-card-cover-image"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"

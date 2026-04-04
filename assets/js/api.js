@@ -395,7 +395,6 @@ export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) 
     const ws = new WebSocket(`${wsUrl}/api/ws/chat?token=${token}`);
     
     ws.onopen = () => {
-        console.log('WebSocket connected');
         if (onOpen) onOpen();
     };
     
@@ -405,7 +404,6 @@ export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) 
     };
     
     ws.onclose = (event) => {
-        console.log('WebSocket closed', event.code, event.reason);
         if (onClose) onClose(event);
     };
     

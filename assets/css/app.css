@@ -658,7 +658,7 @@ code[class*="language-"] {
     content: "";
     position: absolute;
     left: 3px;
-    top: 0px;
+    top: 0;
     width: 5px;
     height: 9px;
     border: 2px solid #fff;
@@ -1422,7 +1422,7 @@ code[class*="language-"] {
 }
 
 .course-card-cover-frame {
-    height: 160px;
+    height: 180px;
     border-radius: 10px;
     border: 1px solid rgba(64, 66, 73, 0.8);
     overflow: hidden;
@@ -1435,7 +1435,8 @@ code[class*="language-"] {
 .course-card-cover-image {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
+    object-position: center top;
     background: #16181d;
 }
 
@@ -1463,7 +1464,7 @@ code[class*="language-"] {
 .course-detail-cover-image {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     background: #13151a;
 }
 
