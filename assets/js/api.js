@@ -55,7 +55,7 @@ async function apiRequest(endpoint, options = {}) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.dispatchEvent(new CustomEvent('auth-changed'));
-        throw new Error('Unauthorized');
+        throw new Error('Для выполнения этого действия нужно авторизоваться на сайте.');
     }
     
     if (!response.ok) {
@@ -86,7 +86,7 @@ async function formDataRequest(endpoint, formData, options = {}) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.dispatchEvent(new CustomEvent('auth-changed'));
-        throw new Error('Unauthorized');
+        throw new Error('Для выполнения этого действия нужно авторизоваться на сайте.');
     }
 
     if (!response.ok) {
