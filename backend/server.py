@@ -6,7 +6,6 @@ import random
 import secrets
 import string
 import uuid
-import httpx
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,7 +14,8 @@ from typing import Any
 import bcrypt
 import resend
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, \
+    status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
@@ -321,6 +321,7 @@ class CourseResponse(_StrictSchema):
 
 
 class CoursePartCreate(_StrictSchema):
+    module_title: str = Field("", max_length=255)
     title: str = Field(..., min_length=1, max_length=255)
     description: str = Field("", max_length=512)
     content: str = Field("", max_length=500000)
@@ -343,6 +344,7 @@ class CoursePartCreate(_StrictSchema):
 
 
 class CoursePartUpdate(_StrictSchema):
+    module_title: str | None = Field(None, max_length=255)
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = Field(None, max_length=512)
     content: str | None = Field(None, max_length=500000)
@@ -371,6 +373,7 @@ class CoursePartUpdate(_StrictSchema):
 class CoursePartResponse(_StrictSchema):
     id: str
     course_id: str
+    module_title: str
     title: str
     description: str
     price: int
@@ -780,6 +783,7 @@ def _course_part_to_response(
     payload: dict[str, Any] = {
         "id": part.id,
         "course_id": part.course_id,
+        "module_title": part.module_title or "",
         "title": part.title,
         "description": part.description or "",
         "price": int(part.price),
@@ -2384,6 +2388,7 @@ async def create_course_part(
     part = CoursePart(
         id=str(uuid.uuid4()),
         course_id=course_id,
+        module_title=payload.module_title,
         title=payload.title,
         description=payload.description,
         content=payload.content,

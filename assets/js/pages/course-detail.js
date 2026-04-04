@@ -9,7 +9,7 @@ let purchases = [];
 let currentCourseId = null;
 
 const SBP_PHONE_FALLBACK = '+7 987 745 65 36';
-const SBP_BANK_FALLBACK = 'Тинькофф / Сбер';
+const SBP_BANK_FALLBACK = 'Т-банк / Сбер';
 
 function formatPrice(amount) {
     return `${Number(amount || 0).toLocaleString('ru-RU')} ₽`;
@@ -153,39 +153,72 @@ function renderPartsList() {
         `;
     }
 
-    return `
-        <div class="space-y-4 mt-4">
-            ${parts.map((part, index) => {
-                const partPrice = Number(part.price || 0);
-                const showPartPrice = partPrice > 0 && !part.has_access;
+    const groups = [];
+    let currentModule = null;
+    let currentParts = [];
 
-                return `
-                    <div class="bg-discord-light rounded-xl border border-discord-lighter/40 p-5">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-discord-text text-sm">${index + 1}.</span>
-                                    <h3 class="text-white font-bold text-lg">${escapeHtml(part.title)}</h3>
-                                    ${part.is_preview ? '<span class="tag tag-primary">Превью</span>' : ''}
+    for (const part of parts) {
+        const mod = part.module_title || '';
+        if (mod !== currentModule) {
+            if (currentParts.length) {
+                groups.push({ title: currentModule, parts: currentParts });
+            }
+            currentModule = mod;
+            currentParts = [part];
+        } else {
+            currentParts.push(part);
+        }
+    }
+    if (currentParts.length) {
+        groups.push({ title: currentModule, parts: currentParts });
+    }
+
+    let globalIndex = 0;
+
+    return `
+        <div class="space-y-6 mt-4">
+            ${groups.map((group) => `
+                ${group.title ? `
+                    <h3 class="text-white font-bold text-lg mt-4 mb-2 flex items-center gap-2">
+                        <span class="text-discord-accent">#</span>
+                        ${escapeHtml(group.title)}
+                    </h3>
+                ` : ''}
+                <div class="space-y-4">
+                    ${group.parts.map((part) => {
+        globalIndex++;
+        const partPrice = Number(part.price || 0);
+        const showPartPrice = partPrice > 0 && !part.has_access;
+
+        return `
+                            <div class="bg-discord-light rounded-xl border border-discord-lighter/40 p-5">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-discord-text text-sm">${globalIndex}.</span>
+                                            <h3 class="text-white font-bold text-lg">${escapeHtml(part.title)}</h3>
+                                            ${part.is_preview ? '<span class="tag tag-primary">Превью</span>' : ''}
+                                        </div>
+                                        <p class="text-discord-text text-sm">${escapeHtml(part.description || 'Без описания')}</p>
+                                        ${showPartPrice ? `<p class="text-white text-sm mt-2">${formatPrice(partPrice)}</p>` : ''}
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        ${renderPartAction(part)}
+                                        ${isAdmin() ? `
+                                            <button class="btn btn-secondary btn-sm edit-part-btn" data-part-id="${escapeHtml(part.id)}">
+                                                Редактировать
+                                            </button>
+                                            <button class="btn btn-danger btn-sm delete-part-btn" data-part-id="${escapeHtml(part.id)}">
+                                                Удалить
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                                <p class="text-discord-text text-sm">${escapeHtml(part.description || 'Без описания')}</p>
-                                ${showPartPrice ? `<p class="text-white text-sm mt-2">${formatPrice(partPrice)}</p>` : ''}
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                ${renderPartAction(part)}
-                                ${isAdmin() ? `
-                                    <button class="btn btn-secondary btn-sm edit-part-btn" data-part-id="${escapeHtml(part.id)}">
-                                        Редактировать
-                                    </button>
-                                    <button class="btn btn-danger btn-sm delete-part-btn" data-part-id="${escapeHtml(part.id)}">
-                                        Удалить
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('')}
+                        `;
+    }).join('')}
+                </div>
+            `).join('')}
         </div>
     `;
 }
@@ -493,6 +526,12 @@ function showPartModal(part = null) {
         content: `
             <form id="part-form" class="space-y-4">
                 <div>
+                    <label class="label" for="part-module">Модуль (необязательно)</label>
+                    <input id="part-module" type="text" class="input" maxlength="255" 
+                           placeholder="Например: Модуль 1. Введение"
+                           value="${isEdit ? escapeHtml(part.module_title || '') : ''}">
+                </div>
+                <div>
                     <label class="label" for="part-title">Название</label>
                     <input id="part-title" type="text" class="input" maxlength="255" value="${isEdit ? escapeHtml(part.title) : ''}" required>
                 </div>
@@ -578,6 +617,7 @@ async function savePart(partId = null) {
     const parsedOrder = Number.parseInt(orderInput?.value || '0', 10);
 
     const payload = {
+        module_title: document.getElementById('part-module')?.value.trim() || '',
         title,
         description: descriptionInput?.value.trim() || '',
         content: contentInput?.value || '',

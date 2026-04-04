@@ -193,6 +193,7 @@ class CoursePart(Base):
     course_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    module_title: Mapped[str] = mapped_column(String(255), default="")
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String(512), default="")
     content: Mapped[str] = mapped_column(Text, default="")
