@@ -1458,13 +1458,14 @@ code[class*="language-"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: clamp(220px, 42vw, 420px);
+    height: clamp(260px, 50vw, 500px);
 }
 
 .course-detail-cover-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center top;
     background: #13151a;
 }
 
