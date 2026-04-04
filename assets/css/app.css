@@ -1904,11 +1904,6 @@ code[class*="language-"] {
     color: #f2f3f5 !important;
 }
 
-.bg-discord-light:hover {
-    background: #313338;
-    transition: background 0.3s ease;
-}
-
 @keyframes pulse-dot {
     0%,
     100% {
