@@ -4,10 +4,12 @@ import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { confirmModal } from '../components/modal.js';
 
 let users = [];
-let resetRequests = [];
 let purchases = [];
 let activeTab = 'users';
 let purchasesFilter = '';
+let licenseAdminSecret = '';
+let licenseFilter = null;
+let licenses = [];
 
 export function render() {
     return `
@@ -25,10 +27,9 @@ export function render() {
                     <i class="fas fa-users"></i>
                     Пользователи
                 </button>
-                <button class="btn ${activeTab === 'requests' ? 'btn-primary' : 'btn-secondary'}" id="tab-requests">
+                <button class="btn ${activeTab === 'licenses' ? 'btn-primary' : 'btn-secondary'}" id="tab-licenses">
                     <i class="fas fa-key"></i>
-                    Запросы на сброс
-                    <span id="requests-badge" class="hidden ml-2 px-2 py-0.5 bg-discord-red rounded-full text-xs">0</span>
+                    Лицензии
                 </button>
                 <button class="btn ${activeTab === 'purchases' ? 'btn-primary' : 'btn-secondary'}" id="tab-purchases">
                     <i class="fas fa-shopping-cart"></i>
@@ -130,56 +131,201 @@ function renderUsers() {
     });
 }
 
-function renderResetRequests() {
-    const container = document.getElementById('admin-content');
-    if (!container) return;
-    
-    if (resetRequests.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-check-circle text-discord-green"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Нет запросов на сброс</h3>
-                <p class="text-discord-text mt-2">Все запросы обработаны</p>
-            </div>
-        `;
+async function loadLicenses(filter = null) {
+    if (!licenseAdminSecret) return;
+    let url = `/api/admin/licenses?admin_secret=${encodeURIComponent(licenseAdminSecret)}`;
+    if (filter === true)  url += '&used=true';
+    if (filter === false) url += '&used=false';
+
+    try {
+        const resp = await fetch(url, { method: 'GET' });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Ошибка загрузки ключей', 'error');
+            return;
+        }
+        const data = await resp.json();
+        licenses = data.items || [];
+        licenseFilter = filter;
+        if (activeTab === 'licenses') renderLicenses();
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+async function generateLicenseKey() {
+    const secret = document.getElementById('license-secret-input')?.value.trim();
+    if (!secret) {
+        showToast('Введите admin_secret', 'warning');
         return;
     }
-    
+    licenseAdminSecret = secret;
+
+    const btn = document.getElementById('gen-key-btn');
+    const initial = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>'; }
+
+    try {
+        const resp = await fetch(
+            `/api/generate_key?admin_secret=${encodeURIComponent(secret)}`,
+            { method: 'GET' }
+        );
+        const data = await resp.json();
+        if (!resp.ok) {
+            showToast(data.detail || 'Ошибка генерации', 'error');
+            return;
+        }
+        const display = document.getElementById('generated-key-display');
+        if (display) {
+            display.textContent = data.key;
+            display.parentElement.classList.remove('hidden');
+        }
+        showToast('Ключ сгенерирован!', 'success');
+        await loadLicenses(licenseFilter);
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = initial; }
+    }
+}
+
+function renderLicenses() {
+    const container = document.getElementById('admin-content');
+    if (!container) return;
+
     container.innerHTML = `
-        <div class="space-y-4">
-            ${resetRequests.map(req => `
-                <div class="bg-discord-light rounded-lg p-6 flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-full bg-discord-yellow/20 flex items-center justify-center">
-                            <i class="fas fa-key text-discord-yellow"></i>
-                        </div>
-                        <div>
-                            <p class="text-white font-semibold">${escapeHtml(req.username)}</p>
-                            <p class="text-discord-text text-sm">
-                                Запрос от ${formatDate(req.requested_at)}
-                            </p>
-                            <p class="text-discord-text/70 text-xs mt-1">
-                                Пользователь без email запросил сброс пароля
-                            </p>
-                        </div>
+        <div class="space-y-6">
+            <div class="bg-discord-light rounded-lg p-6 border border-discord-lighter/40">
+                <h3 class="text-white font-bold text-lg mb-4">
+                    <i class="fas fa-plus-circle text-discord-accent mr-2"></i>
+                    Создать ключ
+                </h3>
+                <div class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-60">
+                        <label class="label">Admin Secret</label>
+                        <input
+                            id="license-secret-input"
+                            type="password"
+                            class="input"
+                            placeholder="LICENSE_ADMIN_SECRET"
+                            value="${escapeHtml(licenseAdminSecret)}"
+                        >
                     </div>
-                    <!-- ИЗМЕНЕНО: Убрали "на qwerty123" -->
-                    <button class="btn btn-success approve-reset" data-id="${req.user_id}" data-username="${escapeHtml(req.username)}">
-                        <i class="fas fa-check"></i>
-                        Сгенерировать пароль
+                    <button id="gen-key-btn" class="btn btn-primary">
+                        <i class="fas fa-key"></i>
+                        Сгенерировать ключ
+                    </button>
+                    <button id="load-keys-btn" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i>
+                        Загрузить список
                     </button>
                 </div>
-            `).join('')}
+                <div id="generated-key-wrapper" class="hidden mt-5">
+                    <p class="text-discord-text text-sm mb-2">Новый ключ:</p>
+                    <div class="flex items-center gap-3">
+                        <code
+                            id="generated-key-display"
+                            class="text-2xl font-mono font-bold text-white tracking-widest bg-discord-darker px-4 py-3 rounded-lg select-all border border-discord-lighter/40"
+                        ></code>
+                        <button id="copy-key-btn" class="btn btn-outline btn-sm">
+                            <i class="fas fa-copy"></i>
+                            Копировать
+                        </button>
+                    </div>
+                </div>
+            </div>
+ 
+            <div class="flex gap-2">
+                <button class="btn btn-sm ${licenseFilter === null ? 'btn-primary' : 'btn-secondary'}" data-filter="all">Все</button>
+                <button class="btn btn-sm ${licenseFilter === false ? 'btn-primary' : 'btn-secondary'}" data-filter="free">Свободные</button>
+                <button class="btn btn-sm ${licenseFilter === true  ? 'btn-primary' : 'btn-secondary'}" data-filter="used">Использованные</button>
+            </div>
+ 
+            <div class="bg-discord-light rounded-lg overflow-hidden">
+                ${licenses.length === 0 ? `
+                    <div class="empty-state">
+                        <i class="fas fa-key"></i>
+                        <p class="mt-3 text-discord-text">
+                            ${licenseAdminSecret
+                                ? 'Ключей нет или не загружены'
+                                : 'Введите admin_secret и нажмите «Загрузить список»'}
+                        </p>
+                    </div>
+                ` : `
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ключ</th>
+                                <th>Статус</th>
+                                <th>HWID</th>
+                                <th>Активирован</th>
+                                <th>Истекает</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${licenses.map(lic => `
+                                <tr>
+                                    <td class="text-discord-text text-sm">${lic.id}</td>
+                                    <td>
+                                        <code class="text-white font-mono tracking-wider select-all">${escapeHtml(lic.key)}</code>
+                                    </td>
+                                    <td>
+                                        <span class="tag ${lic.used ? 'tag-danger' : 'tag-success'}">
+                                            ${lic.used ? 'Использован' : 'Свободен'}
+                                        </span>
+                                    </td>
+                                    <td class="text-discord-text text-xs font-mono max-w-xs truncate">
+                                        ${lic.hwid ? escapeHtml(lic.hwid.slice(0, 20) + '...') : '—'}
+                                    </td>
+                                    <td class="text-discord-text text-sm">
+                                        ${lic.activated_at ? formatDate(lic.activated_at) : '—'}
+                                    </td>
+                                    <td class="text-discord-text text-sm">
+                                        ${lic.expires_at ? formatDate(lic.expires_at) : '—'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <p class="text-discord-text text-xs text-right p-3">Всего: ${licenses.length}</p>
+                `}
+            </div>
         </div>
     `;
 
-    container.querySelectorAll('.approve-reset').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.dataset.id;
-            const username = btn.dataset.username;
-            approveResetRequest(id, username);
+    document.getElementById('gen-key-btn')?.addEventListener('click', generateLicenseKey);
+
+    document.getElementById('load-keys-btn')?.addEventListener('click', async () => {
+        const secret = document.getElementById('license-secret-input')?.value.trim();
+        if (!secret) { showToast('Введите admin_secret', 'warning'); return; }
+        licenseAdminSecret = secret;
+        await loadLicenses(licenseFilter);
+    });
+
+    document.getElementById('copy-key-btn')?.addEventListener('click', async () => {
+        const key = document.getElementById('generated-key-display')?.textContent || '';
+        if (!key) return;
+        try {
+            await navigator.clipboard.writeText(key);
+            showToast('Ключ скопирован', 'success');
+        } catch {
+            showToast(key, 'info');
+        }
+    });
+
+    container.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const f = btn.dataset.filter;
+            const filter = f === 'all' ? null : f === 'used';
+            await loadLicenses(filter);
         });
     });
+
+    const keyDisplay = document.getElementById('generated-key-display');
+    if (keyDisplay?.textContent) {
+        keyDisplay.parentElement.parentElement.classList.remove('hidden');
+    }
 }
 
 function getPurchaseStatusClass(status) {
@@ -309,39 +455,21 @@ function renderPurchases() {
     });
 }
 
-function updateRequestsBadge() {
-    const badge = document.getElementById('requests-badge');
-    if (badge) {
-        if (resetRequests.length > 0) {
-            badge.textContent = resetRequests.length;
-            badge.classList.remove('hidden');
-        } else {
-            badge.classList.add('hidden');
-        }
-    }
-}
-
 function switchTab(tab) {
     activeTab = tab;
 
     const tabUsers = document.getElementById('tab-users');
-    const tabRequests = document.getElementById('tab-requests');
+    const tablicenses = document.getElementById('tab-licenses');
     const tabPurchases = document.getElementById('tab-purchases');
 
-    if (tabUsers) {
-        tabUsers.className = `btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`;
-    }
-    if (tabRequests) {
-        tabRequests.className = `btn ${tab === 'requests' ? 'btn-primary' : 'btn-secondary'}`;
-    }
-    if (tabPurchases) {
-        tabPurchases.className = `btn ${tab === 'purchases' ? 'btn-primary' : 'btn-secondary'}`;
-    }
+    if (tabUsers) tabUsers.className = `btn ${tab === 'users' ? 'btn-primary' : 'btn-secondary'}`;
+    if (tablicenses) tablicenses.className = `btn ${tab === 'licenses' ? 'btn-primary' : 'btn-secondary'}`;
+    if (tabPurchases) tabPurchases.className = `btn ${tab === 'purchases' ? 'btn-primary' : 'btn-secondary'}`;
 
     if (tab === 'users') {
         renderUsers();
-    } else if (tab === 'requests') {
-        renderResetRequests();
+    } else if (tab === 'licenses') {
+        renderLicenses();
     } else if (tab === 'purchases') {
         renderPurchases();
     }
@@ -368,7 +496,84 @@ function showNewPasswordModal(username, password) {
         </div>
     `;
 
-    alert(`Новый пароль для ${username}:\n\n${password}\n\nСкопируйте его!`);
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+    `;
+
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: #36393f; color: white; padding: 24px;
+        border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    `;
+
+    modalContent.innerHTML = `
+        <div class="text-center">${message}</div>
+        <div style="margin-top: 16px; text-align: center; gap: 8px; display: flex; justify-content: center;">
+            <button id="copyBtn" style="background: #43b581; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">📋 Скопировать</button>
+            <button id="closeBtn" style="background: #4f545c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">✕ Закрыть</button>
+        </div>
+    `;
+
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+
+    modalOverlay.onclick = (e) => {
+        if (e.target === modalOverlay) modalOverlay.remove();
+    };
+
+    document.getElementById('closeBtn').onclick = () => modalOverlay.remove();
+
+    document.getElementById('copyBtn').onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(password);
+            document.getElementById('copyBtn').textContent = '✅ Скопировано!';
+            setTimeout(() => modalOverlay.remove(), 1500);
+        } catch (err) {
+            console.error('Копирование не удалось:', err);
+            fallbackCopyTextToClipboard(password);
+        }
+    };
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            modalOverlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            document.getElementById('copyBtn').textContent = '✅ Скопировано!';
+            setTimeout(() => modalOverlay.remove(), 1500);
+        } else {
+            throw new Error('Fallback тоже не сработал');
+        }
+    } catch (err) {
+        console.error('Fallback failed:', err);
+        alert('Не удалось скопировать. Выделите пароль вручную.');
+    } finally {
+        document.body.removeChild(textArea);
+    }
 }
 
 async function resetUserPassword(userId, username) {
@@ -379,22 +584,6 @@ async function resetUserPassword(userId, username) {
             const newPassword = message.replace("Password reset to ", "");
 
             showNewPasswordModal(username, newPassword);
-
-        } catch (error) {
-            showToast(error.message || 'Ошибка сброса пароля', 'error');
-        }
-    });
-}
-
-async function approveResetRequest(userId, username) {
-    confirmModal(`Сбросить пароль для ${username}?`, async () => {
-        try {
-            const response = await adminApi.resetUserPassword(userId);
-            const message = response.message || "";
-            const newPassword = message.replace("Password reset to ", "");
-
-            showNewPasswordModal(username, newPassword);
-            await loadResetRequests();
 
         } catch (error) {
             showToast(error.message || 'Ошибка сброса пароля', 'error');
@@ -434,18 +623,6 @@ async function loadUsers() {
     }
 }
 
-async function loadResetRequests() {
-    try {
-        resetRequests = await adminApi.getResetRequests();
-        updateRequestsBadge();
-        if (activeTab === 'requests') {
-            renderResetRequests();
-        }
-    } catch (error) {
-        console.error('Error loading reset requests:', error);
-    }
-}
-
 async function loadPurchases(status = null) {
     try {
         purchases = await adminPurchasesApi.getAll(status);
@@ -463,30 +640,23 @@ export async function mount() {
 
     await Promise.all([
         loadUsers(),
-        loadResetRequests(),
+        loadLicenses(),
         loadPurchases(),
     ]);
 
     const tabUsers = document.getElementById('tab-users');
-    const tabRequests = document.getElementById('tab-requests');
+    const tabLicenses = document.getElementById('tab-licenses');
     const tabPurchases = document.getElementById('tab-purchases');
 
-    if (tabUsers) {
-        tabUsers.addEventListener('click', () => switchTab('users'));
-    }
-    if (tabRequests) {
-        tabRequests.addEventListener('click', () => switchTab('requests'));
-    }
-    if (tabPurchases) {
-        tabPurchases.addEventListener('click', () => switchTab('purchases'));
-    }
+    if (tabUsers) tabUsers.addEventListener('click', () => switchTab('users'));
+    if (tabLicenses) tabLicenses.addEventListener('click', () => switchTab('licenses'));
+    if (tabPurchases) tabPurchases.addEventListener('click', () => switchTab('purchases'));
 
     renderUsers();
 }
 
 export function unmount() {
     users = [];
-    resetRequests = [];
     purchases = [];
     activeTab = 'users';
     purchasesFilter = '';

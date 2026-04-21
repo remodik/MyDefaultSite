@@ -43,6 +43,12 @@ from backend.database import (
     get_session,
     init_models,
 )
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from backend.license.routers import license_router
+from backend.license.models import License, LicenseLog
 
 load_dotenv()
 
@@ -54,6 +60,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.include_router(license_router)
 
 _allowed_origins_env = os.getenv("CORS_ORIGINS", "https://remod3.ru,http://localhost:3000,http://localhost:5173,https://www.remod3.ru")
 ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]

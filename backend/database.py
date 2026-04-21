@@ -11,6 +11,8 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, St
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from backend.license.models import License, LicenseLog
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
