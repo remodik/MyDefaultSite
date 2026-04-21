@@ -21,11 +21,14 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy import and_, delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import (
+from .database import (
     AdminResetRequest,
     ChatMessage,
     Conversation,
@@ -43,12 +46,7 @@ from backend.database import (
     get_session,
     init_models,
 )
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-
-from backend.license.routers import license_router
-from backend.license.models import License, LicenseLog
+from .license.routers import license_router
 
 load_dotenv()
 

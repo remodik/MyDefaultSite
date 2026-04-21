@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import os
+import ssl
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator
-import ssl
 
 from dotenv import load_dotenv
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from backend.license.models import License, LicenseLog
 
 load_dotenv()
 

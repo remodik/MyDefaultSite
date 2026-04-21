@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+
 from pydantic import BaseModel, Field, field_validator
 
 KEY_PATTERN = re.compile(r"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$")
