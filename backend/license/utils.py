@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import random
 import string
@@ -46,7 +47,8 @@ def verify_offline_token(hwid: str, expires_at_ms: int, token: str) -> bool:
 
 def sign_response(payload: dict) -> str:
     data = "".join(
-        str(v) for _, v in sorted(payload.items()) if v is not None
+        json.dumps(v, ensure_ascii=False, separators=(',', ':'))
+        for _, v in sorted(payload.items())
     )
     return hmac_sha256_hex(data)
 
