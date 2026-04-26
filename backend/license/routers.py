@@ -93,17 +93,14 @@ async def activate_license(
                    {"reason": "key_not_found"})
         await session.commit()
         payload = {"success": False, "message": "Неверный ключ"}
-        return {**payload, "sign": sign_response(payload)}
+        return {**payload, "sig": sign_response(payload)}
 
-    if lic.used:
-        if lic.hwid and lic.hwid == body.hwid:
-            pass
-        else:
-            await _log(session, "activate_fail", body.hwid, body.code, ip,
-                       {"reason": "key_used", "bound_hwid": lic.hwid})
-            await session.commit()
-            payload = {"success": False, "message": "Ключ уже использован"}
-            return {**payload, "sign": sign_response(payload)}
+    if lic.used and lic.hwid != body.hwid:
+        await _log(session, "activate_fail", body.hwid, body.code, ip,
+                   {"reason": "key_used", "bound_hwid": lic.hwid})
+        await session.commit()
+        payload = {"success": False, "message": "Ключ уже использован"}
+        return {**payload, "sig": sign_response(payload)}
 
     now = datetime.now()
     expires_at = now + timedelta(days=LICENSE_OFFLINE_DAYS)
@@ -125,7 +122,7 @@ async def activate_license(
         "offlineToken": offline_token,
         "expiresAt": expires_ms,
     }
-    return {**payload, "sign": sign_response(payload)}
+    return {**payload, "sig": sign_response(payload)}
 
 
 @license_router.post(
@@ -167,13 +164,13 @@ async def check_license(
         "valid": valid,
         "expires_at": dt_to_iso(lic.expires_at) if lic else None,
     }
-    return {**payload, "sign": sign_response(payload)}
+    return {**payload, "sig": sign_response(payload)}
 
 
 @license_router.get(
     "/generate_key",
     response_model=GenerateKeyResponse,
-    summary="Генерация нового лицензионного ключа (только для администратора)",
+    summary="Генерация нового лицензионного ключа",
 )
 async def generate_key(
     request: Request,

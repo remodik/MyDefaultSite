@@ -41,13 +41,13 @@ class ActivateResponse(BaseModel):
     message: str
     offlineToken: str | None = None
     expiresAt: int | None = None
-    sign: str
+    sig: str
 
 
 class CheckResponse(BaseModel):
     valid: bool
     expires_at: str | None = None
-    sign: str
+    sig: str
 
 
 class GenerateKeyResponse(BaseModel):
