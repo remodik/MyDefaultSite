@@ -63,8 +63,17 @@ def sign_response(payload: dict) -> str:
         ((k, v) for k, v in payload.items() if k != "sig"),
         key=lambda x: x[0],
     )
-    data = "".join(_gson_str(v) for _, v in parts)
-    return hmac_sha256_hex(data)
+    pieces = [(k, _gson_str(v)) for k, v in parts]
+    data = "".join(s for _, s in pieces)
+
+    import logging
+    log = logging.getLogger("license.sign")
+    for k, s in pieces:
+        log.warning("[SIG] key=%s, serialized=%r", k, s)
+    log.warning("[SIG] dataToSign=%r", data)
+    sig = hmac_sha256_hex(data)
+    log.warning("[SIG] sig=%s", sig)
+    return sig
 
 
 def dt_to_iso(dt: datetime | None) -> str | None:
