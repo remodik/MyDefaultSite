@@ -5,6 +5,7 @@ import os
 import random
 import secrets
 import string
+import re
 import uuid
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
@@ -42,6 +43,7 @@ from .database import (
     Service,
     User,
     UserProfile,
+    Work,
     async_session_factory,
     get_session,
     init_models,
@@ -247,6 +249,48 @@ class ContactMessage(BaseModel):
     phone: str | None = None
     subject: str
     message: str
+
+
+_WORKS_SLUG_RE = re.compile(r"[^a-z0-9\-]+")
+
+
+def _slugify_work_title(title: str) -> str:
+    base = title.strip().lower()
+    translit_map = str.maketrans({
+        "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+        "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+        "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+        "ф": "f", "х": "h", "ц": "c", "ч": "ch", "ш": "sh", "щ": "sch",
+        "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+    })
+    base = base.translate(translit_map)
+    base = base.replace(" ", "-")
+    base = _WORKS_SLUG_RE.sub("-", base)
+    base = base.strip("-")
+    return base[:150] or "work"
+
+
+class WorkBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str = Field("", max_length=2000)
+    subject: str = Field("", max_length=255)
+    display_date: str = Field("", max_length=64)
+    icon: str = Field("book", max_length=64)
+    tags: str = Field("", max_length=512)
+    is_published: bool = True
+    sort_order: int = 0
+
+
+class WorkUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=2000)
+    subject: str | None = Field(None, max_length=255)
+    display_date: str | None = Field(None, max_length=64)
+    icon: str | None = Field(None, max_length=64)
+    tags: str | None = Field(None, max_length=512)
+    is_published: bool | None = None
+    sort_order: int | None = None
+    slug: str | None = Field(None, max_length=160)
 
 
 class _StrictSchema(BaseModel):
@@ -629,11 +673,7 @@ def _conversation_pair(user_id_1: str, user_id_2: str) -> tuple[str, str]:
     return ordered[0], ordered[1]
 
 
-async def get_or_create_profile(
-    session: AsyncSession,
-    user: User,
-    commit_on_create: bool = True,
-) -> UserProfile:
+async def get_or_create_profile(session: AsyncSession, user: User, commit_on_create: bool = True) -> UserProfile:
     result = await session.execute(select(UserProfile).where(UserProfile.user_id == user.id))
     profile = result.scalar_one_or_none()
     if profile:
@@ -676,10 +716,7 @@ async def get_conversation_for_user_or_404(
     return conversation
 
 
-async def ensure_user_accepts_dm(
-    session: AsyncSession,
-    target_user: User,
-) -> UserProfile | None:
+async def ensure_user_accepts_dm(session: AsyncSession, target_user: User) -> UserProfile | None:
     target_profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == target_user.id))
     target_profile = target_profile_result.scalar_one_or_none()
     privacy_dm = _normalize_privacy_dm(target_profile.privacy_dm if target_profile else DEFAULT_DM_PRIVACY)
@@ -1009,7 +1046,7 @@ async def startup_event() -> None:
     await init_models()
 
 
-@app.post("/api/auth/register", response_model=Token)
+@app.post(path="/api/auth/register", response_model=Token)
 async def register(user: UserCreate, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -1058,7 +1095,7 @@ async def register(user: UserCreate, session: AsyncSession = Depends(get_session
     }
 
 
-@app.post("/api/auth/login", response_model=Token)
+@app.post(path="/api/auth/login", response_model=Token)
 async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     await ensure_db_connection(session)
     result = await session.execute(select(User).where(User.username == user.username))
@@ -1080,17 +1117,17 @@ async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -
     }
 
 
-@app.get("/api/auth/me")
+@app.get(path="/api/auth/me")
 async def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return current_user
 
 
-@app.get("/api/me")
+@app.get(path="/api/me")
 async def get_me_short(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return current_user
 
 
-@app.get("/api/me/profile")
+@app.get(path="/api/me/profile")
 async def get_my_profile(
     current_user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_session),
@@ -1100,7 +1137,7 @@ async def get_my_profile(
     return profile_to_dict(current_user, profile)
 
 
-@app.put("/api/me/profile")
+@app.put(path="/api/me/profile")
 async def update_my_profile(
     payload: ProfileUpdatePayload,
     current_user: User = Depends(get_current_user_model),
@@ -1131,7 +1168,7 @@ async def update_my_profile(
     return profile_to_dict(current_user, profile)
 
 
-@app.post("/api/me/avatar")
+@app.post(path="/api/me/avatar")
 async def upload_my_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user_model),
@@ -1160,7 +1197,7 @@ async def upload_my_avatar(
     return profile_to_dict(current_user, profile)
 
 
-@app.delete("/api/me/avatar")
+@app.delete(path="/api/me/avatar")
 async def delete_my_avatar(
     current_user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_session),
@@ -1180,7 +1217,7 @@ async def delete_my_avatar(
     return profile_to_dict(current_user, profile)
 
 
-@app.get("/api/users/{user_id}/profile")
+@app.get(path="/api/users/{user_id}/profile")
 async def get_user_public_profile(
     user_id: str,
     current_user: User = Depends(get_current_user_model),
@@ -1202,7 +1239,7 @@ async def get_user_public_profile(
     return public_profile_to_dict(target_user, profile)
 
 
-@app.get("/api/users/search")
+@app.get(path="/api/users/search")
 async def search_users(
     q: str = "",
     limit: int = 20,
@@ -1248,7 +1285,7 @@ async def search_users(
     return payload
 
 
-@app.post("/api/conversations")
+@app.post(path="/api/conversations")
 async def create_or_get_conversation(
     payload: ConversationCreatePayload,
     current_user: User = Depends(get_current_user_model),
@@ -1293,7 +1330,7 @@ async def create_or_get_conversation(
     return await build_conversation_summary(session, conversation, current_user.id)
 
 
-@app.get("/api/me/conversations")
+@app.get(path="/api/me/conversations")
 async def get_my_conversations(
     current_user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_session),
@@ -1322,7 +1359,7 @@ async def get_my_conversations(
     return summaries
 
 
-@app.get("/api/conversations/{conversation_id}/messages")
+@app.get(path="/api/conversations/{conversation_id}/messages")
 async def get_conversation_messages(
     conversation_id: str,
     limit: int = 50,
@@ -1381,7 +1418,7 @@ async def get_conversation_messages(
     return payload
 
 
-@app.post("/api/conversations/{conversation_id}/messages")
+@app.post(path="/api/conversations/{conversation_id}/messages")
 async def send_conversation_message(
     conversation_id: str,
     payload: DirectMessageCreatePayload,
@@ -1421,10 +1458,10 @@ async def send_conversation_message(
     return direct_message_to_dict(message, current_user, current_user_profile)
 
 
-@app.post("/api/auth/password-reset-request")
+@app.post(path="/api/auth/password-reset-request")
 async def request_password_reset(
-        request: PasswordResetRequest,
-        session: AsyncSession = Depends(get_session),
+    request: PasswordResetRequest,
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -1463,10 +1500,10 @@ async def request_password_reset(
     }
 
 
-@app.get("/api/auth/password-reset/verify")
+@app.get(path="/api/auth/password-reset/verify")
 async def verify_reset_token(
-        token: str,
-        session: AsyncSession = Depends(get_session),
+    token: str,
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -1487,10 +1524,10 @@ async def verify_reset_token(
     return {"valid": True}
 
 
-@app.post("/api/auth/password-reset")
+@app.post(path="/api/auth/password-reset")
 async def reset_password(
-        reset: PasswordReset,
-        session: AsyncSession = Depends(get_session)
+    reset: PasswordReset,
+    session: AsyncSession = Depends(get_session)
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
 
@@ -1522,10 +1559,9 @@ async def reset_password(
     return {"message": "Пароль успешно изменён"}
 
 
-@app.get("/api/projects")
+@app.get(path="/api/projects", dependencies=[Depends(get_current_admin)],)
 async def get_projects(
-        current_user: dict[str, Any] = Depends(get_current_user),
-        session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
 
@@ -1534,10 +1570,9 @@ async def get_projects(
     return projects
 
 
-@app.get("/api/projects/{project_id}")
+@app.get(path="/api/projects/{project_id}", dependencies=[Depends(get_current_admin)],)
 async def get_project(
         project_id: str,
-        current_user: dict[str, Any] = Depends(get_current_user),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1554,7 +1589,7 @@ async def get_project(
     return project_data
 
 
-@app.post("/api/projects")
+@app.post(path="/api/projects")
 async def create_project(
         project: ProjectCreate,
         current_user: dict[str, Any] = Depends(get_current_admin),
@@ -1575,11 +1610,10 @@ async def create_project(
     return project_to_dict(project_obj)
 
 
-@app.put("/api/projects/{project_id}")
+@app.put(path="/api/projects/{project_id}", dependencies=[Depends(get_current_admin)],)
 async def update_project(
         project_id: str,
         project: ProjectUpdate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1600,10 +1634,9 @@ async def update_project(
     return project_to_dict(project_obj)
 
 
-@app.delete("/api/projects/{project_id}")
+@app.delete(path="/api/projects/{project_id}", dependencies=[Depends(get_current_admin)],)
 async def delete_project(
         project_id: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -1619,10 +1652,9 @@ async def delete_project(
     return {"message": "Project deleted"}
 
 
-@app.post("/api/files")
+@app.post(path="/api/files", dependencies=[Depends(get_current_admin)],)
 async def create_file(
         file: FileCreate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1662,11 +1694,10 @@ async def create_file(
     return file_to_dict(file_obj)
 
 
-@app.post("/api/files/upload")
+@app.post(path="/api/files/upload", dependencies=[Depends(get_current_admin)],)
 async def upload_file(
         project_id: str = Form(...),
         file: UploadFile = File(...),
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1713,10 +1744,9 @@ async def upload_file(
     return file_to_dict(file_obj)
 
 
-@app.get("/api/files/{file_id}")
+@app.get(path="/api/files/{file_id}", dependencies=[Depends(get_current_admin)],)
 async def get_file(
         file_id: str,
-        current_user: dict[str, Any] = Depends(get_current_user),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1727,11 +1757,10 @@ async def get_file(
     return file_to_dict(file_obj)
 
 
-@app.put("/api/files/{file_id}")
+@app.put(path="/api/files/{file_id}", dependencies=[Depends(get_current_admin)],)
 async def update_file(
         file_id: str,
         file: FileUpdate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1754,10 +1783,9 @@ async def update_file(
     return file_to_dict(file_obj)
 
 
-@app.delete("/api/files/{file_id}")
+@app.delete(path="/api/files/{file_id}", dependencies=[Depends(get_current_admin)],)
 async def delete_file(
         file_id: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -1783,10 +1811,9 @@ async def delete_file(
     return {"message": "File deleted"}
 
 
-@app.post("/api/folders")
+@app.post(path="/api/folders", dependencies=[Depends(get_current_admin)],)
 async def create_folder(
         folder: FolderCreate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session)
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1820,11 +1847,10 @@ async def create_folder(
     return file_to_dict(folder_obj)
 
 
-@app.put("/api/files/{file_id}/move")
+@app.put(path="/api/files/{file_id}/move", dependencies=[Depends(get_current_admin)],)
 async def move_file(
         file_id: str,
         move_data: FileMove,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1834,7 +1860,6 @@ async def move_file(
     if not file_obj:
         raise HTTPException(status_code=404, detail="File not found")
     old_path = file_obj.path
-    old_parent_path = file_obj.parent_path
     new_parent_path = move_data.new_parent_path
 
     if new_parent_path:
@@ -1865,11 +1890,10 @@ async def move_file(
     return file_to_dict(file_obj)
 
 
-@app.put("/api/files/{file_id}/rename")
+@app.put(path="/api/files/{file_id}/rename", dependencies=[Depends(get_current_admin)],)
 async def rename_file(
         file_id: str,
         new_name: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1877,7 +1901,6 @@ async def rename_file(
     if not file_obj:
         raise HTTPException(status_code=404, detail="File not found")
     old_path = file_obj.path
-    old_name = file_obj.name
 
     if file_obj.parent_path:
         new_path = f"{file_obj.parent_path}/{new_name}"
@@ -1906,9 +1929,8 @@ async def rename_file(
     return file_to_dict(file_obj)
 
 
-@app.get("/api/admin/users")
+@app.get(path="/api/admin/users", dependencies=[Depends(get_current_admin)],)
 async def get_users(
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
@@ -1917,9 +1939,8 @@ async def get_users(
     return [user_to_public_dict(user) for user in result.scalars().all()]
 
 
-@app.get("/api/admin/reset-requests")
+@app.get(path="/api/admin/reset-requests", dependencies=[Depends(get_current_admin)],)
 async def get_reset_requests(
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
@@ -1940,10 +1961,9 @@ async def get_reset_requests(
     return requests
 
 
-@app.post("/api/admin/reset-password/{user_id}")
+@app.post(path="/api/admin/reset-password/{user_id}", dependencies=[Depends(get_current_admin)],)
 async def admin_reset_password(
         user_id: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -1966,11 +1986,10 @@ async def admin_reset_password(
     return {"message": f"Password reset to {new_password}"}
 
 
-@app.put("/api/admin/users/{user_id}/role")
+@app.put(path="/api/admin/users/{user_id}/role", dependencies=[Depends(get_current_admin)],)
 async def update_user_role(
         user_id: str,
         role: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -2114,19 +2133,16 @@ def service_to_dict(service: Service) -> dict[str, Any]:
 
 
 @app.get("/api/services")
-async def get_services(
-        session: AsyncSession = Depends(get_session),
-) -> list[dict[str, Any]]:
+async def get_services(session: AsyncSession = Depends(get_session),) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
     result = await session.execute(select(Service))
     services = [service_to_dict(service) for service in result.scalars().all()]
     return services
 
 
-@app.post("/api/services")
+@app.post(path="/api/services", dependencies=[Depends(get_current_admin)],)
 async def create_service(
         service: ServiceCreate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2147,11 +2163,10 @@ async def create_service(
     return service_to_dict(service_obj)
 
 
-@app.put("/api/services/{service_id}")
+@app.put(path="/api/services/{service_id}", dependencies=[Depends(get_current_admin)],)
 async def update_service(
         service_id: str,
         service: ServiceUpdate,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2172,10 +2187,9 @@ async def update_service(
     return service_to_dict(service_obj)
 
 
-@app.delete("/api/services/{service_id}")
+@app.delete(path="/api/services/{service_id}", dependencies=[Depends(get_current_admin)],)
 async def delete_service(
         service_id: str,
-        current_user: dict[str, Any] = Depends(get_current_admin),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -2188,7 +2202,7 @@ async def delete_service(
     return {"message": "Service deleted"}
 
 
-@app.post("/api/contact")
+@app.post(path="/api/contact")
 async def send_contact_message(contact: ContactMessage) -> dict[str, Any]:
     recipient = EMAIL_FROM
     if not recipient:
@@ -2240,10 +2254,8 @@ Email: {contact.email}{phone_text}
         raise HTTPException(status_code=500, detail="Failed to send email")
 
 
-@app.get("/api/courses", response_model=list[CourseResponse])
-async def get_courses_catalog(
-    session: AsyncSession = Depends(get_session),
-) -> list[dict[str, Any]]:
+@app.get(path="/api/courses", response_model=list[CourseResponse])
+async def get_courses_catalog(session: AsyncSession = Depends(get_session),) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
     result = await session.execute(
         select(Course)
@@ -2254,18 +2266,15 @@ async def get_courses_catalog(
     return [_course_to_response(course) for course in courses]
 
 
-@app.get("/api/courses/all", response_model=list[CourseResponse])
-async def get_all_courses_admin(
-    current_user: dict[str, Any] = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_session),
-) -> list[dict[str, Any]]:
+@app.get(path="/api/courses/all", response_model=list[CourseResponse], dependencies=[Depends(get_current_admin)],)
+async def get_all_courses_admin(session: AsyncSession = Depends(get_session),) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
     result = await session.execute(select(Course).order_by(Course.created_at.desc()))
     courses = result.scalars().all()
     return [_course_to_response(course) for course in courses]
 
 
-@app.get("/api/courses/{course_id}", response_model=CourseResponse)
+@app.get(path="/api/courses/{course_id}", response_model=CourseResponse)
 async def get_course_detail(
     course_id: str,
     request: Request,
@@ -2303,10 +2312,10 @@ async def get_course_detail(
     return _course_to_response(course, parts=serialized_parts)
 
 
-@app.post("/api/courses", response_model=CourseResponse, status_code=201)
+@app.post(path="/api/courses", response_model=CourseResponse,
+          status_code=201, dependencies=[Depends(get_current_admin)],)
 async def create_course(
     payload: CourseCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2330,11 +2339,10 @@ async def create_course(
     return _course_to_response(course)
 
 
-@app.put("/api/courses/{course_id}", response_model=CourseResponse)
+@app.put(path="/api/courses/{course_id}", response_model=CourseResponse, dependencies=[Depends(get_current_admin)],)
 async def update_course(
     course_id: str,
     payload: CourseUpdate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2353,10 +2361,9 @@ async def update_course(
     return _course_to_response(course)
 
 
-@app.delete("/api/courses/{course_id}")
+@app.delete(path="/api/courses/{course_id}", dependencies=[Depends(get_current_admin)],)
 async def delete_course(
     course_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -2381,11 +2388,11 @@ async def delete_course(
     return {"message": "Курс удалён"}
 
 
-@app.post("/api/courses/{course_id}/parts", response_model=CoursePartContentResponse, status_code=201)
+@app.post(path="/api/courses/{course_id}/parts", response_model=CoursePartContentResponse,
+          status_code=201, dependencies=[Depends(get_current_admin)],)
 async def create_course_part(
     course_id: str,
     payload: CoursePartCreate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2416,12 +2423,12 @@ async def create_course_part(
     return _course_part_to_response(part, has_access=True, include_content=True)
 
 
-@app.put("/api/courses/{course_id}/parts/{part_id}", response_model=CoursePartContentResponse)
+@app.put(path="/api/courses/{course_id}/parts/{part_id}", response_model=CoursePartContentResponse,
+         dependencies=[Depends(get_current_admin)],)
 async def update_course_part(
     course_id: str,
     part_id: str,
     payload: CoursePartUpdate,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2441,11 +2448,10 @@ async def update_course_part(
     return _course_part_to_response(part, has_access=True, include_content=True)
 
 
-@app.delete("/api/courses/{course_id}/parts/{part_id}")
+@app.delete(path="/api/courses/{course_id}/parts/{part_id}", dependencies=[Depends(get_current_admin)],)
 async def delete_course_part(
     course_id: str,
     part_id: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     await ensure_db_connection(session)
@@ -2461,7 +2467,7 @@ async def delete_course_part(
     return {"message": "Раздел удалён"}
 
 
-@app.get("/api/courses/{course_id}/parts/{part_id}/content", response_model=CoursePartContentResponse)
+@app.get(path="/api/courses/{course_id}/parts/{part_id}/content", response_model=CoursePartContentResponse)
 async def get_course_part_content(
     course_id: str,
     part_id: str,
@@ -2486,7 +2492,7 @@ async def get_course_part_content(
     return _course_part_to_response(part, has_access=True, include_content=True)
 
 
-@app.post("/api/courses/{course_id}/purchase", response_model=PurchaseWithSbpResponse)
+@app.post(path="/api/courses/{course_id}/purchase", response_model=PurchaseWithSbpResponse)
 async def purchase_course(
     course_id: str,
     current_user: User = Depends(get_current_user_model),
@@ -2543,7 +2549,7 @@ async def purchase_course(
     }
 
 
-@app.post("/api/courses/{course_id}/parts/{part_id}/purchase", response_model=PurchaseWithSbpResponse)
+@app.post(path="/api/courses/{course_id}/parts/{part_id}/purchase", response_model=PurchaseWithSbpResponse)
 async def purchase_course_part(
     course_id: str,
     part_id: str,
@@ -2612,7 +2618,7 @@ async def purchase_course_part(
     }
 
 
-@app.get("/api/me/purchases", response_model=list[PurchaseResponse])
+@app.get(path="/api/me/purchases", response_model=list[PurchaseResponse])
 async def get_my_purchases(
     current_user: User = Depends(get_current_user_model),
     session: AsyncSession = Depends(get_session),
@@ -2627,10 +2633,10 @@ async def get_my_purchases(
     return [_purchase_to_response(purchase) for purchase in purchases]
 
 
-@app.get("/api/admin/purchases", response_model=list[AdminPurchaseResponse])
+@app.get(path="/api/admin/purchases", response_model=list[AdminPurchaseResponse],
+         dependencies=[Depends(get_current_admin)],)
 async def get_admin_purchases(
     status: str | None = None,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
     await ensure_db_connection(session)
@@ -2666,11 +2672,11 @@ async def get_admin_purchases(
     return payload
 
 
-@app.put("/api/admin/purchases/{purchase_id}/status", response_model=PurchaseResponse)
+@app.put(path="/api/admin/purchases/{purchase_id}/status", response_model=PurchaseResponse,
+         dependencies=[Depends(get_current_admin)],)
 async def update_purchase_status(
     purchase_id: str,
     status: str,
-    current_user: dict[str, Any] = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -2687,6 +2693,223 @@ async def update_purchase_status(
     await session.refresh(purchase)
 
     return _purchase_to_response(purchase)
+
+
+def _work_to_dict(work: Work, include_html: bool = False) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": work.id,
+        "slug": work.slug,
+        "title": work.title,
+        "description": work.description or "",
+        "subject": work.subject or "",
+        "display_date": work.display_date or "",
+        "icon": work.icon or "book",
+        "tags": [t.strip() for t in (work.tags or "").split(",") if t.strip()],
+        "is_published": bool(work.is_published),
+        "sort_order": int(work.sort_order),
+        "created_at": _to_iso(work.created_at),
+        "updated_at": _to_iso(work.updated_at),
+    }
+    if include_html:
+        payload["html_content"] = work.html_content or ""
+    return payload
+
+
+@app.get(path="/api/works")
+async def list_works(request: Request, session: AsyncSession = Depends(get_session),) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+    optional_user = await _get_optional_user_from_request(request, session)
+    is_admin_user = bool(optional_user and optional_user.role == "admin")
+
+    query = select(Work).order_by(Work.sort_order.desc(), Work.created_at.desc())
+    if not is_admin_user:
+        query = query.where(Work.is_published.is_(True))
+
+    result = await session.execute(query)
+    return [_work_to_dict(w) for w in result.scalars().all()]
+
+
+@app.get(path="/api/works/{slug}")
+async def get_work_meta(
+    slug: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    optional_user = await _get_optional_user_from_request(request, session)
+    is_admin_user = bool(optional_user and optional_user.role == "admin")
+
+    result = await session.execute(select(Work).where(Work.slug == slug))
+    work = result.scalar_one_or_none()
+    if not work or (not work.is_published and not is_admin_user):
+        raise HTTPException(status_code=404, detail="Работа не найдена")
+
+    return _work_to_dict(work)
+
+
+@app.get(path="/api/works/{slug}/raw")
+async def get_work_raw_html(
+    slug: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    from fastapi.responses import HTMLResponse
+
+    await ensure_db_connection(session)
+    optional_user = await _get_optional_user_from_request(request, session)
+    is_admin_user = bool(optional_user and optional_user.role == "admin")
+
+    result = await session.execute(select(Work).where(Work.slug == slug))
+    work = result.scalar_one_or_none()
+    if not work or (not work.is_published and not is_admin_user):
+        raise HTTPException(status_code=404, detail="Работа не найдена")
+
+    return HTMLResponse(content=work.html_content or "", status_code=200)
+
+
+@app.post(path="/api/works", dependencies=[Depends(get_current_admin)],)
+async def create_work(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    subject: str = Form(""),
+    display_date: str = Form(""),
+    icon: str = Form("book"),
+    tags: str = Form(""),
+    slug: str = Form(""),
+    is_published: bool = Form(True),
+    sort_order: int = Form(0),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    if not file.filename or not file.filename.lower().endswith((".html", ".htm")):
+        raise HTTPException(status_code=400, detail="Нужен файл .html / .htm")
+
+    raw = await file.read()
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (макс. 5 МБ)")
+
+    try:
+        html_text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            html_text = raw.decode("cp1251")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=400, detail="Не удалось определить кодировку (используй UTF-8)") from exc
+
+    final_slug = (slug or "").strip().lower() or _slugify_work_title(title)
+    base_slug = final_slug
+    counter = 1
+    while True:
+        existing = await session.execute(select(Work).where(Work.slug == final_slug))
+        if not existing.scalar_one_or_none():
+            break
+        counter += 1
+        final_slug = f"{base_slug}-{counter}"
+
+    work = Work(
+        id=str(uuid.uuid4()),
+        slug=final_slug,
+        title=title.strip(),
+        description=description.strip(),
+        subject=subject.strip(),
+        display_date=display_date.strip(),
+        icon=icon.strip() or "book",
+        tags=tags.strip(),
+        html_content=html_text,
+        is_published=bool(is_published),
+        sort_order=int(sort_order),
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(work)
+    await session.commit()
+    await session.refresh(work)
+
+    return _work_to_dict(work)
+
+
+@app.put(path="/api/works/{slug}", dependencies=[Depends(get_current_admin)])
+async def update_work(
+    slug: str,
+    payload: WorkUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    result = await session.execute(select(Work).where(Work.slug == slug))
+    work = result.scalar_one_or_none()
+    if not work:
+        raise HTTPException(status_code=404, detail="Работа не найдена")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    new_slug = update_data.pop("slug", None)
+    if new_slug:
+        new_slug = new_slug.strip().lower()
+        if new_slug != work.slug:
+            existing = await session.execute(
+                select(Work).where(Work.slug == new_slug, Work.id != work.id)
+            )
+            if existing.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Slug занят")
+            work.slug = new_slug
+
+    for key, value in update_data.items():
+        if isinstance(value, str):
+            value = value.strip() if key != "description" else value
+        setattr(work, key, value)
+
+    work.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(work)
+    return _work_to_dict(work)
+
+
+@app.put(path="/api/works/{slug}/content", dependencies=[Depends(get_current_admin)],)
+async def replace_work_content(
+    slug: str,
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+    result = await session.execute(select(Work).where(Work.slug == slug))
+    work = result.scalar_one_or_none()
+    if not work:
+        raise HTTPException(status_code=404, detail="Работа не найдена")
+
+    if not file.filename or not file.filename.lower().endswith((".html", ".htm")):
+        raise HTTPException(status_code=400, detail="Нужен файл .html / .htm")
+
+    raw = await file.read()
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (макс. 5 МБ)")
+    try:
+        html_text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        html_text = raw.decode("cp1251", errors="replace")
+
+    work.html_content = html_text
+    work.updated_at = datetime.now()
+    await session.commit()
+    await session.refresh(work)
+    return _work_to_dict(work)
+
+
+@app.delete(path="/api/works/{slug}", dependencies=[Depends(get_current_admin)],)
+async def delete_work(
+    slug: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    await ensure_db_connection(session)
+    result = await session.execute(select(Work).where(Work.slug == slug))
+    work = result.scalar_one_or_none()
+    if not work:
+        raise HTTPException(status_code=404, detail="Работа не найдена")
+
+    await session.delete(work)
+    await session.commit()
+    return {"message": "Работа удалена"}
 
 
 if __name__ == "__main__":

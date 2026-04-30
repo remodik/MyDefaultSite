@@ -18,6 +18,8 @@ import * as contactPage from './pages/contact.js';
 import * as botPage from './pages/bot.js';
 import * as adminPanelPage from './pages/admin-panel.js';
 import * as notFoundPage from './pages/not-found.js';
+import * as worksPage from './pages/works.js';
+import * as workDetailPage from './pages/work-detail.js';
 
 window.APP_CONFIG = {
     API_URL: API_URL || 'http://localhost:8001'
@@ -36,6 +38,8 @@ router.addRoute('/settings', settingsPage, { requireAuth: true });
 router.addRoute('/contact', contactPage);
 router.addRoute('/bot', botPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
+router.addRoute('/works', worksPage);
+router.addRoute('/works/:slug', workDetailPage);
 
 router.setNotFound(notFoundPage);
 

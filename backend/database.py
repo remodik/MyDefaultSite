@@ -237,6 +237,28 @@ class Purchase(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
+class Work(Base):
+    __tablename__ = "works"
+    __table_args__ = (
+        Index("ix_works_slug", "slug", unique=True),
+        Index("ix_works_is_published", "is_published"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    slug: Mapped[str] = mapped_column(String(160), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    subject: Mapped[str] = mapped_column(String(255), default="")
+    display_date: Mapped[str] = mapped_column(String(64), default="")
+    icon: Mapped[str] = mapped_column(String(64), default="book")
+    tags: Mapped[str] = mapped_column(Text, default="")
+    html_content: Mapped[str] = mapped_column(Text, default="")
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 async def init_models() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

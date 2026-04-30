@@ -15,6 +15,7 @@ export function renderNavbar() {
     const navLinks = [
         { path: '/', label: 'Главная', icon: 'fa-home', public: true },
         { path: '/services', label: 'Услуги', icon: 'fa-briefcase', public: true },
+        { path: '/works', label: 'Работы', icon: 'fa-folder-open', public: true },
         { path: '/bot', label: 'Бот', icon: 'fa-robot', public: true },
         { path: '/courses', label: 'Курсы', icon: 'fa-graduation-cap', public: true },
         { path: '/projects', label: 'Проекты', icon: 'fa-folder', requireAuth: true },
