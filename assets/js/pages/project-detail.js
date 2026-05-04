@@ -42,7 +42,7 @@ function renderProject() {
                     <p class="text-discord-text text-sm mt-1">${escapeHtml(project.description) || 'Нет описания'}</p>
                 </div>
             </div>
-            
+
             ${isAdmin() ? `
                 <div class="flex gap-2">
                     <button class="btn btn-primary btn-sm" id="add-file-btn">
@@ -61,17 +61,25 @@ function renderProject() {
                 </div>
             ` : ''}
         </div>
-        
+
         <div id="dd-overlay" style="
-            display:none; position:fixed; inset:0; z-index:999;
-            background:rgba(88,101,242,.18); backdrop-filter:blur(2px);
+            display:none; position:fixed; inset:0; z-index:998;
+            background:rgba(88,101,242,.15); backdrop-filter:blur(2px);
             border:3px dashed #5865f2; pointer-events:none;
-            align-items:center; justify-content:center; flex-direction:column; gap:12px;
+            flex-direction:column; align-items:center; justify-content:center; gap:10px;
         ">
-            <i class="fas fa-cloud-upload-alt" style="font-size:56px;color:#5865f2;"></i>
-            <span style="font-size:20px;font-weight:700;color:#f2f3f5;">Отпустите для загрузки</span>
-            <span style="font-size:13px;color:#b5bac1;">Поддерживаются файлы и папки</span>
+            <i class="fas fa-cloud-upload-alt" style="font-size:52px;color:#5865f2;"></i>
+            <span id="dd-overlay-label" style="font-size:18px;font-weight:700;color:#f2f3f5;">Загрузить в корень</span>
+            <span style="font-size:12px;color:#b5bac1;">Наведите на папку чтобы загрузить в неё</span>
         </div>
+
+        <style>
+            .dd-folder-highlight > .file-tree-item-content {
+                background: rgba(88,101,242,.25) !important;
+                outline: 2px dashed #5865f2;
+                outline-offset: -2px;
+            }
+        </style>
 
         <div class="grid lg:grid-cols-4 gap-6">
             <div class="lg:col-span-1">
@@ -92,7 +100,7 @@ function renderProject() {
                     <div class="p-2" id="file-list"></div>
                 </div>
             </div>
-            
+
             <div class="lg:col-span-3">
                 <div id="file-viewer" class="bg-discord-light rounded-lg min-h-[400px]">
                     ${selectedFile ? renderFileViewer() : renderEmptyViewer()}
@@ -122,18 +130,7 @@ function renderFileViewer() {
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico'].includes(file.file_type);
   const isVideo = ['mp4', 'avi', 'mov', 'webm'].includes(file.file_type);
   const isMarkdown = isMarkdownType(file.file_type);
-  const nonPreviewTypes = [
-    'zip',
-    'rar',
-    '7z',
-    'ppt',
-    'pptx',
-    'doc',
-    'docx',
-    'xls',
-    'xlsx',
-    'pdf',
-  ];
+  const nonPreviewTypes = ['zip','rar','7z','ppt','pptx','doc','docx','xls','xlsx','pdf'];
   const isUnsupported =
       file.is_folder ||
       nonPreviewTypes.includes((file.file_type || '').toLowerCase()) ||
@@ -163,7 +160,8 @@ function renderFileViewer() {
                     <i class="fas fa-file-archive text-4xl mb-3 opacity-60"></i>
                     <p>Предпросмотр для этого типа файла недоступен.</p>
                     ${downloadLink ? `
-                        <a class="btn btn-secondary btn-sm mt-4 inline-flex items-center gap-2" href="${downloadLink}" download="${escapeHtml(file.name)}">
+                        <a class="btn btn-secondary btn-sm mt-4 inline-flex items-center gap-2"
+                           href="${downloadLink}" download="${escapeHtml(file.name)}">
                             <i class="fas fa-download"></i>
                             Скачать файл
                         </a>
@@ -175,7 +173,8 @@ function renderFileViewer() {
     const src = file.is_binary ? `data:image/${file.file_type};base64,${file.content}` : file.content;
     contentHtml = `
             <div class="flex items-center justify-center p-8">
-                <img src="${src}" alt="${escapeHtml(file.name)}" class="max-w-full max-h-[600px] rounded-lg shadow-lg">
+                <img src="${src}" alt="${escapeHtml(file.name)}"
+                     class="max-w-full max-h-[600px] rounded-lg shadow-lg">
             </div>
         `;
   } else if (isVideo) {
@@ -303,6 +302,199 @@ function setupViewerListeners() {
   }
 }
 
+let dragCounter = 0;
+let ddCurrentTarget = '';
+
+function setupDragDropZone() {
+  document.addEventListener('dragenter', onDragEnter);
+  document.addEventListener('dragleave', onDragLeave);
+  document.addEventListener('dragover',  onDragOver);
+  document.addEventListener('drop',      onDrop);
+}
+
+function teardownDragDropZone() {
+  document.removeEventListener('dragenter', onDragEnter);
+  document.removeEventListener('dragleave', onDragLeave);
+  document.removeEventListener('dragover',  onDragOver);
+  document.removeEventListener('drop',      onDrop);
+  dragCounter = 0;
+  ddCurrentTarget = '';
+}
+
+function hasFiles(e) {
+  return e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+}
+
+function getFolderUnderCursor(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (!el || !project?.files) return '';
+  const itemEl = el.closest('[data-item-id]');
+  if (!itemEl) return '';
+  const found = project.files.find(f => f.id === itemEl.dataset.itemId && f.is_folder);
+  return found ? found.path : '';
+}
+
+function applyTarget(path) {
+  if (path === ddCurrentTarget) return;
+  ddCurrentTarget = path;
+
+  const label = document.getElementById('dd-overlay-label');
+  if (label) {
+    label.textContent = path ? `Загрузить в «${path}»` : 'Загрузить в корень';
+  }
+
+  document.querySelectorAll('.dd-folder-highlight').forEach(el => el.classList.remove('dd-folder-highlight'));
+  if (path && project?.files) {
+    const folder = project.files.find(f => f.path === path && f.is_folder);
+    if (folder) {
+      const el = document.querySelector(`[data-item-id="${folder.id}"]`);
+      if (el) el.classList.add('dd-folder-highlight');
+    }
+  }
+}
+
+function showOverlay() {
+  const o = document.getElementById('dd-overlay');
+  if (o) o.style.display = 'flex';
+}
+
+function hideOverlay() {
+  const o = document.getElementById('dd-overlay');
+  if (o) o.style.display = 'none';
+  document.querySelectorAll('.dd-folder-highlight').forEach(el => el.classList.remove('dd-folder-highlight'));
+}
+
+function onDragEnter(e) {
+  if (!hasFiles(e)) return;
+  dragCounter++;
+  if (dragCounter === 1) {
+    applyTarget(getFolderUnderCursor(e));
+    showOverlay();
+  }
+}
+
+function onDragLeave(e) {
+  if (!hasFiles(e)) return;
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    ddCurrentTarget = '';
+    hideOverlay();
+  }
+}
+
+function onDragOver(e) {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  applyTarget(getFolderUnderCursor(e));
+}
+
+async function onDrop(e) {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+
+  const targetPath = getFolderUnderCursor(e);
+
+  dragCounter = 0;
+  ddCurrentTarget = '';
+  hideOverlay();
+
+  if (!isAdmin()) {
+    showToast('Только администратор может загружать файлы', 'error');
+    return;
+  }
+
+  const entries = Array.from(e.dataTransfer.items || [])
+      .filter(i => i.kind === 'file')
+      .map(i => i.webkitGetAsEntry?.() || null)
+      .filter(Boolean);
+
+  if (!entries.length) return;
+
+  showToast(`Загружаю в «${targetPath || 'корень'}»…`, 'info');
+
+  let uploaded = 0, failed = 0;
+  for (const entry of entries) {
+    const r = await uploadEntry(entry, targetPath);
+    uploaded += r.ok;
+    failed += r.fail;
+  }
+
+  if (uploaded) showToast(`Загружено: ${uploaded} файл(ов)`, 'success');
+  if (failed) showToast(`Ошибок: ${failed}`, 'error');
+
+  await loadProject(project.id);
+}
+
+async function uploadEntry(entry, parentPath) {
+  if (entry.isFile) {
+    return new Promise(resolve => {
+      entry.file(async (file) => {
+        try {
+          await filesApi.upload(project.id, file, parentPath);
+          resolve({ ok: 1, fail: 0 });
+        } catch {
+          resolve({ ok: 0, fail: 1 });
+        }
+      }, () => resolve({ ok: 0, fail: 1 }));
+    });
+  }
+
+  if (entry.isDirectory) {
+    const folderPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+
+    try {
+      await filesApi.createFolder(project.id, entry.name, parentPath);
+    } catch {  }
+
+    const children = await readDirEntries(entry);
+    let ok = 0, fail = 0;
+    for (const child of children) {
+      const r = await uploadEntry(child, folderPath);
+      ok += r.ok;
+      fail += r.fail;
+    }
+    return { ok, fail };
+  }
+
+  return { ok: 0, fail: 0 };
+}
+
+function readDirEntries(dirEntry) {
+  return new Promise(resolve => {
+    const reader = dirEntry.createReader();
+    const all = [];
+
+    function readBatch() {
+      reader.readEntries(batch => {
+        if (!batch.length) { resolve(all); return; }
+        all.push(...batch);
+        readBatch();
+      }, () => resolve(all));
+    }
+
+    readBatch();
+  });
+}
+
+async function handleFileUpload(e) {
+  const files = e.target.files;
+  if (!files.length) return;
+
+  for (const file of files) {
+    try {
+      await filesApi.upload(project.id, file);
+      showToast(`Файл ${file.name} загружен`, 'success');
+    } catch (error) {
+      showToast(`Ошибка загрузки ${file.name}`, 'error');
+    }
+  }
+
+  e.target.value = '';
+  await loadProject(project.id);
+}
+
 function showFileModal(file = null) {
   const isEdit = !!file;
 
@@ -312,12 +504,15 @@ function showFileModal(file = null) {
             <form id="file-form" class="space-y-4">
                <div>
                     <label class="label" for="file-name">Имя файла</label>
-                    <input type="text" id="file-name" class="input" value="${isEdit ? escapeHtml(file.name) : ''}" ${isEdit ? 'readonly' : ''} required>
+                    <input type="text" id="file-name" class="input"
+                           value="${isEdit ? escapeHtml(file.name) : ''}"
+                           ${isEdit ? 'readonly' : ''} required>
                     ${!isEdit ? '<p class="text-discord-text text-xs mt-2">Тип определяется автоматически по расширению (например, README.md).</p>' : ''}
                 </div>
                 <div>
                     <label class="label" for="file-content">Содержимое</label>
-                    <textarea id="file-content" class="input font-mono text-sm" rows="15" style="tab-size: 4;">${isEdit ? escapeHtml(file.content) : ''}</textarea>
+                    <textarea id="file-content" class="input font-mono text-sm"
+                              rows="15" style="tab-size:4;">${isEdit ? escapeHtml(file.content) : ''}</textarea>
                 </div>
             </form>
         `,
@@ -333,20 +528,20 @@ function showFileModal(file = null) {
 
   setTimeout(() => {
     const closeBtn = document.querySelector('[data-close]');
-    const saveBtn = document.getElementById('save-file-btn');
+    const saveBtn  = document.getElementById('save-file-btn');
     const textarea = document.getElementById('file-content');
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (saveBtn) saveBtn.addEventListener('click', () => saveFile(file?.id));
+    if (saveBtn)  saveBtn.addEventListener('click', () => saveFile(file?.id));
 
     if (textarea) {
       textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Tab') {
           e.preventDefault();
-          const start = textarea.selectionStart;
+          const s = textarea.selectionStart;
           const end = textarea.selectionEnd;
-          textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
-          textarea.selectionStart = textarea.selectionEnd = start + 4;
+          textarea.value = textarea.value.substring(0, s) + '    ' + textarea.value.substring(end);
+          textarea.selectionStart = textarea.selectionEnd = s + 4;
         }
       });
     }
@@ -394,177 +589,12 @@ async function saveFile(id = null) {
   }
 }
 
-let dragCounter = 0;
-
-function setupDragDropZone() {
-  const overlay = document.getElementById('dd-overlay');
-  if (!overlay) return;
-
-  document.addEventListener('dragenter', onDragEnter);
-  document.addEventListener('dragleave', onDragLeave);
-  document.addEventListener('dragover', onDragOver);
-  document.addEventListener('drop', onDrop);
-}
-
-function teardownDragDropZone() {
-  document.removeEventListener('dragenter', onDragEnter);
-  document.removeEventListener('dragleave', onDragLeave);
-  document.removeEventListener('dragover', onDragOver);
-  document.removeEventListener('drop', onDrop);
-  dragCounter = 0;
-}
-
-function hasFiles(e) {
-  return e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
-}
-
-function showOverlay() {
-  const o = document.getElementById('dd-overlay');
-  if (o) o.style.display = 'flex';
-}
-
-function hideOverlay() {
-  const o = document.getElementById('dd-overlay');
-  if (o) o.style.display = 'none';
-}
-
-function onDragEnter(e) {
-  if (!hasFiles(e)) return;
-  dragCounter++;
-  if (dragCounter === 1) showOverlay();
-}
-
-function onDragLeave(e) {
-  if (!hasFiles(e)) return;
-  dragCounter--;
-  if (dragCounter <= 0) { dragCounter = 0; hideOverlay(); }
-}
-
-function onDragOver(e) {
-  if (!hasFiles(e)) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-}
-
-async function onDrop(e) {
-  if (!hasFiles(e)) return;
-  e.preventDefault();
-  dragCounter = 0;
-  hideOverlay();
-
-  if (!isAdmin()) {
-    showToast('Только администратор может загружать файлы', 'error');
-    return;
-  }
-
-  const items = Array.from(e.dataTransfer.items || []);
-  const entries = items
-      .filter(i => i.kind === 'file')
-      .map(i => i.webkitGetAsEntry?.() || null)
-      .filter(Boolean);
-
-  if (!entries.length) return;
-
-  showToast('Загружаю файлы…', 'info');
-
-  let uploaded = 0;
-  let failed = 0;
-
-  for (const entry of entries) {
-    const result = await uploadEntry(entry, '');
-    uploaded += result.ok;
-    failed += result.fail;
-  }
-
-  if (uploaded) showToast(`Загружено: ${uploaded} файл(ов)`, 'success');
-  if (failed) showToast(`Ошибок: ${failed}`, 'error');
-
-  await loadProject(project.id);
-}
-
-async function uploadEntry(entry, parentPath) {
-  console.log(`[DD] entry: ${entry.name}, isFile: ${entry.isFile}, isDir: ${entry.isDirectory}, parentPath: "${parentPath}"`);
-
-  if (entry.isFile) {
-    return new Promise(resolve => {
-      entry.file(async (file) => {
-        try {
-          console.log(`[DD] uploading file "${file.name}" to parentPath="${parentPath}"`);
-          await filesApi.upload(project.id, file, parentPath);
-          resolve({ ok: 1, fail: 0 });
-        } catch (err) {
-          console.error(`[DD] upload failed for "${file.name}":`, err);
-          resolve({ ok: 0, fail: 1 });
-        }
-      }, () => resolve({ ok: 0, fail: 1 }));
-    });
-  }
-
-  if (entry.isDirectory) {
-    const folderPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
-    console.log(`[DD] creating folder "${entry.name}" at parentPath="${parentPath}", folderPath="${folderPath}"`);
-    try {
-      await filesApi.createFolder(project.id, entry.name, parentPath);
-    } catch (err) {
-      console.warn(`[DD] createFolder failed (may exist):`, err);
-    }
-
-    const children = await readDirEntries(entry);
-    console.log(`[DD] folder "${entry.name}" has ${children.length} children`);
-    let ok = 0, fail = 0;
-    for (const child of children) {
-      const r = await uploadEntry(child, folderPath);
-      ok += r.ok;
-      fail += r.fail;
-    }
-    return { ok, fail };
-  }
-
-  return { ok: 0, fail: 0 };
-}
-
-function readDirEntries(dirEntry) {
-  return new Promise(resolve => {
-    const reader = dirEntry.createReader();
-    const all = [];
-
-    function read() {
-      reader.readEntries(batch => {
-        if (!batch.length) { resolve(all); return; }
-        all.push(...batch);
-        read();
-      }, () => resolve(all));
-    }
-
-    read();
-  });
-}
-
-async function handleFileUpload(e) {
-  const files = e.target.files;
-  if (!files.length) return;
-
-  for (const file of files) {
-    try {
-      await filesApi.upload(project.id, file);
-      showToast(`Файл ${file.name} загружен`, 'success');
-    } catch (error) {
-      showToast(`Ошибка загрузки ${file.name}`, 'error');
-    }
-  }
-
-  e.target.value = '';
-  await loadProject(project.id);
-}
-
 async function deleteFile(id) {
   confirmModal('Удалить этот файл?', async () => {
     try {
       await filesApi.delete(id);
       showToast('Файл удалён', 'success');
-      if (selectedFile?.id === id) {
-        selectedFile = null;
-      }
+      if (selectedFile?.id === id) selectedFile = null;
       await loadProject(project.id);
     } catch (error) {
       showToast(error.message || 'Ошибка удаления', 'error');
