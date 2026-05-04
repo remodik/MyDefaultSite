@@ -1559,7 +1559,7 @@ async def reset_password(
     return {"message": "Пароль успешно изменён"}
 
 
-@app.get(path="/api/projects", dependencies=[Depends(get_current_admin)],)
+@app.get(path="/api/projects")
 async def get_projects(
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
