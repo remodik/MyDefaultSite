@@ -1,5 +1,5 @@
-import { projectsApi, filesApi } from "../api.js";
-import { isAdmin } from "../auth.js";
+import { projectsApi, filesApi } from '../api.js';
+import { isAdmin } from '../auth.js';
 import {
   showToast,
   escapeHtml,
@@ -8,13 +8,9 @@ import {
   renderMarkdown,
   getFileTypeFromName,
   isMarkdownType,
-} from "../utils.js";
-import { showModal, closeModal, confirmModal } from "../components/modal.js";
-import {
-  renderFileTree,
-  createRootFolder,
-  createRootFile,
-} from "../components/file-tree.js";
+} from '../utils.js';
+import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { renderFileTree, createRootFolder, createRootFile } from '../components/file-tree.js';
 
 let project = null;
 let selectedFile = null;
@@ -32,7 +28,7 @@ export function render(params) {
 }
 
 function renderProject() {
-  const container = document.getElementById("project-content");
+  const container = document.getElementById('project-content');
   if (!container || !project) return;
 
   container.innerHTML = `
@@ -43,13 +39,11 @@ function renderProject() {
                 </a>
                 <div>
                     <h1 class="text-2xl font-bold text-white">${escapeHtml(project.name)}</h1>
-                    <p class="text-discord-text text-sm mt-1">${escapeHtml(project.description) || "Нет описания"}</p>
+                    <p class="text-discord-text text-sm mt-1">${escapeHtml(project.description) || 'Нет описания'}</p>
                 </div>
             </div>
-
-            ${
-              isAdmin()
-                ? `
+            
+            ${isAdmin() ? `
                 <div class="flex gap-2">
                     <button class="btn btn-primary btn-sm" id="add-file-btn">
                         <i class="fas fa-file-plus"></i>
@@ -65,11 +59,9 @@ function renderProject() {
                     </button>
                     <input type="file" id="file-input" class="hidden" multiple>
                 </div>
-            `
-                : ""
-            }
+            ` : ''}
         </div>
-
+        
         <div id="dd-overlay" style="
             display:none; position:fixed; inset:0; z-index:999;
             background:rgba(88,101,242,.18); backdrop-filter:blur(2px);
@@ -88,21 +80,19 @@ function renderProject() {
                         <h3 class="text-white font-semibold">
                             <i class="fas fa-folder-tree mr-2"></i>
                             ${(() => {
-                              const files = project.files || [];
-                              const folders = files.filter(
-                                (f) => f.is_folder,
-                              ).length;
-                              const regularFiles = files.length - folders;
-                              return folders > 0 || regularFiles > 0
-                                ? `${regularFiles} ${regularFiles === 1 ? "файл" : "файлов"}, ${folders} ${folders === 1 ? "папка" : "папок"}`
-                                : "Пусто";
-                            })()}
+    const files = project.files || [];
+    const folders = files.filter(f => f.is_folder).length;
+    const regularFiles = files.length - folders;
+    return folders > 0 || regularFiles > 0
+        ? `${regularFiles} ${regularFiles === 1 ? 'файл' : 'файлов'}, ${folders} ${folders === 1 ? 'папка' : 'папок'}`
+        : 'Пусто';
+  })()}
                         </h3>
                     </div>
                     <div class="p-2" id="file-list"></div>
                 </div>
             </div>
-
+            
             <div class="lg:col-span-3">
                 <div id="file-viewer" class="bg-discord-light rounded-lg min-h-[400px]">
                     ${selectedFile ? renderFileViewer() : renderEmptyViewer()}
@@ -129,27 +119,25 @@ function renderFileViewer() {
   if (!selectedFile) return renderEmptyViewer();
 
   const file = selectedFile;
-  const isImage = ["png", "jpg", "jpeg", "gif", "webp", "ico"].includes(
-    file.file_type,
-  );
-  const isVideo = ["mp4", "avi", "mov", "webm"].includes(file.file_type);
+  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico'].includes(file.file_type);
+  const isVideo = ['mp4', 'avi', 'mov', 'webm'].includes(file.file_type);
   const isMarkdown = isMarkdownType(file.file_type);
   const nonPreviewTypes = [
-    "zip",
-    "rar",
-    "7z",
-    "ppt",
-    "pptx",
-    "doc",
-    "docx",
-    "xls",
-    "xlsx",
-    "pdf",
+    'zip',
+    'rar',
+    '7z',
+    'ppt',
+    'pptx',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'pdf',
   ];
   const isUnsupported =
-    file.is_folder ||
-    nonPreviewTypes.includes((file.file_type || "").toLowerCase()) ||
-    (file.is_binary && !isImage && !isVideo);
+      file.is_folder ||
+      nonPreviewTypes.includes((file.file_type || '').toLowerCase()) ||
+      (file.is_binary && !isImage && !isVideo);
 
   let contentHtml;
 
@@ -163,45 +151,35 @@ function renderFileViewer() {
             </div>
         `;
   } else if (isUnsupported) {
-    const mimeType = file.is_binary
-      ? `application/${file.file_type || "octet-stream"}`
-      : "text/plain;charset=utf-8";
+    const mimeType = file.is_binary ? `application/${file.file_type || 'octet-stream'}` : 'text/plain;charset=utf-8';
     const downloadLink = file.content
-      ? file.is_binary
-        ? `data:${mimeType};base64,${file.content}`
-        : `data:${mimeType},${encodeURIComponent(file.content)}`
-      : null;
+        ? (file.is_binary
+            ? `data:${mimeType};base64,${file.content}`
+            : `data:${mimeType},${encodeURIComponent(file.content)}`)
+        : null;
     contentHtml = `
             <div class="flex items-center justify-center p-8 text-discord-text">
                 <div class="text-center max-w-md">
                     <i class="fas fa-file-archive text-4xl mb-3 opacity-60"></i>
                     <p>Предпросмотр для этого типа файла недоступен.</p>
-                    ${
-                      downloadLink
-                        ? `
+                    ${downloadLink ? `
                         <a class="btn btn-secondary btn-sm mt-4 inline-flex items-center gap-2" href="${downloadLink}" download="${escapeHtml(file.name)}">
                             <i class="fas fa-download"></i>
                             Скачать файл
                         </a>
-                    `
-                        : '<p class="text-sm mt-2">Файл пустой или не содержит данных для скачивания.</p>'
-                    }
+                    ` : '<p class="text-sm mt-2">Файл пустой или не содержит данных для скачивания.</p>'}
                 </div>
             </div>
         `;
   } else if (isImage) {
-    const src = file.is_binary
-      ? `data:image/${file.file_type};base64,${file.content}`
-      : file.content;
+    const src = file.is_binary ? `data:image/${file.file_type};base64,${file.content}` : file.content;
     contentHtml = `
             <div class="flex items-center justify-center p-8">
                 <img src="${src}" alt="${escapeHtml(file.name)}" class="max-w-full max-h-[600px] rounded-lg shadow-lg">
             </div>
         `;
   } else if (isVideo) {
-    const src = file.is_binary
-      ? `data:video/${file.file_type};base64,${file.content}`
-      : file.content;
+    const src = file.is_binary ? `data:video/${file.file_type};base64,${file.content}` : file.content;
     contentHtml = `
             <div class="flex items-center justify-center p-8">
                 <video controls class="max-w-full max-h-[600px] rounded-lg shadow-lg">
@@ -229,27 +207,19 @@ function renderFileViewer() {
                 <i class="${getFileIcon(file.file_type)}"></i>
                 <span>${escapeHtml(file.name)}</span>
             </div>
-            ${
-              isAdmin()
-                ? `
+            ${isAdmin() ? `
                 <div class="flex gap-2">
-                    ${
-                      !isImage && !isVideo && !isUnsupported
-                        ? `
+                    ${!isImage && !isVideo && !isUnsupported ? `
                         <button class="btn btn-secondary btn-sm" id="edit-file-btn">
                             <i class="fas fa-edit"></i>
                             Редактировать
                         </button>
-                    `
-                        : ""
-                    }
+                    ` : ''}
                     <button class="btn btn-danger btn-sm" id="delete-current-file-btn">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-            `
-                : ""
-            }
+            ` : ''}
         </div>
         <div class="file-content">
             ${contentHtml}
@@ -259,42 +229,37 @@ function renderFileViewer() {
 
 function setupEventListeners() {
   if (project.files) {
-    renderFileTree(
-      project.files,
-      "file-list",
-      (file) => {
-        selectedFile = file;
-        updateFileViewer();
-      },
-      project.id,
-    );
+    renderFileTree(project.files, 'file-list', (file) => {
+      selectedFile = file;
+      updateFileViewer();
+    }, project.id);
   }
 
-  const addFolderBtn = document.getElementById("add-folder-btn");
+  const addFolderBtn = document.getElementById('add-folder-btn');
   if (addFolderBtn) {
-    addFolderBtn.addEventListener("click", () => {
-      createRootFile(project.id, "file-list", project.files, (file) => {
+    addFolderBtn.addEventListener('click', () => {
+      createRootFile(project.id, 'file-list', project.files, (file) => {
         selectedFile = file;
         updateFileViewer();
       });
     });
   }
 
-  const addFileBtn = document.getElementById("add-file-btn");
+  const addFileBtn = document.getElementById('add-file-btn');
   if (addFileBtn) {
-    addFileBtn.addEventListener("click", () => {
-      createRootFolder(project.id, "file-list", project.files, (file) => {
+    addFileBtn.addEventListener('click', () => {
+      createRootFolder(project.id, 'file-list', project.files, (file) => {
         selectedFile = file;
         updateFileViewer();
       });
     });
   }
 
-  const uploadFileBtn = document.getElementById("upload-file-btn");
-  const fileInput = document.getElementById("file-input");
+  const uploadFileBtn = document.getElementById('upload-file-btn');
+  const fileInput = document.getElementById('file-input');
   if (uploadFileBtn && fileInput) {
-    uploadFileBtn.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", handleFileUpload);
+    uploadFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileUpload);
   }
 
   setupViewerListeners();
@@ -302,7 +267,7 @@ function setupEventListeners() {
 }
 
 function updateFileViewer() {
-  const viewer = document.getElementById("file-viewer");
+  const viewer = document.getElementById('file-viewer');
   if (viewer) {
     viewer.innerHTML = selectedFile ? renderFileViewer() : renderEmptyViewer();
     setupViewerListeners();
@@ -310,16 +275,14 @@ function updateFileViewer() {
 }
 
 function setupViewerListeners() {
-  const editFileBtn = document.getElementById("edit-file-btn");
+  const editFileBtn = document.getElementById('edit-file-btn');
   if (editFileBtn) {
-    editFileBtn.addEventListener("click", () => showFileModal(selectedFile));
+    editFileBtn.addEventListener('click', () => showFileModal(selectedFile));
   }
 
-  const deleteCurrentBtn = document.getElementById("delete-current-file-btn");
+  const deleteCurrentBtn = document.getElementById('delete-current-file-btn');
   if (deleteCurrentBtn) {
-    deleteCurrentBtn.addEventListener("click", () =>
-      deleteFile(selectedFile.id),
-    );
+    deleteCurrentBtn.addEventListener('click', () => deleteFile(selectedFile.id));
   }
 
   if (window.Prism) {
@@ -327,12 +290,12 @@ function setupViewerListeners() {
   }
 
   if (window.renderMathInElement && isMarkdownType(selectedFile?.file_type)) {
-    const mdContent = document.querySelector(".markdown-content");
+    const mdContent = document.querySelector('.markdown-content');
     if (mdContent) {
       renderMathInElement(mdContent, {
         delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false },
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
         ],
         throwOnError: false,
       });
@@ -344,17 +307,17 @@ function showFileModal(file = null) {
   const isEdit = !!file;
 
   showModal({
-    title: isEdit ? "Редактировать файл" : "Новый файл",
+    title: isEdit ? 'Редактировать файл' : 'Новый файл',
     content: `
             <form id="file-form" class="space-y-4">
                <div>
                     <label class="label" for="file-name">Имя файла</label>
-                    <input type="text" id="file-name" class="input" value="${isEdit ? escapeHtml(file.name) : ""}" ${isEdit ? "readonly" : ""} required>
-                    ${!isEdit ? '<p class="text-discord-text text-xs mt-2">Тип определяется автоматически по расширению (например, README.md).</p>' : ""}
+                    <input type="text" id="file-name" class="input" value="${isEdit ? escapeHtml(file.name) : ''}" ${isEdit ? 'readonly' : ''} required>
+                    ${!isEdit ? '<p class="text-discord-text text-xs mt-2">Тип определяется автоматически по расширению (например, README.md).</p>' : ''}
                 </div>
                 <div>
                     <label class="label" for="file-content">Содержимое</label>
-                    <textarea id="file-content" class="input font-mono text-sm" rows="15" style="tab-size: 4;">${isEdit ? escapeHtml(file.content) : ""}</textarea>
+                    <textarea id="file-content" class="input font-mono text-sm" rows="15" style="tab-size: 4;">${isEdit ? escapeHtml(file.content) : ''}</textarea>
                 </div>
             </form>
         `,
@@ -362,30 +325,27 @@ function showFileModal(file = null) {
             <button class="btn btn-secondary" data-close>Отмена</button>
             <button class="btn btn-primary" id="save-file-btn">
                 <i class="fas fa-save"></i>
-                ${isEdit ? "Сохранить" : "Создать"}
+                ${isEdit ? 'Сохранить' : 'Создать'}
             </button>
         `,
-    size: "full",
+    size: 'full',
   });
 
   setTimeout(() => {
-    const closeBtn = document.querySelector("[data-close]");
-    const saveBtn = document.getElementById("save-file-btn");
-    const textarea = document.getElementById("file-content");
+    const closeBtn = document.querySelector('[data-close]');
+    const saveBtn = document.getElementById('save-file-btn');
+    const textarea = document.getElementById('file-content');
 
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
-    if (saveBtn) saveBtn.addEventListener("click", () => saveFile(file?.id));
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (saveBtn) saveBtn.addEventListener('click', () => saveFile(file?.id));
 
     if (textarea) {
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
           e.preventDefault();
           const start = textarea.selectionStart;
           const end = textarea.selectionEnd;
-          textarea.value =
-            textarea.value.substring(0, start) +
-            "    " +
-            textarea.value.substring(end);
+          textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
           textarea.selectionStart = textarea.selectionEnd = start + 4;
         }
       });
@@ -398,16 +358,16 @@ let isSaving = false;
 async function saveFile(id = null) {
   if (isSaving) return;
 
-  const name = document.getElementById("file-name").value.trim();
-  const content = document.getElementById("file-content").value;
+  const name = document.getElementById('file-name').value.trim();
+  const content = document.getElementById('file-content').value;
 
   if (!name) {
-    showToast("Введите имя файла", "error");
+    showToast('Введите имя файла', 'error');
     return;
   }
 
   isSaving = true;
-  const saveBtn = document.getElementById("save-file-btn");
+  const saveBtn = document.getElementById('save-file-btn');
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<div class="spinner"></div>';
@@ -416,20 +376,15 @@ async function saveFile(id = null) {
   try {
     if (id) {
       await filesApi.update(id, { name, content });
-      showToast("Файл обновлён", "success");
+      showToast('Файл обновлён', 'success');
     } else {
-      await filesApi.create(
-        project.id,
-        name,
-        content,
-        getFileTypeFromName(name),
-      );
-      showToast("Файл создан", "success");
+      await filesApi.create(project.id, name, content, getFileTypeFromName(name));
+      showToast('Файл создан', 'success');
     }
     closeModal();
     await loadProject(project.id);
   } catch (error) {
-    showToast(error.message || "Ошибка сохранения", "error");
+    showToast(error.message || 'Ошибка сохранения', 'error');
     if (saveBtn) {
       saveBtn.disabled = false;
       saveBtn.innerHTML = '<i class="fas fa-save"></i> Сохранить';
@@ -442,35 +397,35 @@ async function saveFile(id = null) {
 let dragCounter = 0;
 
 function setupDragDropZone() {
-  const overlay = document.getElementById("dd-overlay");
+  const overlay = document.getElementById('dd-overlay');
   if (!overlay) return;
 
-  document.addEventListener("dragenter", onDragEnter);
-  document.addEventListener("dragleave", onDragLeave);
-  document.addEventListener("dragover", onDragOver);
-  document.addEventListener("drop", onDrop);
+  document.addEventListener('dragenter', onDragEnter);
+  document.addEventListener('dragleave', onDragLeave);
+  document.addEventListener('dragover', onDragOver);
+  document.addEventListener('drop', onDrop);
 }
 
 function teardownDragDropZone() {
-  document.removeEventListener("dragenter", onDragEnter);
-  document.removeEventListener("dragleave", onDragLeave);
-  document.removeEventListener("dragover", onDragOver);
-  document.removeEventListener("drop", onDrop);
+  document.removeEventListener('dragenter', onDragEnter);
+  document.removeEventListener('dragleave', onDragLeave);
+  document.removeEventListener('dragover', onDragOver);
+  document.removeEventListener('drop', onDrop);
   dragCounter = 0;
 }
 
 function hasFiles(e) {
-  return e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files");
+  return e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
 }
 
 function showOverlay() {
-  const o = document.getElementById("dd-overlay");
-  if (o) o.style.display = "flex";
+  const o = document.getElementById('dd-overlay');
+  if (o) o.style.display = 'flex';
 }
 
 function hideOverlay() {
-  const o = document.getElementById("dd-overlay");
-  if (o) o.style.display = "none";
+  const o = document.getElementById('dd-overlay');
+  if (o) o.style.display = 'none';
 }
 
 function onDragEnter(e) {
@@ -482,16 +437,13 @@ function onDragEnter(e) {
 function onDragLeave(e) {
   if (!hasFiles(e)) return;
   dragCounter--;
-  if (dragCounter <= 0) {
-    dragCounter = 0;
-    hideOverlay();
-  }
+  if (dragCounter <= 0) { dragCounter = 0; hideOverlay(); }
 }
 
 function onDragOver(e) {
   if (!hasFiles(e)) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = "copy";
+  e.dataTransfer.dropEffect = 'copy';
 }
 
 async function onDrop(e) {
@@ -501,61 +453,65 @@ async function onDrop(e) {
   hideOverlay();
 
   if (!isAdmin()) {
-    showToast("Только администратор может загружать файлы", "error");
+    showToast('Только администратор может загружать файлы', 'error');
     return;
   }
 
   const items = Array.from(e.dataTransfer.items || []);
   const entries = items
-    .filter((i) => i.kind === "file")
-    .map((i) => i.webkitGetAsEntry?.() || null)
-    .filter(Boolean);
+      .filter(i => i.kind === 'file')
+      .map(i => i.webkitGetAsEntry?.() || null)
+      .filter(Boolean);
 
   if (!entries.length) return;
 
-  showToast("Загружаю файлы…", "info");
+  showToast('Загружаю файлы…', 'info');
 
   let uploaded = 0;
   let failed = 0;
 
   for (const entry of entries) {
-    const result = await uploadEntry(entry, "");
+    const result = await uploadEntry(entry, '');
     uploaded += result.ok;
     failed += result.fail;
   }
 
-  if (uploaded) showToast(`Загружено: ${uploaded} файл(ов)`, "success");
-  if (failed) showToast(`Ошибок: ${failed}`, "error");
+  if (uploaded) showToast(`Загружено: ${uploaded} файл(ов)`, 'success');
+  if (failed) showToast(`Ошибок: ${failed}`, 'error');
 
   await loadProject(project.id);
 }
 
 async function uploadEntry(entry, parentPath) {
+  console.log(`[DD] entry: ${entry.name}, isFile: ${entry.isFile}, isDir: ${entry.isDirectory}, parentPath: "${parentPath}"`);
+
   if (entry.isFile) {
-    return new Promise((resolve) => {
-      entry.file(
-        async (file) => {
-          try {
-            await filesApi.upload(project.id, file, parentPath);
-            resolve({ ok: 1, fail: 0 });
-          } catch {
-            resolve({ ok: 0, fail: 1 });
-          }
-        },
-        () => resolve({ ok: 0, fail: 1 }),
-      );
+    return new Promise(resolve => {
+      entry.file(async (file) => {
+        try {
+          console.log(`[DD] uploading file "${file.name}" to parentPath="${parentPath}"`);
+          await filesApi.upload(project.id, file, parentPath);
+          resolve({ ok: 1, fail: 0 });
+        } catch (err) {
+          console.error(`[DD] upload failed for "${file.name}":`, err);
+          resolve({ ok: 0, fail: 1 });
+        }
+      }, () => resolve({ ok: 0, fail: 1 }));
     });
   }
 
   if (entry.isDirectory) {
     const folderPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+    console.log(`[DD] creating folder "${entry.name}" at parentPath="${parentPath}", folderPath="${folderPath}"`);
     try {
       await filesApi.createFolder(project.id, entry.name, parentPath);
-    } catch {}
+    } catch (err) {
+      console.warn(`[DD] createFolder failed (may exist):`, err);
+    }
 
     const children = await readDirEntries(entry);
-    let ok = 0,
-      fail = 0;
+    console.log(`[DD] folder "${entry.name}" has ${children.length} children`);
+    let ok = 0, fail = 0;
     for (const child of children) {
       const r = await uploadEntry(child, folderPath);
       ok += r.ok;
@@ -568,22 +524,16 @@ async function uploadEntry(entry, parentPath) {
 }
 
 function readDirEntries(dirEntry) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const reader = dirEntry.createReader();
     const all = [];
 
     function read() {
-      reader.readEntries(
-        (batch) => {
-          if (!batch.length) {
-            resolve(all);
-            return;
-          }
-          all.push(...batch);
-          read();
-        },
-        () => resolve(all),
-      );
+      reader.readEntries(batch => {
+        if (!batch.length) { resolve(all); return; }
+        all.push(...batch);
+        read();
+      }, () => resolve(all));
     }
 
     read();
@@ -597,27 +547,27 @@ async function handleFileUpload(e) {
   for (const file of files) {
     try {
       await filesApi.upload(project.id, file);
-      showToast(`Файл ${file.name} загружен`, "success");
+      showToast(`Файл ${file.name} загружен`, 'success');
     } catch (error) {
-      showToast(`Ошибка загрузки ${file.name}`, "error");
+      showToast(`Ошибка загрузки ${file.name}`, 'error');
     }
   }
 
-  e.target.value = "";
+  e.target.value = '';
   await loadProject(project.id);
 }
 
 async function deleteFile(id) {
-  confirmModal("Удалить этот файл?", async () => {
+  confirmModal('Удалить этот файл?', async () => {
     try {
       await filesApi.delete(id);
-      showToast("Файл удалён", "success");
+      showToast('Файл удалён', 'success');
       if (selectedFile?.id === id) {
         selectedFile = null;
       }
       await loadProject(project.id);
     } catch (error) {
-      showToast(error.message || "Ошибка удаления", "error");
+      showToast(error.message || 'Ошибка удаления', 'error');
     }
   });
 }
@@ -627,8 +577,7 @@ async function loadProject(projectId) {
     project = await projectsApi.getById(projectId);
 
     if (selectedFile) {
-      selectedFile =
-        project.files?.find((f) => f.id === selectedFile.id) || null;
+      selectedFile = project.files?.find(f => f.id === selectedFile.id) || null;
     }
     if (!selectedFile && project.files?.length > 0) {
       selectedFile = project.files[0];
@@ -636,7 +585,7 @@ async function loadProject(projectId) {
 
     renderProject();
   } catch (error) {
-    const container = document.getElementById("project-content");
+    const container = document.getElementById('project-content');
     if (container) {
       container.innerHTML = `
                 <div class="empty-state">

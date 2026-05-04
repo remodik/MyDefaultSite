@@ -1698,6 +1698,7 @@ async def create_file(
 async def upload_file(
         project_id: str = Form(...),
         file: UploadFile = File(...),
+        parent_path: str = Form(""),
         session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await ensure_db_connection(session)
@@ -1728,10 +1729,15 @@ async def upload_file(
 
     file_id = str(uuid.uuid4())
     now = datetime.now()
+    clean_name = file.filename.rsplit('/', 1)[-1]
+    full_path = f"{parent_path}/{clean_name}" if parent_path else clean_name
+
     file_obj = FileModel(
         id=file_id,
         project_id=project_id,
-        name=file.filename,
+        name=clean_name,
+        path=full_path,
+        parent_path=parent_path,
         content=content_str,
         file_type=file_type,
         is_binary=is_binary,
