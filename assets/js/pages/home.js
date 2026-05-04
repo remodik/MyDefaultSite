@@ -246,7 +246,6 @@ export function render() {
             z-index: 0;
             transition: opacity 1s;
         }
-       
         .hv2-glow-1 {
             width: 600px; height: 600px;
             background: var(--user-accent, #5865f2);
@@ -1007,14 +1006,14 @@ export function render() {
 export async function mount() {
     initRevealObserver();
     startTyping();
-    loadAvatar();
-    loadServices();
+    await loadAvatar();
+    await loadServices();
     if (isAuthenticated()) {
-        loadProjects();
+        await loadProjects();
     } else {
         renderProjectsPlaceholder();
     }
-    loadProjectCount();
+    await loadProjectCount();
 }
 
 export function unmount() {
@@ -1039,7 +1038,7 @@ function initRevealObserver() {
                 if (entry.target.classList.contains('hv2-skills-bars')) {
                     entry.target.querySelectorAll('.hv2-skill-fill').forEach(fill => {
                         const pct = fill.dataset.pct || '0';
-                      fill.style.background = fill.dataset.color || '#5865f2';
+                        fill.style.background = fill.dataset.color || '#5865f2';
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
                                 fill.style.width = pct + '%';
