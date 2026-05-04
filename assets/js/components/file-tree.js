@@ -487,7 +487,7 @@ function setupDragAndDrop(container, files, onSelect, projectId) {
                     return;
                 }
 
-                if (item.path.startsWith(draggedItem.path)) {
+                if (item.path === draggedItem.path || item.path.startsWith(draggedItem.path + '/')) {
                     showToast('Cannot move folder into itself', 'error');
                     return;
                 }
