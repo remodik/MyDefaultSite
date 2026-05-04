@@ -63,6 +63,12 @@ function getFileIcon(file) {
     gif: "fas fa-image",
     mp4: "fas fa-video",
     pdf: "fas fa-file-pdf",
+    jsx: "fab fa-react file-icon js",
+    tsx: "fab fa-react file-icon js",
+    dockerfile: "fab fa-docker file-icon",
+    toml: "fas fa-file-code file-icon",
+    yml: "fas fa-file-code file-icon json",
+    yaml: "fas fa-file-code file-icon json",
   };
 
   const icon = iconMap[file.file_type] || "fas fa-file";
