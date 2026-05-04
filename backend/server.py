@@ -1570,7 +1570,7 @@ async def get_projects(
     return projects
 
 
-@app.get(path="/api/projects/{project_id}", dependencies=[Depends(get_current_admin)],)
+@app.get(path="/api/projects/{project_id}")
 async def get_project(
         project_id: str,
         session: AsyncSession = Depends(get_session),
