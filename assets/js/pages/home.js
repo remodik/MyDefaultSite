@@ -1,6 +1,6 @@
 import {isAuthenticated} from '../auth.js';
 import {router} from '../router.js';
-import {meApi, projectsApi, resolveApiUrl, servicesApi} from '../api.js';
+import {projectsApi, servicesApi} from '../api.js';
 
 let scrollObserver = null;
 let typingInterval = null;
@@ -133,11 +133,11 @@ export function render() {
 
                         <div class="hv2-skills-bars hv2-reveal" style="animation-delay:200ms">
                             ${[
-                                { label: 'Python', pct: 65, color: '#5865f2' },
-                                { label: 'Discord API', pct: 75, color: '#7289da' },
-                                { label: 'JavaScript', pct: 45, color: '#f0b232' },
-                                { label: 'FastAPI / SQL', pct: 55, color: '#23a559' },
-                            ].map(({ label, pct, color }) => `
+        { label: 'Python', pct: 65, color: '#5865f2' },
+        { label: 'Discord API', pct: 75, color: '#7289da' },
+        { label: 'JavaScript', pct: 45, color: '#f0b232' },
+        { label: 'FastAPI / SQL', pct: 55, color: '#23a559' },
+    ].map(({ label, pct, color }) => `
                                 <div class="hv2-skill-row">
                                     <div class="hv2-skill-meta">
                                         <span>${label}</span>
@@ -1006,14 +1006,14 @@ export function render() {
 export async function mount() {
     initRevealObserver();
     startTyping();
-    await loadAvatar();
-    await loadServices();
+    loadAvatar();
+    loadServices();
     if (isAuthenticated()) {
-        await loadProjects();
+        loadProjects();
     } else {
         renderProjectsPlaceholder();
     }
-    await loadProjectCount();
+    loadProjectCount();
 }
 
 export function unmount() {
@@ -1085,22 +1085,18 @@ function startTyping() {
     typingInterval = setTimeout(tick, 600);
 }
 
-async function loadAvatar() {
+function loadAvatar() {
     const DECORATION_URL = 'https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true';
+
+    const wrap = document.getElementById('hero-avatar-wrap');
+    if (wrap) {
+        wrap.innerHTML = `<img src="/assets/images/blue_avatar.png" alt="avatar">`;
+    }
+
     const decoration = document.getElementById('hero-avatar-decoration');
     if (decoration) {
         decoration.style.backgroundImage = `url("${DECORATION_URL}")`;
     }
-
-    try {
-        const profile = await meApi.getProfile();
-        if (profile?.avatar_url) {
-            const wrap = document.getElementById('hero-avatar-wrap');
-            if (wrap) {
-                wrap.innerHTML = `<img src="${resolveApiUrl(profile.avatar_url)}" alt="avatar">`;
-            }
-        }
-    } catch {  }
 }
 
 async function loadProjectCount() {
