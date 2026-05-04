@@ -1,20 +1,20 @@
-import { isAuthenticated } from "../auth.js";
-import { router } from "../router.js";
-import { meApi, projectsApi, resolveApiUrl, servicesApi } from "../api.js";
+import {isAuthenticated} from '../auth.js';
+import {router} from '../router.js';
+import {meApi, projectsApi, resolveApiUrl, servicesApi} from '../api.js';
 
 let scrollObserver = null;
 let typingInterval = null;
 
 const TYPING_STRINGS = [
-  "Discord-боты",
-  "Веб-панели",
-  "FastAPI backend",
-  "API-интеграции",
-  "Python системы",
+    'Discord-боты',
+    'Веб-панели',
+    'FastAPI backend',
+    'API-интеграции',
+    'Python системы',
 ];
 
 export function render() {
-  return `
+    return `
         <div class="home-v2" id="home-v2-root">
 
             <div class="hv2-noise" aria-hidden="true"></div>
@@ -31,6 +31,7 @@ export function render() {
                             <div class="hv2-avatar-wrap" id="hero-avatar-wrap">
                                 <div class="hv2-avatar-fallback">R</div>
                             </div>
+                            <div class="hv2-avatar-decoration" id="hero-avatar-decoration" aria-hidden="true"></div>
                             <span class="hv2-status-dot" aria-label="онлайн"></span>
                         </div>
                         <div class="hv2-hero-chip">
@@ -91,36 +92,13 @@ export function render() {
             <div class="hv2-marquee-wrap" aria-hidden="true">
                 <div class="hv2-marquee-track">
                     ${[
-                      "Python",
-                      "FastAPI",
-                      "Discord.py",
-                      "SQLAlchemy",
-                      "PostgreSQL",
-                      "WebSockets",
-                      "JWT",
-                      "REST API",
-                      "JavaScript",
-                      "Vanilla JS",
-                      "Tailwind CSS",
-                      "Docker",
-                      "Python",
-                      "FastAPI",
-                      "Discord.py",
-                      "SQLAlchemy",
-                      "PostgreSQL",
-                      "WebSockets",
-                      "JWT",
-                      "REST API",
-                      "JavaScript",
-                      "Vanilla JS",
-                      "Tailwind CSS",
-                      "Docker",
-                    ]
-                      .map(
-                        (s) =>
-                          `<span class="hv2-marquee-item"><span class="hv2-marquee-dot"></span>${s}</span>`,
-                      )
-                      .join("")}
+                        'Python', 'FastAPI', 'Discord.py', 'SQLAlchemy',
+                        'PostgreSQL', 'WebSockets', 'JWT', 'REST API',
+                        'JavaScript', 'Vanilla JS', 'Tailwind CSS', 'Docker',
+                        'Python', 'FastAPI', 'Discord.py', 'SQLAlchemy',
+                        'PostgreSQL', 'WebSockets', 'JWT', 'REST API',
+                        'JavaScript', 'Vanilla JS', 'Tailwind CSS', 'Docker',
+                    ].map(s => `<span class="hv2-marquee-item"><span class="hv2-marquee-dot"></span>${s}</span>`).join('')}
                 </div>
             </div>
 
@@ -155,25 +133,11 @@ export function render() {
 
                         <div class="hv2-skills-bars hv2-reveal" style="animation-delay:200ms">
                             ${[
-                              { label: "Python", pct: 65, color: "#5865f2" },
-                              {
-                                label: "Discord API",
-                                pct: 75,
-                                color: "#7289da",
-                              },
-                              {
-                                label: "JavaScript",
-                                pct: 45,
-                                color: "#f0b232",
-                              },
-                              {
-                                label: "FastAPI / SQL",
-                                pct: 55,
-                                color: "#23a559",
-                              },
-                            ]
-                              .map(
-                                ({ label, pct, color }) => `
+                                { label: 'Python', pct: 65, color: '#5865f2' },
+                                { label: 'Discord API', pct: 75, color: '#7289da' },
+                                { label: 'JavaScript', pct: 45, color: '#f0b232' },
+                                { label: 'FastAPI / SQL', pct: 55, color: '#23a559' },
+                            ].map(({ label, pct, color }) => `
                                 <div class="hv2-skill-row">
                                     <div class="hv2-skill-meta">
                                         <span>${label}</span>
@@ -183,9 +147,7 @@ export function render() {
                                         <div class="hv2-skill-fill" data-pct="${pct}" data-color="${color}"></div>
                                     </div>
                                 </div>
-                            `,
-                              )
-                              .join("")}
+                            `).join('')}
                         </div>
                     </div>
                 </div>
@@ -219,23 +181,19 @@ export function render() {
                         <div class="hv2-services-loading"><div class="spinner"></div></div>
                     </div>
 
-                    ${
-                      isAuthenticated()
-                        ? `
+                    ${isAuthenticated() ? `
                         <div class="hv2-section-more hv2-reveal">
                             <a href="/projects" class="hv2-btn hv2-btn-ghost">
                                 Все проекты <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
-                    `
-                        : `
+                    ` : `
                         <div class="hv2-section-more hv2-reveal">
                             <p class="hv2-auth-hint">
                                 <a href="/login" class="hv2-link">Войдите</a>, чтобы просматривать проекты
                             </p>
                         </div>
-                    `
-                    }
+                    `}
                 </div>
             </section>
 
@@ -288,7 +246,7 @@ export function render() {
             z-index: 0;
             transition: opacity 1s;
         }
-
+       
         .hv2-glow-1 {
             width: 600px; height: 600px;
             background: var(--user-accent, #5865f2);
@@ -311,28 +269,16 @@ export function render() {
         }
 
         @keyframes glow-drift-1 {
-            from {
-                transform: translate(0,0) scale(1);
-            }
-            to {
-                transform: translate(80px, 60px) scale(1.15);
-            }
+            from { transform: translate(0,0) scale(1); }
+            to   { transform: translate(80px, 60px) scale(1.15); }
         }
         @keyframes glow-drift-2 {
-            from {
-                transform: translate(0,0) scale(1);
-            }
-            to {
-                transform: translate(-60px, -80px) scale(1.2);
-            }
+            from { transform: translate(0,0) scale(1); }
+            to   { transform: translate(-60px, -80px) scale(1.2); }
         }
         @keyframes glow-drift-3 {
-            from {
-                transform: translate(0,0) scale(1);
-            }
-            to {
-                transform: translate(40px, 60px) scale(.9);
-            }
+            from { transform: translate(0,0) scale(1); }
+            to   { transform: translate(40px, 60px) scale(.9); }
         }
 
         .hv2-reveal {
@@ -410,6 +356,15 @@ export function render() {
         .hv2-avatar-wrap img {
             width: 100%; height: 100%;
             object-fit: cover;
+        }
+
+        .hv2-avatar-decoration {
+            position: absolute;
+            inset: -18px;
+            border-radius: 50%;
+            background: no-repeat center / contain;
+            pointer-events: none;
+            z-index: 2;
         }
 
         .hv2-avatar-fallback {
@@ -1050,142 +1005,131 @@ export function render() {
 }
 
 export async function mount() {
-  initRevealObserver();
-  startTyping();
-  await loadAvatar();
-  await loadServices();
-  if (isAuthenticated()) {
-    await loadProjects();
-  } else {
-    renderProjectsPlaceholder();
-  }
-  await loadProjectCount();
+    initRevealObserver();
+    startTyping();
+    loadAvatar();
+    loadServices();
+    if (isAuthenticated()) {
+        loadProjects();
+    } else {
+        renderProjectsPlaceholder();
+    }
+    loadProjectCount();
 }
 
 export function unmount() {
-  if (scrollObserver) {
-    scrollObserver.disconnect();
-    scrollObserver = null;
-  }
-  if (typingInterval) {
-    clearInterval(typingInterval);
-    typingInterval = null;
-  }
+    if (scrollObserver) {
+        scrollObserver.disconnect();
+        scrollObserver = null;
+    }
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
 }
 
 function initRevealObserver() {
-  const elements = document.querySelectorAll(".hv2-reveal");
+    const elements = document.querySelectorAll('.hv2-reveal');
 
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
 
-          if (entry.target.classList.contains("hv2-skills-bars")) {
-            entry.target.querySelectorAll(".hv2-skill-fill").forEach((fill) => {
-              const pct = fill.dataset.pct || "0";
-              fill.style.background = fill.dataset.color || "#5865f2";
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  fill.style.width = pct + "%";
-                });
-              });
-            });
-          }
+                if (entry.target.classList.contains('hv2-skills-bars')) {
+                    entry.target.querySelectorAll('.hv2-skill-fill').forEach(fill => {
+                        const pct = fill.dataset.pct || '0';
+                      fill.style.background = fill.dataset.color || '#5865f2';
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                fill.style.width = pct + '%';
+                            });
+                        });
+                    });
+                }
 
-          io.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.08 },
-  );
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.08 });
 
-  elements.forEach((el) => io.observe(el));
-  scrollObserver = io;
+    elements.forEach(el => io.observe(el));
+    scrollObserver = io;
 }
 
 function startTyping() {
-  const el = document.getElementById("hv2-typed-text");
-  if (!el) return;
+    const el = document.getElementById('hv2-typed-text');
+    if (!el) return;
 
-  let si = 0,
-    ci = 0,
-    deleting = false;
-  const TYPE_SPEED = 80,
-    DELETE_SPEED = 40,
-    PAUSE = 1800;
+    let si = 0, ci = 0, deleting = false;
+    const TYPE_SPEED = 80, DELETE_SPEED = 40, PAUSE = 1800;
 
-  function tick() {
-    const current = TYPING_STRINGS[si];
-    if (!deleting) {
-      el.textContent = current.slice(0, ++ci);
-      if (ci === current.length) {
-        deleting = true;
-        typingInterval = setTimeout(tick, PAUSE);
-        return;
-      }
-    } else {
-      el.textContent = current.slice(0, --ci);
-      if (ci === 0) {
-        deleting = false;
-        si = (si + 1) % TYPING_STRINGS.length;
-      }
+    function tick() {
+        const current = TYPING_STRINGS[si];
+        if (!deleting) {
+            el.textContent = current.slice(0, ++ci);
+            if (ci === current.length) {
+                deleting = true;
+                typingInterval = setTimeout(tick, PAUSE);
+                return;
+            }
+        } else {
+            el.textContent = current.slice(0, --ci);
+            if (ci === 0) {
+                deleting = false;
+                si = (si + 1) % TYPING_STRINGS.length;
+            }
+        }
+        typingInterval = setTimeout(tick, deleting ? DELETE_SPEED : TYPE_SPEED);
     }
-    typingInterval = setTimeout(tick, deleting ? DELETE_SPEED : TYPE_SPEED);
-  }
 
-  typingInterval = setTimeout(tick, 600);
+    typingInterval = setTimeout(tick, 600);
 }
 
 async function loadAvatar() {
-  try {
-    const profile = await meApi.getProfile();
-    if (profile?.avatar_url) {
-      const wrap = document.getElementById("hero-avatar-wrap");
-      if (wrap) {
-        wrap.innerHTML = `<img src="${resolveApiUrl(profile.avatar_url)}" alt="avatar">`;
-      }
+    const DECORATION_URL = 'https://cdn.discordapp.com/avatar-decoration-presets/a_cd2c570c5a011190008ee7e34a6dfe87.png?size=160&passthrough=true';
+    const decoration = document.getElementById('hero-avatar-decoration');
+    if (decoration) {
+        decoration.style.backgroundImage = `url("${DECORATION_URL}")`;
     }
-  } catch {}
+
+    try {
+        const profile = await meApi.getProfile();
+        if (profile?.avatar_url) {
+            const wrap = document.getElementById('hero-avatar-wrap');
+            if (wrap) {
+                wrap.innerHTML = `<img src="${resolveApiUrl(profile.avatar_url)}" alt="avatar">`;
+            }
+        }
+    } catch {  }
 }
 
 async function loadProjectCount() {
-  if (!isAuthenticated()) return;
-  try {
-    const projects = await projectsApi.getAll();
-    const el = document.querySelector("#stat-projects .hv2-stat-value");
-    if (el) el.textContent = `${projects.length}+`;
-  } catch {}
+    if (!isAuthenticated()) return;
+    try {
+        const projects = await projectsApi.getAll();
+        const el = document.querySelector('#stat-projects .hv2-stat-value');
+        if (el) el.textContent = `${projects.length}+`;
+    } catch {  }
 }
 
 async function loadServices() {
-  const grid = document.getElementById("hv2-services-grid");
-  if (!grid) return;
+    const grid = document.getElementById('hv2-services-grid');
+    if (!grid) return;
 
-  const ICONS = [
-    "fa-robot",
-    "fa-globe",
-    "fa-plug",
-    "fa-database",
-    "fa-code",
-    "fa-cogs",
-    "fa-chart-bar",
-    "fa-shield-alt",
-  ];
+    const ICONS = [
+        'fa-robot', 'fa-globe', 'fa-plug', 'fa-database',
+        'fa-code', 'fa-cogs', 'fa-chart-bar', 'fa-shield-alt',
+    ];
 
-  try {
-    const services = await servicesApi.getAll();
-    if (!services.length) {
-      grid.innerHTML =
-        '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Услуги скоро появятся</p>';
-      return;
-    }
+    try {
+        const services = await servicesApi.getAll();
+        if (!services.length) {
+            grid.innerHTML = '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Услуги скоро появятся</p>';
+            return;
+        }
 
-    grid.innerHTML = services
-      .slice(0, 6)
-      .map(
-        (s, i) => `
+        grid.innerHTML = services.slice(0, 6).map((s, i) => `
             <div class="hv2-service-card hv2-reveal" style="--d:${i * 80}ms">
                 <div class="hv2-service-icon">
                     <i class="fas ${ICONS[i % ICONS.length]}"></i>
@@ -1194,64 +1138,54 @@ async function loadServices() {
                 <div class="hv2-service-desc">${escHtml(s.description)}</div>
                 <div class="hv2-service-price">${escHtml(s.price)}</div>
             </div>
-        `,
-      )
-      .join("");
+        `).join('');
 
-    grid.querySelectorAll(".hv2-reveal").forEach((el) => {
-      if (scrollObserver) scrollObserver.observe(el);
-    });
-  } catch {
-    grid.innerHTML =
-      '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить услуги</p>';
-  }
+        grid.querySelectorAll('.hv2-reveal').forEach(el => {
+            if (scrollObserver) scrollObserver.observe(el);
+        });
+
+    } catch {
+        grid.innerHTML = '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить услуги</p>';
+    }
 }
 
 async function loadProjects() {
-  const grid = document.getElementById("hv2-projects-grid");
-  if (!grid) return;
+    const grid = document.getElementById('hv2-projects-grid');
+    if (!grid) return;
 
-  try {
-    const projects = await projectsApi.getAll();
-    if (!projects.length) {
-      grid.innerHTML =
-        '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Проектов пока нет</p>';
-      return;
-    }
+    try {
+        const projects = await projectsApi.getAll();
+        if (!projects.length) {
+            grid.innerHTML = '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Проектов пока нет</p>';
+            return;
+        }
 
-    grid.innerHTML = projects
-      .slice(0, 3)
-      .map(
-        (p, i) => `
+        grid.innerHTML = projects.slice(0, 3).map((p, i) => `
             <div class="hv2-project-card hv2-reveal" style="--d:${i * 100}ms" data-id="${p.id}">
                 <div class="hv2-project-icon"><i class="fas fa-code"></i></div>
                 <div class="hv2-project-name">${escHtml(p.name)}</div>
-                <div class="hv2-project-desc">${escHtml(p.description || "Нет описания")}</div>
+                <div class="hv2-project-desc">${escHtml(p.description || 'Нет описания')}</div>
                 <div class="hv2-project-arrow">Открыть <i class="fas fa-arrow-right"></i></div>
             </div>
-        `,
-      )
-      .join("");
+        `).join('');
 
-    grid.querySelectorAll(".hv2-project-card").forEach((card) => {
-      card.addEventListener("click", () =>
-        router.navigate(`/projects/${card.dataset.id}`),
-      );
-    });
+        grid.querySelectorAll('.hv2-project-card').forEach(card => {
+            card.addEventListener('click', () => router.navigate(`/projects/${card.dataset.id}`));
+        });
 
-    grid.querySelectorAll(".hv2-reveal").forEach((el) => {
-      if (scrollObserver) scrollObserver.observe(el);
-    });
-  } catch {
-    grid.innerHTML =
-      '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить проекты</p>';
-  }
+        grid.querySelectorAll('.hv2-reveal').forEach(el => {
+            if (scrollObserver) scrollObserver.observe(el);
+        });
+
+    } catch {
+        grid.innerHTML = '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить проекты</p>';
+    }
 }
 
 function renderProjectsPlaceholder() {
-  const grid = document.getElementById("hv2-projects-grid");
-  if (!grid) return;
-  grid.innerHTML = `
+    const grid = document.getElementById('hv2-projects-grid');
+    if (!grid) return;
+    grid.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding: 48px 24px; color:#4a5160;">
             <i class="fas fa-lock" style="font-size:2.5rem; margin-bottom:16px; display:block; opacity:.4"></i>
             <p style="margin:0; font-size:.95rem;">Авторизуйтесь, чтобы просматривать проекты</p>
@@ -1260,7 +1194,7 @@ function renderProjectsPlaceholder() {
 }
 
 function escHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = str || "";
-  return d.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
 }
