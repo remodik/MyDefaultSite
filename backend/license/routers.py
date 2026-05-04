@@ -73,6 +73,7 @@ def _get_admin_secret() -> str:
 @license_router.post(
     "/activate",
     response_model=ActivateResponse,
+    response_model_exclude_none=True,
     summary="Активация лицензионного ключа",
 )
 @limiter.limit("5/minute")
@@ -93,14 +94,14 @@ async def activate_license(
                    {"reason": "key_not_found"})
         await session.commit()
         payload = {"success": False, "message": "Неверный ключ"}
-        return {**payload, "sig": sign_response(payload)}
+        return {**payload, "sign": sign_response(payload)}
 
     if lic.used and lic.hwid != body.hwid:
         await _log(session, "activate_fail", body.hwid, body.code, ip,
                    {"reason": "key_used", "bound_hwid": lic.hwid})
         await session.commit()
         payload = {"success": False, "message": "Ключ уже использован"}
-        return {**payload, "sig": sign_response(payload)}
+        return {**payload, "sign": sign_response(payload)}
 
     now = datetime.now()
     expires_at = now + timedelta(days=LICENSE_OFFLINE_DAYS)
@@ -122,12 +123,13 @@ async def activate_license(
         "offlineToken": offline_token,
         "expiresAt": expires_ms,
     }
-    return {**payload, "sig": sign_response(payload)}
+    return {**payload, "sign": sign_response(payload)}
 
 
 @license_router.post(
     "/check",
     response_model=CheckResponse,
+    response_model_exclude_none=True,
     summary="Онлайн-проверка лицензии по HWID",
 )
 @limiter.limit("5/minute")
@@ -164,7 +166,7 @@ async def check_license(
         "valid": valid,
         "expires_at": dt_to_iso(lic.expires_at) if lic else None,
     }
-    return {**payload, "sig": sign_response(payload)}
+    return {**payload, "sign": sign_response(payload)}
 
 
 @license_router.get(

@@ -60,7 +60,7 @@ def _gson_str(v: object) -> str:
 
 def sign_response(payload: dict) -> str:
     parts = sorted(
-        ((k, v) for k, v in payload.items() if k != "sig"),
+        ((k, v) for k, v in payload.items() if k != "sign"),
         key=lambda x: x[0],
     )
     pieces = [(k, _gson_str(v)) for k, v in parts]

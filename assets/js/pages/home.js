@@ -1,518 +1,1266 @@
-const birthdayTimestamp = 1791406800;
+import { isAuthenticated } from "../auth.js";
+import { router } from "../router.js";
+import { meApi, projectsApi, resolveApiUrl, servicesApi } from "../api.js";
 
-function formatRelativeTime(seconds) {
-  if (seconds <= 0) return "сегодня! 🎉";
+let scrollObserver = null;
+let typingInterval = null;
 
-  const pluralRules = new Intl.PluralRules("ru");
-  const forms = {
-    год: ["год", "года", "лет"],
-    месяц: ["месяц", "месяца", "месяцев"],
-    неделя: ["неделя", "недели", "недель"],
-    день: ["день", "дня", "дней"],
-    час: ["час", "часа", "часов"],
-    минута: ["минута", "минуты", "минут"],
-  };
-  const intervals = {
-    год: 31536000,
-    месяц: 2592000,
-    неделя: 604800,
-    день: 86400,
-    час: 3600,
-    минута: 60,
-  };
-
-  for (const [unit, secs] of Object.entries(intervals)) {
-    const count = Math.floor(seconds / secs);
-    if (count >= 1) {
-      const form =
-        forms[unit][
-          pluralRules.select(count) === "one" ? 0
-            : pluralRules.select(count) === "few" ? 1 : 2
-        ];
-      return `через ${count} ${form}`;
-    }
-  }
-  return "скоро!";
-}
-
-function updateBirthdayCountdown() {
-  const el = document.getElementById("birthday-countdown");
-  if (!el) return;
-  const now = Math.floor(Date.now() / 1000);
-  const diff = birthdayTimestamp - now;
-  const relativeTime = formatRelativeTime(diff);
-  const fullDate = new Date(birthdayTimestamp * 1000).toLocaleDateString(
-    "ru-RU",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    },
-  );
-  el.innerHTML = `<span class="text-discord-accent font-bold">${relativeTime}</span> <span class="text-discord-text/60 text-xs">(${fullDate})</span>`;
-}
-
-const FEATURED_PROJECTS = [
-  {
-    icon: "fa-calculator",
-    color: "text-blue-400",
-    bg: "bg-blue-500/15",
-    name: "Calc",
-    desc: "Калькулятор с поддержкой сложных выражений и историей вычислений.",
-    tags: ["C++"],
-    link: "https://github.com/remodik/calc",
-  },
-  {
-    icon: "fa-bomb",
-    color: "text-red-400",
-    bg: "bg-red-500/15",
-    name: "Minesweeper.WEB",
-    desc: "Классический сапёр в браузере с разными уровнями сложности и таймером.",
-    tags: ["C#", "ASP.NET"],
-    link: "https://github.com/remodik/minesweeper.web",
-  },
-  {
-    icon: "fa-globe",
-    color: "text-purple-400",
-    bg: "bg-purple-500/15",
-    name: "Landing",
-    desc: "Современный анимированный лендинг с glassmorphism-эффектами и адаптивной вёрсткой.",
-    tags: ["HTML", "CSS", "JS", "Three.js", "WebGL"],
-    link: "https://github.com/remodik/Landing",
-  },
-  {
-    icon: "fa-message",
-    color: "text-yellow-400",
-    bg: "bg-yellow-500/15",
-    name: "Lentik",
-    desc: "Семейный мессенджер на FastAPI + Next.js с семейной галереей, чатами и уведомлениями.",
-    tags: ["Python", "FastAPI", "Next.js", "TSX", "Docker"],
-    link: "https://github.com/remodik/Lentik",
-  },
+const TYPING_STRINGS = [
+  "Discord-боты",
+  "Веб-панели",
+  "FastAPI backend",
+  "API-интеграции",
+  "Python системы",
 ];
-
-let birthdayIntervalId = null;
-let revealObserver = null;
-
-function initRevealOnScroll() {
-  const revealItems = document.querySelectorAll(".reveal-on-scroll");
-  if (!revealItems.length) return;
-
-  if (!("IntersectionObserver" in window)) {
-    revealItems.forEach((item) => item.classList.add("is-visible"));
-    return;
-  }
-
-  revealObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-visible");
-        revealObserver.unobserve(entry.target);
-      });
-    },
-    { threshold: 0.18, rootMargin: "0px 0px -8% 0px" },
-  );
-
-  revealItems.forEach((item) => revealObserver.observe(item));
-}
-
-function cleanupRevealOnScroll() {
-  if (revealObserver) {
-    revealObserver.disconnect();
-    revealObserver = null;
-  }
-}
 
 export function render() {
   return `
-        <div class="fixed inset-0 overflow-hidden pointer-events-none" id="bg-animation" aria-hidden="true">
-            <div class="home-depth-gradient absolute inset-0"></div>
-            <div class="absolute inset-0 opacity-20">
-                <div class="absolute top-20 left-10 w-72 h-72 bg-discord-accent rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob"></div>
-                <div class="absolute top-40 right-10 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-2000"></div>
-                <div class="absolute bottom-20 left-1/3 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-4000"></div>
+        <div class="home-v2" id="home-v2-root">
+
+            <div class="hv2-noise" aria-hidden="true"></div>
+
+            <div class="hv2-glow hv2-glow-1" aria-hidden="true"></div>
+            <div class="hv2-glow hv2-glow-2" aria-hidden="true"></div>
+            <div class="hv2-glow hv2-glow-3" aria-hidden="true"></div>
+
+            <section class="hv2-hero">
+                <div class="hv2-hero-inner">
+                    <div class="hv2-hero-left hv2-reveal" style="--d:0ms">
+                        <div class="hv2-avatar-ring">
+                            <div class="hv2-avatar-ring-spin" aria-hidden="true"></div>
+                            <div class="hv2-avatar-wrap" id="hero-avatar-wrap">
+                                <div class="hv2-avatar-fallback">R</div>
+                            </div>
+                            <span class="hv2-status-dot" aria-label="онлайн"></span>
+                        </div>
+                        <div class="hv2-hero-chip">
+                            <span class="hv2-chip-dot"></span>
+                            доступен для проектов
+                        </div>
+                    </div>
+
+                    <div class="hv2-hero-center">
+                        <div class="hv2-hero-eyebrow hv2-reveal" style="--d:80ms">
+                            Python Developer · Discord Bots · Web Apps
+                        </div>
+                        <h1 class="hv2-hero-name hv2-reveal" style="--d:160ms">
+                            <span class="hv2-name-accent">re</span>mod3
+                        </h1>
+                        <div class="hv2-hero-typing hv2-reveal" style="--d:240ms">
+                            создаю&nbsp;<span class="hv2-typed" id="hv2-typed-text"></span><span class="hv2-cursor" aria-hidden="true">|</span>
+                        </div>
+                        <p class="hv2-hero-desc hv2-reveal" style="--d:320ms">
+                            Создаю сложные системы для Discord&#8209;серверов,
+                            рейтинговые системы, кланы, модерацию и веб&#8209;панели.
+                        </p>
+                        <div class="hv2-hero-actions hv2-reveal" style="--d:400ms">
+                            <a href="/projects" class="hv2-btn hv2-btn-primary">
+                                <i class="fas fa-folder-open"></i>
+                                Проекты
+                            </a>
+                            <a href="/contact" class="hv2-btn hv2-btn-ghost">
+                                <i class="fas fa-paper-plane"></i>
+                                Написать
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="hv2-hero-right hv2-reveal" style="--d:200ms">
+                        <div class="hv2-stat-card" id="stat-projects">
+                            <span class="hv2-stat-value">—</span>
+                            <span class="hv2-stat-label">проектов</span>
+                        </div>
+                        <div class="hv2-stat-card">
+                            <span class="hv2-stat-value">2+</span>
+                            <span class="hv2-stat-label">года опыта</span>
+                        </div>
+                        <div class="hv2-stat-card">
+                            <span class="hv2-stat-value">24/7</span>
+                            <span class="hv2-stat-label">онлайн</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="hv2-scroll-hint hv2-reveal" style="--d:600ms" aria-hidden="true">
+                    <div class="hv2-scroll-line"></div>
+                    <span>scroll</span>
+                </div>
+            </section>
+
+            <div class="hv2-marquee-wrap" aria-hidden="true">
+                <div class="hv2-marquee-track">
+                    ${[
+                      "Python",
+                      "FastAPI",
+                      "Discord.py",
+                      "SQLAlchemy",
+                      "PostgreSQL",
+                      "WebSockets",
+                      "JWT",
+                      "REST API",
+                      "JavaScript",
+                      "Vanilla JS",
+                      "Tailwind CSS",
+                      "Docker",
+                      "Python",
+                      "FastAPI",
+                      "Discord.py",
+                      "SQLAlchemy",
+                      "PostgreSQL",
+                      "WebSockets",
+                      "JWT",
+                      "REST API",
+                      "JavaScript",
+                      "Vanilla JS",
+                      "Tailwind CSS",
+                      "Docker",
+                    ]
+                      .map(
+                        (s) =>
+                          `<span class="hv2-marquee-item"><span class="hv2-marquee-dot"></span>${s}</span>`,
+                      )
+                      .join("")}
+                </div>
             </div>
+
+            <section class="hv2-section hv2-about-section">
+                <div class="hv2-section-inner">
+
+                    <div class="hv2-section-label hv2-reveal">/ обо мне</div>
+
+                    <div class="hv2-about-grid">
+                        <div class="hv2-about-text hv2-reveal" style="--d:100ms">
+                            <h2 class="hv2-section-title">
+                                Привет, меня зовут <span class="hv2-accent">Илья</span>
+                            </h2>
+                            <p>
+                                Мне 18 лет. Занимаюсь разработкой на&nbsp;Python —
+                                специализируюсь на&nbsp;Discord-ботах: системы рейтингов,
+                                управление кланами, HR-инструменты для&nbsp;модерации.
+                            </p>
+                            <p>
+                                Также строю фулстек-веб-приложения на&nbsp;<strong>FastAPI + Vanilla&nbsp;JS</strong> —
+                                именно то, что ты сейчас смотришь.
+                            </p>
+                            <div class="hv2-about-tags">
+                                <span class="hv2-tag">Python</span>
+                                <span class="hv2-tag">FastAPI</span>
+                                <span class="hv2-tag">discord.py</span>
+                                <span class="hv2-tag">SQLAlchemy</span>
+                                <span class="hv2-tag">JavaScript</span>
+                                <span class="hv2-tag">PostgreSQL</span>
+                            </div>
+                        </div>
+
+                        <div class="hv2-skills-bars hv2-reveal" style="animation-delay:200ms">
+                            ${[
+                              { label: "Python", pct: 65, color: "#5865f2" },
+                              {
+                                label: "Discord API",
+                                pct: 75,
+                                color: "#7289da",
+                              },
+                              {
+                                label: "JavaScript",
+                                pct: 45,
+                                color: "#f0b232",
+                              },
+                              {
+                                label: "FastAPI / SQL",
+                                pct: 55,
+                                color: "#23a559",
+                              },
+                            ]
+                              .map(
+                                ({ label, pct, color }) => `
+                                <div class="hv2-skill-row">
+                                    <div class="hv2-skill-meta">
+                                        <span>${label}</span>
+                                        <span class="hv2-skill-pct">${pct}%</span>
+                                    </div>
+                                    <div class="hv2-skill-track">
+                                        <div class="hv2-skill-fill" data-pct="${pct}" data-color="${color}"></div>
+                                    </div>
+                                </div>
+                            `,
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hv2-section hv2-services-section">
+                <div class="hv2-section-inner">
+                    <div class="hv2-section-label hv2-reveal">/ что делаю</div>
+                    <h2 class="hv2-section-title hv2-reveal" style="--d:80ms">Услуги</h2>
+
+                    <div class="hv2-services-grid" id="hv2-services-grid">
+                        <div class="hv2-services-loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+
+                    <div class="hv2-section-more hv2-reveal">
+                        <a href="/services" class="hv2-btn hv2-btn-ghost">
+                            Все услуги <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hv2-section hv2-projects-section">
+                <div class="hv2-section-inner">
+                    <div class="hv2-section-label hv2-reveal">/ последние работы</div>
+                    <h2 class="hv2-section-title hv2-reveal" style="--d:80ms">Проекты</h2>
+
+                    <div class="hv2-projects-grid" id="hv2-projects-grid">
+                        <div class="hv2-services-loading"><div class="spinner"></div></div>
+                    </div>
+
+                    ${
+                      isAuthenticated()
+                        ? `
+                        <div class="hv2-section-more hv2-reveal">
+                            <a href="/projects" class="hv2-btn hv2-btn-ghost">
+                                Все проекты <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    `
+                        : `
+                        <div class="hv2-section-more hv2-reveal">
+                            <p class="hv2-auth-hint">
+                                <a href="/login" class="hv2-link">Войдите</a>, чтобы просматривать проекты
+                            </p>
+                        </div>
+                    `
+                    }
+                </div>
+            </section>
+
+            <section class="hv2-cta-section hv2-reveal">
+                <div class="hv2-cta-glow" aria-hidden="true"></div>
+                <div class="hv2-cta-inner">
+                    <div class="hv2-cta-label">готов к новым проектам</div>
+                    <h2 class="hv2-cta-title">Есть идея? <span class="hv2-accent">Давай сделаем</span></h2>
+                    <div class="hv2-cta-actions">
+                        <a href="/contact" class="hv2-btn hv2-btn-primary hv2-btn-lg">
+                            <i class="fas fa-paper-plane"></i>
+                            Написать мне
+                        </a>
+                        <a href="https://t.me/remod3" target="_blank" rel="noopener" class="hv2-btn hv2-btn-ghost hv2-btn-lg">
+                            <i class="fab fa-telegram"></i>
+                            Telegram
+                        </a>
+                    </div>
+                </div>
+            </section>
+
         </div>
 
-        <div class="container mx-auto px-4 py-8 max-w-7xl relative z-10 home-page">
-            <div class="grid lg:grid-cols-12 gap-6">
+        <style>
+        .home-v2 {
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background: #0d0e11;
+            color: #c8ccd4;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
 
-                <div class="lg:col-span-3 space-y-5">
+        .hv2-noise {
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            opacity: .028;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 180px;
+        }
 
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.2s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-chart-line text-discord-accent"></i>
-                            Статистика
-                        </h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-discord-text">Python</span>
-                                    <span class="text-discord-accent font-semibold">65%</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-blue-400 to-discord-accent h-1.5 rounded-full" style="width: 65%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-discord-text">Discord API</span>
-                                    <span class="text-discord-accent font-semibold">75%</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-purple-400 to-purple-600 h-1.5 rounded-full" style="width: 75%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-discord-text">JavaScript</span>
-                                    <span class="text-discord-accent font-semibold">45%</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-1.5 rounded-full" style="width: 45%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-discord-text">FastAPI / SQL</span>
-                                    <span class="text-discord-accent font-semibold">50%</span>
-                                </div>
-                                <div class="w-full bg-discord-darker rounded-full h-1.5">
-                                    <div class="bg-gradient-to-r from-green-400 to-green-600 h-1.5 rounded-full" style="width: 50%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        .hv2-glow {
+            pointer-events: none;
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .18;
+            z-index: 0;
+            transition: opacity 1s;
+        }
 
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.35s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-trophy text-yellow-400"></i>
-                            Результаты
-                        </h3>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-discord-darker rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-discord-accent">10+</div>
-                                <div class="text-xs text-discord-text mt-0.5">проектов</div>
-                            </div>
-                            <div class="bg-discord-darker rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-discord-green">2+</div>
-                                <div class="text-xs text-discord-text mt-0.5">года опыта</div>
-                            </div>
-                            <div class="bg-discord-darker rounded-lg p-3 text-center">
-                                <div class="text-2xl font-bold text-purple-400">24/7</div>
-                                <div class="text-xs text-discord-text mt-0.5">онлайн</div>
-                            </div>
-                        </div>
-                    </div>
+        .hv2-glow-1 {
+            width: 600px; height: 600px;
+            background: var(--user-accent, #5865f2);
+            top: -200px; left: -150px;
+            animation: glow-drift-1 18s ease-in-out infinite alternate;
+        }
+        .hv2-glow-2 {
+            width: 500px; height: 500px;
+            background: #23a559;
+            bottom: 20vh; right: -100px;
+            animation: glow-drift-2 22s ease-in-out infinite alternate;
+            opacity: .1;
+        }
+        .hv2-glow-3 {
+            width: 350px; height: 350px;
+            background: #eb459e;
+            top: 55vh; left: 40vw;
+            animation: glow-drift-3 26s ease-in-out infinite alternate;
+            opacity: .07;
+        }
 
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.5s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-link text-discord-accent"></i>
-                            Навигация
-                        </h3>
-                        <div class="space-y-1">
-                            <a href="/projects" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-discord-darker transition group">
-                                <i class="fas fa-folder text-discord-accent group-hover:scale-110 transition w-4 text-center"></i>
-                                <span class="text-discord-text text-sm group-hover:text-white transition">Проекты</span>
-                            </a>
-                            <a href="/services" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-discord-darker transition group">
-                                <i class="fas fa-briefcase text-discord-green group-hover:scale-110 transition w-4 text-center"></i>
-                                <span class="text-discord-text text-sm group-hover:text-white transition">Услуги</span>
-                            </a>
-                            <a href="/contact" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-discord-darker transition group">
-                                <i class="fas fa-envelope text-purple-400 group-hover:scale-110 transition w-4 text-center"></i>
-                                <span class="text-discord-text text-sm group-hover:text-white transition">Написать мне</span>
-                            </a>
-                            <a href="https://github.com/remodik" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-discord-darker transition group">
-                                <i class="fab fa-github text-white/60 group-hover:scale-110 transition w-4 text-center"></i>
-                                <span class="text-discord-text text-sm group-hover:text-white transition">GitHub</span>
-                            </a>
-                        </div>
-                    </div>
+        @keyframes glow-drift-1 {
+            from {
+                transform: translate(0,0) scale(1);
+            }
+            to {
+                transform: translate(80px, 60px) scale(1.15);
+            }
+        }
+        @keyframes glow-drift-2 {
+            from {
+                transform: translate(0,0) scale(1);
+            }
+            to {
+                transform: translate(-60px, -80px) scale(1.2);
+            }
+        }
+        @keyframes glow-drift-3 {
+            from {
+                transform: translate(0,0) scale(1);
+            }
+            to {
+                transform: translate(40px, 60px) scale(.9);
+            }
+        }
+
+        .hv2-reveal {
+            opacity: 0;
+            transform: translateY(22px);
+            transition: opacity .55s ease calc(var(--d, 0ms)),
+                        transform .55s ease calc(var(--d, 0ms));
+        }
+        .hv2-reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hv2-hero {
+            position: relative;
+            z-index: 1;
+            min-height: calc(100vh - 64px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 24px 60px;
+        }
+
+        .hv2-hero-inner {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 220px 1fr 180px;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .hv2-hero-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .hv2-avatar-ring {
+            position: relative;
+            width: 160px;
+            height: 160px;
+        }
+
+        .hv2-avatar-ring-spin {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(
+                var(--user-accent, #5865f2) 0%,
+                transparent 35%,
+                #23a559 60%,
+                transparent 80%,
+                var(--user-accent, #5865f2) 100%
+            );
+            animation: ring-spin 5s linear infinite;
+            opacity: .85;
+        }
+
+        @keyframes ring-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hv2-avatar-wrap {
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #1a1c21;
+            border: 3px solid #0d0e11;
+        }
+
+        .hv2-avatar-wrap img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        .hv2-avatar-fallback {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 52px; font-weight: 800;
+            color: var(--user-accent, #5865f2);
+            background: linear-gradient(135deg, rgba(88,101,242,.15), rgba(88,101,242,.05));
+        }
+
+        .hv2-status-dot {
+            position: absolute;
+            bottom: 8px; right: 8px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #23a559;
+            border: 3px solid #0d0e11;
+            box-shadow: 0 0 10px #23a55980;
+            animation: status-pulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes status-pulse {
+            0%, 100% { box-shadow: 0 0 10px #23a55980; }
+            50% { box-shadow: 0 0 20px #23a559cc; }
+        }
+
+        .hv2-hero-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(35, 165, 89, .4);
+            background: rgba(35, 165, 89, .08);
+            color: #23a559;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .5px;
+        }
+
+        .hv2-chip-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #23a559;
+            animation: status-pulse 2s ease-in-out infinite;
+        }
+
+        .hv2-hero-center {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .hv2-hero-eyebrow {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #6b7280;
+        }
+
+        .hv2-hero-name {
+            font-size: clamp(3rem, 6vw, 5.5rem);
+            font-weight: 900;
+            line-height: .95;
+            letter-spacing: -.02em;
+            color: #f2f3f5;
+            margin: 0;
+        }
+
+        .hv2-name-accent {
+            color: var(--user-accent, #5865f2);
+        }
+
+        .hv2-hero-typing {
+            font-size: 1.1rem;
+            color: #8b92a0;
+            height: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .hv2-typed {
+            color: #f2f3f5;
+            font-weight: 600;
+        }
+
+        .hv2-cursor {
+            color: var(--user-accent, #5865f2);
+            animation: cursor-blink .8s step-end infinite;
+        }
+
+        @keyframes cursor-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .hv2-hero-desc {
+            font-size: .97rem;
+            line-height: 1.7;
+            color: #7c8494;
+            max-width: 480px;
+            margin: 0;
+        }
+
+        .hv2-hero-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .hv2-hero-right {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .hv2-stat-card {
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            backdrop-filter: blur(10px);
+            transition: border-color .2s, background .2s;
+        }
+
+        .hv2-stat-card:hover {
+            border-color: rgba(88,101,242,.4);
+            background: rgba(88,101,242,.06);
+        }
+
+        .hv2-stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #f2f3f5;
+            line-height: 1;
+        }
+
+        .hv2-stat-label {
+            font-size: .75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+        }
+
+        .hv2-scroll-hint {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: #3d424e;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hv2-scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, #3d424e);
+            animation: scroll-line 1.8s ease-in-out infinite;
+        }
+
+        @keyframes scroll-line {
+            0%, 100% { transform: scaleY(0); transform-origin: top; }
+            50% { transform: scaleY(1); transform-origin: top; }
+        }
+
+        .hv2-marquee-wrap {
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            border-top: 1px solid rgba(255,255,255,.06);
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            padding: 14px 0;
+            background: rgba(255,255,255,.02);
+            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+
+        .hv2-marquee-track {
+            display: flex;
+            gap: 0;
+            white-space: nowrap;
+            animation: marquee-scroll 30s linear infinite;
+        }
+
+        @keyframes marquee-scroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+
+        .hv2-marquee-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 24px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #4a5160;
+        }
+
+        .hv2-marquee-dot {
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--user-accent, #5865f2);
+            opacity: .6;
+        }
+
+        .hv2-section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 24px;
+        }
+
+        .hv2-section-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hv2-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--user-accent, #5865f2);
+            margin-bottom: 12px;
+        }
+
+        .hv2-section-title {
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            font-weight: 800;
+            color: #f2f3f5;
+            margin: 0 0 48px;
+            letter-spacing: -.02em;
+        }
+
+        .hv2-section-more {
+            margin-top: 48px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .hv2-about-section {
+            border-top: 1px solid rgba(255,255,255,.05);
+        }
+
+        .hv2-about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: start;
+        }
+
+        .hv2-about-text p {
+            margin: 0 0 16px;
+            line-height: 1.75;
+            color: #8b92a0;
+        }
+
+        .hv2-about-text strong {
+            color: #c8ccd4;
+        }
+
+        .hv2-about-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .hv2-tag {
+            padding: 5px 12px;
+            border-radius: 6px;
+            background: rgba(88,101,242,.1);
+            border: 1px solid rgba(88,101,242,.25);
+            color: #9aa3ff;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .hv2-skill-row {
+            margin-bottom: 20px;
+        }
+
+        .hv2-skill-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #c8ccd4;
+        }
+
+        .hv2-skill-pct {
+            color: #6b7280;
+        }
+
+        .hv2-skill-track {
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.07);
+            overflow: hidden;
+        }
+
+        .hv2-skill-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 999px;
+            background: #5865f2;
+            transition: width 1.2s cubic-bezier(.16,1,.3,1) .3s;
+        }
+
+        .hv2-services-section {
+            border-top: 1px solid rgba(255,255,255,.05);
+        }
+
+        .hv2-services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .hv2-service-card {
+            position: relative;
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 16px;
+            padding: 28px;
+            transition: border-color .25s, background .25s, transform .25s;
+            overflow: hidden;
+        }
+
+        .hv2-service-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 0% 0%, rgba(88,101,242,.08), transparent 60%);
+            opacity: 0;
+            transition: opacity .3s;
+        }
+
+        .hv2-service-card:hover {
+            border-color: rgba(88,101,242,.35);
+            background: rgba(88,101,242,.05);
+            transform: translateY(-3px);
+        }
+
+        .hv2-service-card:hover::before {
+            opacity: 1;
+        }
+
+        .hv2-service-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(88,101,242,.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--user-accent, #5865f2);
+        }
+
+        .hv2-service-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f2f3f5;
+            margin: 0 0 8px;
+        }
+
+        .hv2-service-desc {
+            font-size: .85rem;
+            line-height: 1.6;
+            color: #6b7280;
+            margin: 0 0 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .hv2-service-price {
+            font-size: .85rem;
+            font-weight: 700;
+            color: #23a559;
+        }
+
+        .hv2-services-loading {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .hv2-projects-section {
+            border-top: 1px solid rgba(255,255,255,.05);
+        }
+
+        .hv2-projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .hv2-project-card {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 16px;
+            padding: 28px;
+            cursor: pointer;
+            transition: border-color .25s, background .25s, transform .25s;
+        }
+
+        .hv2-project-card:hover {
+            border-color: rgba(88,101,242,.4);
+            background: rgba(88,101,242,.05);
+            transform: translateY(-4px);
+        }
+
+        .hv2-project-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(88,101,242,.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--user-accent, #5865f2);
+        }
+
+        .hv2-project-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f2f3f5;
+            margin: 0 0 8px;
+        }
+
+        .hv2-project-desc {
+            font-size: .85rem;
+            line-height: 1.6;
+            color: #6b7280;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .hv2-project-arrow {
+            margin-top: 16px;
+            font-size: .8rem;
+            color: var(--user-accent, #5865f2);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hv2-auth-hint {
+            color: #6b7280;
+            font-size: .9rem;
+        }
+
+        .hv2-cta-section {
+            position: relative;
+            z-index: 1;
+            padding: 120px 24px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,.05);
+            overflow: hidden;
+        }
+
+        .hv2-cta-glow {
+            pointer-events: none;
+            position: absolute;
+            width: 600px; height: 300px;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse, rgba(88,101,242,.2), transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hv2-cta-inner {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .hv2-cta-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--user-accent, #5865f2);
+            margin-bottom: 16px;
+        }
+
+        .hv2-cta-title {
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 900;
+            color: #f2f3f5;
+            letter-spacing: -.02em;
+            margin: 0 0 40px;
+            line-height: 1.1;
+        }
+
+        .hv2-cta-actions {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hv2-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: .9rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            transition: all .2s ease;
+            letter-spacing: .2px;
+        }
+
+        .hv2-btn-primary {
+            background: var(--user-accent, #5865f2);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(88,101,242,.3);
+        }
+
+        .hv2-btn-primary:hover {
+            background: #6471ff;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(88,101,242,.45);
+        }
+
+        .hv2-btn-ghost {
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.1);
+            color: #c8ccd4;
+        }
+
+        .hv2-btn-ghost:hover {
+            background: rgba(255,255,255,.1);
+            border-color: rgba(255,255,255,.2);
+            color: #f2f3f5;
+            transform: translateY(-2px);
+        }
+
+        .hv2-btn-lg {
+            padding: 14px 32px;
+            font-size: 1rem;
+        }
+
+        .hv2-accent {
+            color: var(--user-accent, #5865f2);
+        }
+
+        .hv2-link {
+            color: var(--user-accent, #5865f2);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .hv2-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 1024px) {
+            .hv2-hero-inner {
+                grid-template-columns: 180px 1fr;
+                grid-template-rows: auto auto;
+            }
+            .hv2-hero-right {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .hv2-stat-card {
+                flex: 1;
+                min-width: 120px;
+            }
+            .hv2-about-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hv2-hero {
+                padding: 60px 20px 60px;
+            }
+            .hv2-hero-inner {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .hv2-hero-left {
+                grid-row: 1;
+            }
+            .hv2-hero-actions {
+                justify-content: center;
+            }
+            .hv2-hero-desc {
+                margin: 0 auto;
+            }
+            .hv2-avatar-ring {
+                width: 130px;
+                height: 130px;
+            }
+            .hv2-hero-name {
+                font-size: 3rem;
+            }
+            .hv2-hero-right {
+                grid-column: 1;
+            }
+            .hv2-scroll-hint {
+                display: none;
+            }
+            .hv2-section {
+                padding: 70px 20px;
+            }
+        }
+        </style>
+    `;
+}
+
+export async function mount() {
+  initRevealObserver();
+  startTyping();
+  await loadAvatar();
+  await loadServices();
+  if (isAuthenticated()) {
+    await loadProjects();
+  } else {
+    renderProjectsPlaceholder();
+  }
+  await loadProjectCount();
+}
+
+export function unmount() {
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+    scrollObserver = null;
+  }
+  if (typingInterval) {
+    clearInterval(typingInterval);
+    typingInterval = null;
+  }
+}
+
+function initRevealObserver() {
+  const elements = document.querySelectorAll(".hv2-reveal");
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+
+          if (entry.target.classList.contains("hv2-skills-bars")) {
+            entry.target.querySelectorAll(".hv2-skill-fill").forEach((fill) => {
+              const pct = fill.dataset.pct || "0";
+              fill.style.background = fill.dataset.color || "#5865f2";
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  fill.style.width = pct + "%";
+                });
+              });
+            });
+          }
+
+          io.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.08 },
+  );
+
+  elements.forEach((el) => io.observe(el));
+  scrollObserver = io;
+}
+
+function startTyping() {
+  const el = document.getElementById("hv2-typed-text");
+  if (!el) return;
+
+  let si = 0,
+    ci = 0,
+    deleting = false;
+  const TYPE_SPEED = 80,
+    DELETE_SPEED = 40,
+    PAUSE = 1800;
+
+  function tick() {
+    const current = TYPING_STRINGS[si];
+    if (!deleting) {
+      el.textContent = current.slice(0, ++ci);
+      if (ci === current.length) {
+        deleting = true;
+        typingInterval = setTimeout(tick, PAUSE);
+        return;
+      }
+    } else {
+      el.textContent = current.slice(0, --ci);
+      if (ci === 0) {
+        deleting = false;
+        si = (si + 1) % TYPING_STRINGS.length;
+      }
+    }
+    typingInterval = setTimeout(tick, deleting ? DELETE_SPEED : TYPE_SPEED);
+  }
+
+  typingInterval = setTimeout(tick, 600);
+}
+
+async function loadAvatar() {
+  try {
+    const profile = await meApi.getProfile();
+    if (profile?.avatar_url) {
+      const wrap = document.getElementById("hero-avatar-wrap");
+      if (wrap) {
+        wrap.innerHTML = `<img src="${resolveApiUrl(profile.avatar_url)}" alt="avatar">`;
+      }
+    }
+  } catch {}
+}
+
+async function loadProjectCount() {
+  if (!isAuthenticated()) return;
+  try {
+    const projects = await projectsApi.getAll();
+    const el = document.querySelector("#stat-projects .hv2-stat-value");
+    if (el) el.textContent = `${projects.length}+`;
+  } catch {}
+}
+
+async function loadServices() {
+  const grid = document.getElementById("hv2-services-grid");
+  if (!grid) return;
+
+  const ICONS = [
+    "fa-robot",
+    "fa-globe",
+    "fa-plug",
+    "fa-database",
+    "fa-code",
+    "fa-cogs",
+    "fa-chart-bar",
+    "fa-shield-alt",
+  ];
+
+  try {
+    const services = await servicesApi.getAll();
+    if (!services.length) {
+      grid.innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Услуги скоро появятся</p>';
+      return;
+    }
+
+    grid.innerHTML = services
+      .slice(0, 6)
+      .map(
+        (s, i) => `
+            <div class="hv2-service-card hv2-reveal" style="--d:${i * 80}ms">
+                <div class="hv2-service-icon">
+                    <i class="fas ${ICONS[i % ICONS.length]}"></i>
                 </div>
-
-                <div class="lg:col-span-6 space-y-5">
-
-                    <div class="card home-hero-card reveal-on-scroll" style="animation-delay: 0.1s">
-                        <div class="banner" style="background-image: url('/assets/images/blue_mybanner.gif'); background-size: cover; background-position: center;"></div>
-
-                        <div class="relative -mt-16 px-6 pb-6 text-center">
-                            <div class="avatar-container inline-block relative">
-                                <img src="/assets/images/blue_avatar.png" alt="Avatar remod3" class="avatar mx-auto"
-                                     onerror="this.src='https://via.placeholder.com/120/5865F2/ffffff?text=R'">
-                                <div class="avatar-decoration"></div>
-                            </div>
-
-                            <h2 class="home-hero-title text-white mt-4">remod3</h2>
-                            <p class="home-hero-subtitle mt-2">Python Developer • Discord Bots • Web Applications</p>
-                            <p class="home-hero-description mt-3">
-                                Создаю сложные системы для Discord-серверов, рейтинговые системы, кланы, модерацию и веб-панели.
-                            </p>
-
-                            <div class="mt-3 flex flex-wrap justify-center gap-2">
-                                <span class="tag tag-primary">チェリー | せんちゃ</span>
-                                <span class="tag bg-discord-light text-white/80">ベテルギウスロマネ・コンティ</span>
-                            </div>
-
-                            <div class="mt-6 flex flex-wrap justify-center gap-3">
-                                <a href="/projects"
-                                   class="btn btn-primary btn-lg hero-projects-btn">
-                                    <i class="fas fa-folder-open text-sm"></i>
-                                    Смотреть проекты
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="bg-discord-light px-6 py-6 space-y-6">
-                            <section class="reveal-on-scroll" style="animation-delay: 0.3s">
-                                <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
-                                    <i class="fas fa-user text-pink-400"></i>
-                                    Обо мне
-                                </h2>
-                                <p class="text-discord-text text-sm leading-relaxed mb-3">
-                                    Привет! Меня зовут Илья, мне 18 лет. Я занимаюсь разработкой на Python.
-                                </p>
-                                <p class="text-discord-text text-sm leading-relaxed mb-3">
-                                    Специализируюсь на <span class="text-discord-accent font-medium">Discord-ботах</span> (py-cord / discord.py): системы рейтингов, управление кланами, HR-инструменты для модерации. Также строю фулстек-веб-приложения на <span class="text-white font-medium">FastAPI + Next.js</span>.
-                                </p>
-                                <p class="text-discord-text text-sm leading-relaxed">
-                                    День рождения: <span id="birthday-countdown"></span>
-                                </p>
-                            </section>
-
-                            <section class="reveal-on-scroll" style="animation-delay: 0.45s">
-                                <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
-                                    <i class="fas fa-wrench text-yellow-400"></i>
-                                    Технологии
-                                </h2>
-                                <div class="skills-container">
-                                    <span class="tag">Python</span>
-                                    <span class="tag">FastAPI</span>
-                                    <span class="tag">py-cord</span>
-                                    <span class="tag">discord.py</span>
-                                    <span class="tag">Next.js</span>
-                                    <span class="tag">SQLite</span>
-                                    <span class="tag">Docker</span>
-                                    <span class="tag">C++</span>
-                                    <span class="tag">WebSocket</span>
-                                    <span class="tag">HTML / CSS / JS</span>
-                                </div>
-                            </section>
-
-                            <section class="reveal-on-scroll" style="animation-delay: 0.55s">
-                                <h2 class="flex items-center gap-2 text-discord-accent text-base font-semibold border-b border-discord-lighter pb-2 mb-4">
-                                    <i class="fas fa-location-dot text-discord-green"></i>
-                                    Контакты
-                                </h2>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-3 text-discord-text text-sm">
-                                        <i class="fas fa-envelope text-discord-accent w-5 text-center"></i>
-                                        <a href="mailto:slenderzet@gmail.com" class="hover:text-white transition">slenderzet@gmail.com</a>
-                                    </div>
-                                    <div class="flex items-center gap-3 text-discord-text text-sm">
-                                        <i class="fas fa-map-marker-alt text-discord-accent w-5 text-center"></i>
-                                        <span>Тояма, Япония 🇯🇵 (Мечтаю там побывать!)</span>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <div class="flex justify-center gap-3 pt-2">
-                                <a href="https://vk.com/remod3" target="_blank" rel="noopener noreferrer"
-                                   class="social-link" aria-label="VKontakte">
-                                    <i class="fab fa-vk"></i>
-                                </a>
-                                <a href="https://t.me/remod3" target="_blank" rel="noopener noreferrer"
-                                   class="social-link" aria-label="Telegram">
-                                    <i class="fab fa-telegram"></i>
-                                </a>
-                                <a href="https://discord.gg/nKkQdDgWfC" target="_blank" rel="noopener noreferrer"
-                                   class="social-link" aria-label="Discord Server">
-                                    <i class="fab fa-discord"></i>
-                                </a>
-                                <a href="https://open.spotify.com/user/31hx3sueaixdsbody6s6lligjm6a" target="_blank" rel="noopener noreferrer"
-                                   class="social-link" aria-label="Spotify">
-                                    <i class="fab fa-spotify"></i>
-                                </a>
-                                <a href="https://github.com/remodik" target="_blank" rel="noopener noreferrer"
-                                   class="social-link" aria-label="GitHub">
-                                    <i class="fab fa-github"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.7s">
-                        <div class="flex items-center justify-between mb-5">
-                            <h2 class="text-white font-bold flex items-center gap-2">
-                                <i class="fas fa-rocket text-discord-accent"></i>
-                                Избранные проекты
-                            </h2>
-                            <a href="/projects"
-                               class="text-discord-accent text-sm hover:underline flex items-center gap-1 transition">
-                                Все проекты <i class="fas fa-arrow-right text-xs"></i>
-                            </a>
-                        </div>
-                        <div class="grid sm:grid-cols-2 gap-3" id="featured-projects">
-                            ${FEATURED_PROJECTS.map(
-                              (p, i) => `
-                                <a href="${p.link}" target="_blank" rel="noopener noreferrer"
-                                   class="group bg-discord-darker hover:bg-discord-darker/70 rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/30 border border-transparent hover:border-discord-lighter fade-in"
-                                   style="animation-delay: ${0.75 + i * 0.1}s">
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-10 h-10 ${p.bg} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
-                                            <i class="fas ${p.icon} ${p.color}"></i>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-white font-semibold text-sm group-hover:text-discord-accent transition truncate">${p.name}</p>
-                                            <p class="text-discord-text text-xs mt-0.5 line-clamp-2 leading-relaxed">${p.desc}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-wrap gap-1.5">
-                                        ${p.tags.map((t) => `<span class="text-xs bg-discord-light px-2 py-0.5 rounded-md text-discord-text/80">${t}</span>`).join("")}
-                                    </div>
-                                </a>
-                            `,
-                            ).join("")}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-3 space-y-5">
-
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.4s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-briefcase text-discord-green"></i>
-                            Что делаю
-                        </h3>
-                        <div class="space-y-3">
-                            <div class="flex items-start gap-3 p-2.5 rounded-lg hover:bg-discord-darker transition group cursor-default">
-                                <div class="w-8 h-8 bg-discord-accent/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-robot text-discord-accent text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-white text-sm font-medium">Discord-боты</p>
-                                    <p class="text-discord-text text-xs mt-0.5">Боты любой сложности под ключ</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 p-2.5 rounded-lg hover:bg-discord-darker transition group cursor-default">
-                                <div class="w-8 h-8 bg-green-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-globe text-discord-green text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-white text-sm font-medium">Веб-панели</p>
-                                    <p class="text-discord-text text-xs mt-0.5">FastAPI + фронтенд с авторизацией</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 p-2.5 rounded-lg hover:bg-discord-darker transition group cursor-default">
-                                <div class="w-8 h-8 bg-purple-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-plug text-purple-400 text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-white text-sm font-medium">API-интеграции</p>
-                                    <p class="text-discord-text text-xs mt-0.5">Discord, внешние сервисы</p>
-                                </div>
-                            </div>
-                            <a href="/services"
-                               class="mt-2 w-full block text-center text-discord-accent text-sm hover:underline py-1">
-                                Подробнее об услугах →
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 0.8s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-tv text-pink-400"></i>
-                            Любимые аниме
-                        </h3>
-                        <div class="space-y-2.5">
-                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
-                                <div class="relative w-10 h-14 rounded overflow-hidden flex-shrink-0 shadow-md">
-                                    <img src="https://cdn.myanimelist.net/images/anime/1522/128039.jpg" alt="Re:Zero"
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" loading="lazy"
-                                         onerror="this.src='https://via.placeholder.com/40x56/9333EA/ffffff?text=RZ'">
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Re:Zero</p>
-                                    <p class="text-discord-text text-xs">Фэнтези · Драма</p>
-                                    <div class="flex items-center gap-1 mt-0.5">
-                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                        <span class="text-xs text-discord-text">9.5/10</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
-                                <div class="relative w-10 h-14 rounded overflow-hidden flex-shrink-0 shadow-md">
-                                    <img src="https://cdn.myanimelist.net/images/anime/11/39717.jpg" alt="Sword Art Online"
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" loading="lazy"
-                                         onerror="this.src='https://via.placeholder.com/40x56/3B82F6/ffffff?text=SAO'">
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Sword Art Online</p>
-                                    <p class="text-discord-text text-xs">Экшен · Приключения</p>
-                                    <div class="flex items-center gap-1 mt-0.5">
-                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                        <span class="text-xs text-discord-text">8.8/10</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3 group cursor-pointer p-2 rounded-lg hover:bg-discord-darker transition">
-                                <div class="relative w-10 h-14 rounded overflow-hidden flex-shrink-0 shadow-md">
-                                    <img src="https://cdn.myanimelist.net/images/anime/1739/140995.jpg" alt="Blue Archive"
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" loading="lazy"
-                                         onerror="this.src='https://via.placeholder.com/40x56/F59E0B/ffffff?text=BA'">
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-white text-sm font-semibold group-hover:text-discord-accent transition">Blue Archive</p>
-                                    <p class="text-discord-text text-xs">Экшен · Школа</p>
-                                    <div class="flex items-center gap-1 mt-0.5">
-                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                        <span class="text-xs text-discord-text">9.2/10</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-discord-light rounded-xl p-5 border border-discord-lighter/40 home-soft-card reveal-on-scroll" style="animation-delay: 1s">
-                        <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-gamepad text-discord-accent"></i>
-                            Играю сейчас
-                        </h3>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-darker transition">
-                                <span class="text-discord-green text-xs">▶</span>
-                                <span class="text-discord-text text-sm">Blue Archive</span>
-                            </div>
-                            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-darker transition">
-                                <span class="text-discord-green text-xs">▶</span>
-                                <span class="text-discord-text text-sm">Arknights: Endfield</span>
-                            </div>
-                            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-darker transition">
-                                <span class="text-discord-green text-xs">▶</span>
-                                <span class="text-discord-text text-sm">PUBG Mobile</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <div class="hv2-service-name">${escHtml(s.name)}</div>
+                <div class="hv2-service-desc">${escHtml(s.description)}</div>
+                <div class="hv2-service-price">${escHtml(s.price)}</div>
             </div>
+        `,
+      )
+      .join("");
+
+    grid.querySelectorAll(".hv2-reveal").forEach((el) => {
+      if (scrollObserver) scrollObserver.observe(el);
+    });
+  } catch {
+    grid.innerHTML =
+      '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить услуги</p>';
+  }
+}
+
+async function loadProjects() {
+  const grid = document.getElementById("hv2-projects-grid");
+  if (!grid) return;
+
+  try {
+    const projects = await projectsApi.getAll();
+    if (!projects.length) {
+      grid.innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Проектов пока нет</p>';
+      return;
+    }
+
+    grid.innerHTML = projects
+      .slice(0, 3)
+      .map(
+        (p, i) => `
+            <div class="hv2-project-card hv2-reveal" style="--d:${i * 100}ms" data-id="${p.id}">
+                <div class="hv2-project-icon"><i class="fas fa-code"></i></div>
+                <div class="hv2-project-name">${escHtml(p.name)}</div>
+                <div class="hv2-project-desc">${escHtml(p.description || "Нет описания")}</div>
+                <div class="hv2-project-arrow">Открыть <i class="fas fa-arrow-right"></i></div>
+            </div>
+        `,
+      )
+      .join("");
+
+    grid.querySelectorAll(".hv2-project-card").forEach((card) => {
+      card.addEventListener("click", () =>
+        router.navigate(`/projects/${card.dataset.id}`),
+      );
+    });
+
+    grid.querySelectorAll(".hv2-reveal").forEach((el) => {
+      if (scrollObserver) scrollObserver.observe(el);
+    });
+  } catch {
+    grid.innerHTML =
+      '<p style="color:#6b7280;text-align:center;padding:40px;grid-column:1/-1">Не удалось загрузить проекты</p>';
+  }
+}
+
+function renderProjectsPlaceholder() {
+  const grid = document.getElementById("hv2-projects-grid");
+  if (!grid) return;
+  grid.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding: 48px 24px; color:#4a5160;">
+            <i class="fas fa-lock" style="font-size:2.5rem; margin-bottom:16px; display:block; opacity:.4"></i>
+            <p style="margin:0; font-size:.95rem;">Авторизуйтесь, чтобы просматривать проекты</p>
         </div>
     `;
 }
 
-export function mount() {
-  updateBirthdayCountdown();
-  birthdayIntervalId = setInterval(updateBirthdayCountdown, 60000);
-  initRevealOnScroll();
-}
-
-export function unmount() {
-  if (birthdayIntervalId) {
-    clearInterval(birthdayIntervalId);
-    birthdayIntervalId = null;
-  }
-
-  cleanupRevealOnScroll();
+function escHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str || "";
+  return d.innerHTML;
 }
