@@ -8,6 +8,7 @@ import string
 import re
 import uuid
 from contextlib import asynccontextmanager, suppress
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -97,6 +98,10 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 else:
     print("WARNING: RESEND_API_KEY is not set. Emails will not be sent.")
+
+contact_rate_limit: dict[str, list[datetime]] = defaultdict(list)
+CONTACT_RATE_LIMIT = 3
+CONTACT_RATE_WINDOW = 3600
 
 VALID_DM_PRIVACY_VALUES = {"all", "none"}
 DEFAULT_DM_PRIVACY = "all"
@@ -1041,6 +1046,21 @@ async def send_reset_link_email(email: str, token: str) -> bool:
         html_content,
         text_content
     )
+
+
+def check_contact_rate_limit(ip: str) -> bool:
+    now = datetime.now()
+    window_start = now - timedelta(seconds=CONTACT_RATE_WINDOW)
+
+    contact_rate_limit[ip] = [
+        t for t in contact_rate_limit[ip] if t > window_start
+    ]
+
+    if len(contact_rate_limit[ip]) >= CONTACT_RATE_LIMIT:
+        return False
+
+    contact_rate_limit[ip].append(now)
+    return True
 
 
 @app.on_event("startup")
@@ -2211,11 +2231,17 @@ async def delete_service(
 
 
 @app.post(path="/api/contact")
-async def send_contact_message(contact: ContactMessage) -> dict[str, Any]:
+async def send_contact_message(contact: ContactMessage, request: Request) -> dict[str, Any]:
+    ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
+
+    if not check_contact_rate_limit(ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Cлишком много сообщений. Попробуйте позже."
+        )
+
     if not DISCORD_WEBHOOK_URL:
         raise HTTPException(status_code=503, detail="Discord webhook not configured")
-
-    phone_text = f"\n📞 **Телефон:** {contact.phone}" if contact.phone else ""
 
     embed = {
         "title": f"📬 Новое сообщение: {contact.subject}",
