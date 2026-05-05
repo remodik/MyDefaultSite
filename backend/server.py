@@ -14,6 +14,7 @@ from typing import Any
 
 import bcrypt
 import resend
+import httpx
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, \
     status
@@ -86,6 +87,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "dev@remod3.ru")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://remod3.ru")
 SBP_PHONE = os.getenv("SBP_PHONE", "+70000000000")
 SBP_BANK = os.getenv("SBP_BANK", "Тинькофф")
@@ -2210,54 +2212,38 @@ async def delete_service(
 
 @app.post(path="/api/contact")
 async def send_contact_message(contact: ContactMessage) -> dict[str, Any]:
-    recipient = EMAIL_FROM
-    if not recipient:
-        raise HTTPException(status_code=503, detail="System email not configured")
+    if not DISCORD_WEBHOOK_URL:
+        raise HTTPException(status_code=503, detail="Discord webhook not configured")
 
-    subject = f"Контакт: {contact.subject}"
-    phone_text = f"\nТелефон: {contact.phone}" if contact.phone else ""
-    text_content = f"""
-Новое сообщение с формы контакта:
+    phone_text = f"\n📞 **Телефон:** {contact.phone}" if contact.phone else ""
 
-Имя: {contact.name}
-Email: {contact.email}{phone_text}
-Тема: {contact.subject}
+    embed = {
+        "title": f"📬 Новое сообщение: {contact.subject}",
+        "color": 0x5865F2,
+        "fields": [
+            {"name": "👤 Имя", "value": contact.name, "inline": True},
+            {"name": "📧 Email", "value": contact.email, "inline": True},
+            {"name": "📝 Тема", "value": contact.subject, "inline": False},
+            {"name": "💬 Сообщение", "value": contact.message[:1024], "inline": False},
+        ],
+        "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+        "footer": {"text": "remod3 contact form"}
+    }
 
-Сообщение:
-{contact.message}
-"""
+    if contact.phone:
+        embed["fields"].insert(2, {"name": "📞 Телефон", "value": contact.phone, "inline": True})
 
-    html_content = f"""
-<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <h2 style="color: #5865F2;">Новое сообщение с формы контакта</h2>
-    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-        <p><strong>Имя:</strong> {contact.name}</p>
-        <p><strong>Email:</strong> {contact.email}</p>
-        {f'<p><strong>Телефон:</strong> {contact.phone}</p>' if contact.phone else ''}
-        <p><strong>Тема:</strong> {contact.subject}</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
-        <p><strong>Сообщение:</strong></p>
-        <p style="white-space: pre-wrap;">{contact.message}</p>
-    </div>
-</body>
-</html>
-"""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            DISCORD_WEBHOOK_URL,
+            json={"embeds": [embed]},
+            timeout=10.0
+        )
 
-    loop = asyncio.get_running_loop()
-    success = await loop.run_in_executor(
-        None,
-        _send_email_via_resend,
-        recipient,
-        subject,
-        html_content,
-        text_content
-    )
-
-    if success:
+    if response.status_code in (200, 204):
         return {"success": True, "message": "Сообщение отправлено"}
     else:
-        raise HTTPException(status_code=500, detail="Failed to send email")
+        raise HTTPException(status_code=500, detail="Failed to send message")
 
 
 @app.get(path="/api/courses", response_model=list[CourseResponse])
