@@ -18,6 +18,8 @@ from backend.license.schemas import (
     ActivateResponse,
     CheckRequest,
     CheckResponse,
+    ConfirmRequest,
+    ConfirmResponse,
     GenerateKeyResponse,
     LicenseListItem,
     LicenseListResponse,
@@ -74,7 +76,7 @@ def _get_admin_secret() -> str:
     "/activate",
     response_model=ActivateResponse,
     response_model_exclude_none=True,
-    summary="Активация лицензионного ключа",
+    summary="Проверка лицензионного ключа (без записи в БД)",
 )
 @limiter.limit("5/minute")
 async def activate_license(
@@ -90,20 +92,77 @@ async def activate_license(
     lic = result.scalar_one_or_none()
 
     if lic is None:
-        await _log(session, "activate_fail", body.hwid, body.code, ip,
+        await _log(session, "activate_check_fail", body.hwid, body.code, ip,
                    {"reason": "key_not_found"})
         await session.commit()
         payload = {"success": False, "message": "Неверный ключ"}
         return {**payload, "sign": sign_response(payload)}
 
     if lic.used and lic.hwid != body.hwid:
-        await _log(session, "activate_fail", body.hwid, body.code, ip,
+        await _log(session, "activate_check_fail", body.hwid, body.code, ip,
                    {"reason": "key_used", "bound_hwid": lic.hwid})
         await session.commit()
         payload = {"success": False, "message": "Ключ уже использован"}
         return {**payload, "sign": sign_response(payload)}
 
+    await _log(session, "activate_check_ok", body.hwid, body.code, ip)
+    await session.commit()
+    payload = {"success": True, "message": "Ключ принят, требуется подтверждение"}
+    return {**payload, "sign": sign_response(payload)}
+
+
+@license_router.post(
+    "/confirm",
+    response_model=ConfirmResponse,
+    response_model_exclude_none=True,
+    summary="Подтверждение активации (запись в БД, идемпотентно)",
+)
+@limiter.limit("5/minute")
+async def confirm_license(
+    request: Request,
+    body: ConfirmRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    ip = _client_ip(request)
+
+    result = await session.execute(
+        select(License).where(License.key == body.code).with_for_update()
+    )
+    lic = result.scalar_one_or_none()
+
+    if lic is None:
+        await _log(session, "confirm_fail", body.hwid, body.code, ip,
+                   {"reason": "key_not_found"})
+        await session.commit()
+        payload = {"success": False, "message": "Неверный ключ"}
+        return {**payload, "sign": sign_response(payload)}
+
     now = datetime.now()
+
+    if (
+        lic.used
+        and lic.hwid == body.hwid
+        and lic.expires_at
+        and lic.expires_at > now
+        and lic.offline_token
+    ):
+        await _log(session, "confirm_repeat", body.hwid, body.code, ip)
+        await session.commit()
+        payload = {
+            "success": True,
+            "message": "Лицензия уже активирована",
+            "offlineToken": lic.offline_token,
+            "expiresAt": dt_to_ms(lic.expires_at),
+        }
+        return {**payload, "sign": sign_response(payload)}
+
+    if lic.used and lic.hwid != body.hwid:
+        await _log(session, "confirm_fail", body.hwid, body.code, ip,
+                   {"reason": "key_used", "bound_hwid": lic.hwid})
+        await session.commit()
+        payload = {"success": False, "message": "Ключ уже использован"}
+        return {**payload, "sign": sign_response(payload)}
+
     expires_at = now + timedelta(days=LICENSE_OFFLINE_DAYS)
     expires_ms = dt_to_ms(expires_at)
     offline_token = generate_offline_token(body.hwid, expires_ms)
@@ -114,7 +173,7 @@ async def activate_license(
     lic.expires_at = expires_at
     lic.offline_token = offline_token
 
-    await _log(session, "activate", body.hwid, body.code, ip)
+    await _log(session, "confirm_ok", body.hwid, body.code, ip)
     await session.commit()
 
     payload = {
