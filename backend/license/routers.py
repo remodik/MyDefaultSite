@@ -163,7 +163,11 @@ async def confirm_license(
         payload = {"success": False, "message": "Ключ уже использован"}
         return {**payload, "sign": sign_response(payload)}
 
-    expires_at = now + timedelta(days=LICENSE_OFFLINE_DAYS)
+    if lic.expires_at and lic.expires_at > now:
+        expires_at = lic.expires_at
+    else:
+        expires_at = now + timedelta(days=LICENSE_OFFLINE_DAYS)
+
     expires_ms = dt_to_ms(expires_at)
     offline_token = generate_offline_token(body.hwid, expires_ms)
 

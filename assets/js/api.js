@@ -488,3 +488,31 @@ export const adminPurchasesApi = {
         );
     },
 };
+
+export const automuteApi = {
+    async subscribe(plan) {
+        return apiRequest('/api/automute/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({ plan }),
+        });
+    },
+    async getMySubscription() {
+        return apiRequest('/api/automute/me/subscription');
+    },
+    async getMyLogs(limit = 50, offset = 0) {
+        return apiRequest(`/api/automute/me/logs?limit=${limit}&offset=${offset}`);
+    },
+};
+
+export const adminAutomuteApi = {
+    async getPurchases(status = null) {
+        const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+        return apiRequest(`/api/automute/admin/purchases${qs}`);
+    },
+    async confirmPurchase(purchaseId) {
+        return apiRequest(`/api/automute/admin/purchases/${purchaseId}/confirm`, { method: 'POST' });
+    },
+    async cancelPurchase(purchaseId) {
+        return apiRequest(`/api/automute/admin/purchases/${purchaseId}/cancel`, { method: 'POST' });
+    },
+};

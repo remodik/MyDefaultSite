@@ -18,6 +18,7 @@ export function renderNavbar() {
         { path: '/works', label: 'Работы', icon: 'fa-folder-open', public: true },
         { path: '/bot', label: 'Бот', icon: 'fa-robot', public: true },
         { path: '/courses', label: 'Курсы', icon: 'fa-graduation-cap', public: true },
+        { path: '/automute', label: 'AutoMute', icon: 'fa-volume-mute', public: true },
         { path: '/projects', label: 'Проекты', icon: 'fa-folder', requireAuth: true },
         { path: '/chat', label: 'Чат', icon: 'fa-comments', requireAuth: true },
         { path: '/contact', label: 'Контакты', icon: 'fa-envelope', public: true },

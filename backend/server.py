@@ -3,19 +3,19 @@ import base64
 import io
 import os
 import random
+import re
 import secrets
 import string
-import re
 import uuid
-from contextlib import asynccontextmanager, suppress
 from collections import defaultdict
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import bcrypt
-import resend
 import httpx
+import resend
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, \
     status
@@ -2928,6 +2928,11 @@ async def delete_work(
     await session.delete(work)
     await session.commit()
     return {"message": "Работа удалена"}
+
+
+from .automute.routers import attach_routes as _attach_automute_routes
+
+_attach_automute_routes(app)
 
 
 if __name__ == "__main__":

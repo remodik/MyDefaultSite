@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base
@@ -13,6 +13,7 @@ class License(Base):
     __table_args__ = (
         Index("ix_licenses_key",  "key",  unique=True),
         Index("ix_licenses_hwid", "hwid"),
+        Index("ix_licenses_user_id", "user_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -23,6 +24,11 @@ class License(Base):
     expires_at:   Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     offline_token: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    plan: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
 
 class LicenseLog(Base):

@@ -3026,3 +3026,25 @@ a.social-link:hover::before {
         width: 100%;
     }
 }
+
+/* ─── Profile tabs (AutoMute) ───────────────────────────────────────────── */
+.profile-tab-btn {
+    background: transparent;
+    border: none;
+    color: #b5bac1;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.profile-tab-btn:hover {
+    color: #fff;
+}
+
+.profile-tab-btn.active {
+    color: #fff;
+    border-bottom-color: var(--user-accent, #5865f2);
+}
+

@@ -1,9 +1,10 @@
-import { adminPurchasesApi, adminApi, API_URL } from "../api.js";
-import { showToast, escapeHtml, formatDate } from "../utils.js";
+import { adminPurchasesApi, adminApi, adminAutomuteApi, API_URL } from "../api.js";
+import { showToast, escapeHtml, formatDate, formatDateTime } from "../utils.js";
 import { confirmModal } from "../components/modal.js";
 
 let users = [];
 let purchases = [];
+let automutePurchases = [];
 let activeTab = "users";
 let purchasesFilter = "";
 let licenseAdminSecret = "";
@@ -33,6 +34,10 @@ export function render() {
                 <button class="btn ${activeTab === "purchases" ? "btn-primary" : "btn-secondary"}" id="tab-purchases">
                     <i class="fas fa-shopping-cart"></i>
                     Покупки курсов
+                </button>
+                <button class="btn ${activeTab === "automute" ? "btn-primary" : "btn-secondary"}" id="tab-automute">
+                    <i class="fas fa-volume-mute"></i>
+                    AutoMute
                 </button>
             </div>
 
@@ -500,6 +505,7 @@ function switchTab(tab) {
   const tabUsers = document.getElementById("tab-users");
   const tablicenses = document.getElementById("tab-licenses");
   const tabPurchases = document.getElementById("tab-purchases");
+  const tabAutomute = document.getElementById("tab-automute");
 
   if (tabUsers)
     tabUsers.className = `btn ${tab === "users" ? "btn-primary" : "btn-secondary"}`;
@@ -507,6 +513,8 @@ function switchTab(tab) {
     tablicenses.className = `btn ${tab === "licenses" ? "btn-primary" : "btn-secondary"}`;
   if (tabPurchases)
     tabPurchases.className = `btn ${tab === "purchases" ? "btn-primary" : "btn-secondary"}`;
+  if (tabAutomute)
+    tabAutomute.className = `btn ${tab === "automute" ? "btn-primary" : "btn-secondary"}`;
 
   if (tab === "users") {
     renderUsers();
@@ -514,6 +522,117 @@ function switchTab(tab) {
     renderLicenses();
   } else if (tab === "purchases") {
     renderPurchases();
+  } else if (tab === "automute") {
+    renderAutomute();
+  }
+}
+
+function renderAutomute() {
+  const container = document.getElementById("admin-content");
+  if (!container) return;
+
+  if (!automutePurchases.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-volume-mute"></i>
+        <h3 class="text-xl font-semibold text-white mt-4">Нет покупок AutoMute</h3>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="bg-discord-light rounded-lg overflow-hidden">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Тариф</th>
+            <th>Сумма</th>
+            <th>Комментарий СБП</th>
+            <th>Статус</th>
+            <th>Создано</th>
+            <th>Ключ</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${automutePurchases.map((p) => `
+            <tr>
+              <td>
+                <div>
+                  <div class="text-white">${escapeHtml(p.username || "—")}</div>
+                  <div class="text-xs text-discord-text">${escapeHtml(p.email || "")}</div>
+                </div>
+              </td>
+              <td><span class="tag tag-primary">${escapeHtml(p.plan)}</span></td>
+              <td>${p.amount} ₽</td>
+              <td><code class="text-discord-text">${escapeHtml(p.sbp_comment || "")}</code></td>
+              <td>
+                ${p.status === "pending" ? '<span class="tag tag-warning">Ожидает</span>'
+                  : p.status === "completed" ? '<span class="tag tag-success">Подтверждена</span>'
+                  : '<span class="tag tag-danger">Отменена</span>'}
+              </td>
+              <td>${formatDateTime(p.created_at)}</td>
+              <td>${p.license_key ? `<code class="text-white select-all">${escapeHtml(p.license_key)}</code>` : "—"}</td>
+              <td>
+                ${p.status === "pending" ? `
+                  <div class="flex gap-1">
+                    <button class="btn btn-success btn-sm am-confirm-btn" data-id="${escapeHtml(p.id)}">
+                      <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm am-cancel-btn" data-id="${escapeHtml(p.id)}">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                ` : ""}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  container.querySelectorAll(".am-confirm-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      confirmModal("Подтвердить покупку и выдать ключ?", async () => {
+        try {
+          const res = await adminAutomuteApi.confirmPurchase(id);
+          showToast(`Ключ выдан: ${res.license_key}`, "success");
+          await loadAutomutePurchases();
+          renderAutomute();
+        } catch (e) {
+          showToast(e.message || "Ошибка подтверждения", "error");
+        }
+      });
+    });
+  });
+
+  container.querySelectorAll(".am-cancel-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      confirmModal("Отменить покупку?", async () => {
+        try {
+          await adminAutomuteApi.cancelPurchase(id);
+          showToast("Покупка отменена", "success");
+          await loadAutomutePurchases();
+          renderAutomute();
+        } catch (e) {
+          showToast(e.message || "Ошибка отмены", "error");
+        }
+      });
+    });
+  });
+}
+
+async function loadAutomutePurchases() {
+  try {
+    automutePurchases = await adminAutomuteApi.getPurchases();
+  } catch (e) {
+    automutePurchases = [];
+    showToast(e.message || "Ошибка загрузки покупок AutoMute", "error");
   }
 }
 
@@ -682,17 +801,25 @@ export async function mount() {
   activeTab = "users";
   purchasesFilter = "";
 
-  await Promise.all([loadUsers(), loadLicenses(), loadPurchases()]);
+  await Promise.all([
+    loadUsers(),
+    loadLicenses(),
+    loadPurchases(),
+    loadAutomutePurchases(),
+  ]);
 
   const tabUsers = document.getElementById("tab-users");
   const tabLicenses = document.getElementById("tab-licenses");
   const tabPurchases = document.getElementById("tab-purchases");
+  const tabAutomute = document.getElementById("tab-automute");
 
   if (tabUsers) tabUsers.addEventListener("click", () => switchTab("users"));
   if (tabLicenses)
     tabLicenses.addEventListener("click", () => switchTab("licenses"));
   if (tabPurchases)
     tabPurchases.addEventListener("click", () => switchTab("purchases"));
+  if (tabAutomute)
+    tabAutomute.addEventListener("click", () => switchTab("automute"));
 
   renderUsers();
 }
@@ -700,6 +827,7 @@ export async function mount() {
 export function unmount() {
   users = [];
   purchases = [];
+  automutePurchases = [];
   activeTab = "users";
   purchasesFilter = "";
 }
