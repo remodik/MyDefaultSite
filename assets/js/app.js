@@ -20,7 +20,6 @@ import * as adminPanelPage from './pages/admin-panel.js';
 import * as notFoundPage from './pages/not-found.js';
 import * as worksPage from './pages/works.js';
 import * as workDetailPage from './pages/work-detail.js';
-import * as automutePage from './pages/automute.js';
 
 window.APP_CONFIG = {
     API_URL: API_URL || 'http://localhost:8001'
@@ -41,7 +40,6 @@ router.addRoute('/bot', botPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
 router.addRoute('/works', worksPage);
 router.addRoute('/works/:slug', workDetailPage);
-router.addRoute('/automute', automutePage);
 
 router.setNotFound(notFoundPage);
 
@@ -61,8 +59,20 @@ async function registerOptionalCourseRoutes() {
     }
 }
 
+async function registerOptionalAutomuteRoute() {
+    try {
+        const automutePage = await import('./pages/automute.js');
+        router.addRoute('/automute', automutePage);
+    } catch (error) {
+        console.warn('AutoMute page is unavailable, skipping automute route:', error);
+    }
+}
+
 async function initApp() {
-    await registerOptionalCourseRoutes();
+    await Promise.all([
+        registerOptionalCourseRoutes(),
+        registerOptionalAutomuteRoute(),
+    ]);
     renderNavbar();
     syncUserAccentColor();
     router.init();
