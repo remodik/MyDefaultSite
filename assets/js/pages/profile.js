@@ -1,10 +1,17 @@
 import { automuteApi, meApi, resolveApiUrl } from '../api.js';
+import { closeModal, showModal } from '../components/modal.js';
 import { applyUserAccentColor, escapeHtml, formatDateTime, showToast } from '../utils.js';
 
 let profile = null;
 let subscription = null;
 let logs = null;
 let activeTab = 'profile'; // 'profile' | 'automute'
+
+const AUTOMUTE_PLANS = [
+    { id: '1d', label: '1 день', price: 19, badge: 'Попробовать' },
+    { id: '7d', label: '7 дней', price: 119, badge: 'Популярный' },
+    { id: '30d', label: '30 дней', price: 529, badge: 'Выгодный' },
+];
 
 function getInitialLetter(data) {
     const source = data?.display_name || data?.username || '?';
@@ -95,14 +102,38 @@ function renderProfileTab() {
     `;
 }
 
+function renderTariffCards() {
+    return `
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+            ${AUTOMUTE_PLANS.map((p) => `
+                <div class="card p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-lg font-bold text-white">${p.label}</h4>
+                        <span class="tag tag-primary">${p.badge}</span>
+                    </div>
+                    <div class="text-3xl font-bold text-white">${p.price} <span class="text-sm text-discord-text">₽</span></div>
+                    <button class="btn btn-success btn-sm automute-buy-btn" data-plan="${p.id}">
+                        <i class="fas fa-shopping-cart"></i> Купить
+                    </button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 function renderSubscriptionStatusCard() {
     if (!subscription) {
         return `
             <div class="card p-4 mb-4">
+                <h3 class="text-lg font-bold text-white mb-2">
+                    <i class="fas fa-circle-info text-discord-accent mr-2"></i>
+                    Купите подписку, чтобы пользоваться модом
+                </h3>
                 <p class="text-discord-text">
-                    У вас нет подписки. <a href="/automute" class="text-discord-accent">Оформить</a>.
+                    После оплаты администратор подтвердит покупку — здесь появится ваш лицензионный ключ.
                 </p>
             </div>
+            ${renderTariffCards()}
         `;
     }
 
@@ -151,11 +182,75 @@ function renderSubscriptionStatusCard() {
 
     return `
         <div class="card p-4 mb-4 border-l-4 border-discord-red">
-            <p class="text-discord-text">
-                Подписка истекла. <a href="/automute" class="text-discord-accent">Продлить</a>.
-            </p>
+            <h3 class="text-lg font-bold text-white">
+                <i class="fas fa-circle-exclamation text-discord-red mr-2"></i>
+                Подписка истекла
+            </h3>
+            <p class="text-discord-text mt-1">Выберите новый тариф, чтобы продлить.</p>
         </div>
+        ${renderTariffCards()}
     `;
+}
+
+function showSbpModal(sbp) {
+    showModal({
+        title: 'Оплата через СБП',
+        size: 'md',
+        content: `
+            <div class="flex flex-col gap-3">
+                <p class="text-discord-text">
+                    Переведите <span class="text-white font-semibold">${sbp.amount} ₽</span>
+                    на <span class="text-white">${escapeHtml(sbp.phone)}</span>
+                    (${escapeHtml(sbp.bank)}) с комментарием:
+                </p>
+                <div class="bg-discord-darkest p-3 rounded">
+                    <code class="text-white font-mono text-lg select-all">${escapeHtml(sbp.comment)}</code>
+                </div>
+                <p class="text-discord-text text-sm">Получатель: ${escapeHtml(sbp.recipient)}</p>
+                <p class="text-discord-text text-sm">
+                    После того как вы переведёте деньги — администратор подтвердит покупку,
+                    и здесь появится лицензионный ключ для активации мода.
+                </p>
+            </div>
+        `,
+        footer: `
+            <button class="btn btn-secondary" id="automute-close-sbp">Закрыть</button>
+            <button class="btn btn-primary" id="automute-copy-sbp" data-comment="${escapeHtml(sbp.comment)}">
+                <i class="fas fa-copy"></i> Скопировать комментарий
+            </button>
+        `,
+    });
+
+    setTimeout(() => {
+        const close = document.getElementById('automute-close-sbp');
+        const copy = document.getElementById('automute-copy-sbp');
+        if (close) close.addEventListener('click', closeModal);
+        if (copy) {
+            copy.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(copy.dataset.comment);
+                    showToast('Комментарий скопирован', 'success');
+                } catch {
+                    showToast('Не удалось скопировать', 'error');
+                }
+            });
+        }
+    }, 0);
+}
+
+async function handleBuy(plan) {
+    try {
+        const res = await automuteApi.subscribe(plan);
+        if (res?.sbp) {
+            showSbpModal(res.sbp);
+        } else {
+            showToast('Покупка создана', 'success');
+        }
+        await loadAutomuteData();
+        renderProfileContent();
+    } catch (e) {
+        showToast(e.message || 'Ошибка покупки', 'error');
+    }
 }
 
 function renderLogsList() {
@@ -250,6 +345,10 @@ function renderProfileContent() {
             }
             renderProfileContent();
         });
+    });
+
+    container.querySelectorAll('.automute-buy-btn').forEach((btn) => {
+        btn.addEventListener('click', () => handleBuy(btn.dataset.plan));
     });
 }
 
