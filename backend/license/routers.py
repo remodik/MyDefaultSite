@@ -204,12 +204,15 @@ async def check_license(
     ip = _client_ip(request)
 
     result = await session.execute(
-        select(License).where(
+        select(License)
+        .where(
             License.hwid == body.hwid,
             License.used.is_(True),
         )
+        .order_by(License.expires_at.desc())
+        .limit(1)
     )
-    lic = result.scalar_one_or_none()
+    lic = result.scalars().first()
 
     now = datetime.now()
     valid = bool(

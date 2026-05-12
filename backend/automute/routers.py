@@ -239,12 +239,15 @@ def attach_routes(app) -> None:
             return {**resp, "sign": sign_response(resp)}
 
         lic_result = await session.execute(
-            select(License).where(
+            select(License)
+            .where(
                 License.hwid == body.hwid,
                 License.used.is_(True),
             )
+            .order_by(License.expires_at.desc())
+            .limit(1)
         )
-        lic = lic_result.scalar_one_or_none()
+        lic = lic_result.scalars().first()
         now = datetime.now()
         if not lic or not lic.expires_at or lic.expires_at < now:
             resp = {"success": False, "log_id": None, "message": "Лицензия не активна"}
