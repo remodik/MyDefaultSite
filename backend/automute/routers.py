@@ -12,8 +12,8 @@ from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.automute.models import AutoMuteLog, AutoMutePurchase
-from backend.automute.schemas import (
+from automute.models import AutoMuteLog, AutoMutePurchase
+from automute.schemas import (
     AdminAutoMutePurchaseResponse,
     AutoMuteLogsListResponse,
     ModLogSubmitRequest,
@@ -22,10 +22,10 @@ from backend.automute.schemas import (
     SubscribeResponse,
     SubscriptionStatusResponse,
 )
-from backend.automute.utils import PLAN_DAYS, PLAN_PRICES
-from backend.database import User, get_session
-from backend.license.models import License
-from backend.license.utils import (
+from automute.utils import PLAN_DAYS, PLAN_PRICES
+from database import User, get_session
+from license.models import License
+from license.utils import (
     dt_to_iso,
     generate_license_key,
     hmac_sha256_hex,

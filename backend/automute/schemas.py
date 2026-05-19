@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from backend.automute.utils import is_valid_plan
+from automute.utils import is_valid_plan
 
 
 class _Strict(BaseModel):
