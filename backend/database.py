@@ -15,7 +15,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}")
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'projects.db'}"
+
+import re
+DATABASE_URL = re.sub(r'\?.*$', '', DATABASE_URL)
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
