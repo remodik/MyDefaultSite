@@ -11,9 +11,9 @@ from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_session
-from backend.license.models import License, LicenseLog
-from backend.license.schemas import (
+from database import get_session
+from license.models import License, LicenseLog
+from license.schemas import (
     ActivateRequest,
     ActivateResponse,
     CheckRequest,
@@ -24,7 +24,7 @@ from backend.license.schemas import (
     LicenseListItem,
     LicenseListResponse,
 )
-from backend.license.utils import (
+from license.utils import (
     dt_to_iso,
     dt_to_ms,
     generate_license_key,
