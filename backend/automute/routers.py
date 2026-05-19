@@ -88,7 +88,7 @@ def _verify_mod_signature(payload: dict[str, Any], received_sign: str) -> bool:
 
 
 def attach_routes(app) -> None:
-    from backend.server import get_current_admin, get_current_user_model
+    from server import get_current_admin, get_current_user_model
 
     @automute_router.post(
         "/subscribe",
