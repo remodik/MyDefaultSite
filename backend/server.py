@@ -31,7 +31,7 @@ from sqlalchemy import and_, delete, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .database import (
+from database import (
     AdminResetRequest,
     ChatMessage,
     Conversation,
@@ -50,7 +50,7 @@ from .database import (
     get_session,
     init_models,
 )
-from .license.routers import license_router
+from license.routers import license_router
 
 load_dotenv()
 
@@ -2930,7 +2930,7 @@ async def delete_work(
     return {"message": "Работа удалена"}
 
 
-from .automute.routers import attach_routes as _attach_automute_routes
+from automute.routers import attach_routes as _attach_automute_routes
 
 _attach_automute_routes(app)
 
