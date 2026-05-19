@@ -72,8 +72,25 @@ export function render() {
                             >
                         </div>
                         
+                        <div class="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                id="privacy-consent"
+                                name="privacy-consent"
+                                class="mt-1 flex-shrink-0"
+                                required
+                            >
+                            <label for="privacy-consent" class="text-sm text-discord-text cursor-pointer">
+                                Я прочитал(а) и принимаю
+                                <a href="/terms" class="text-discord-accent hover:underline">Пользовательское соглашение</a>
+                                и
+                                <a href="/privacy" class="text-discord-accent hover:underline">Политику конфиденциальности</a>,
+                                и даю согласие на обработку персональных данных
+                            </label>
+                        </div>
+
                         <div id="error-message" class="hidden text-discord-red text-sm"></div>
-                        
+
                         <button type="submit" class="btn btn-primary w-full" data-testid="register-submit">
                             <i class="fas fa-user-plus"></i>
                             Зарегистрироваться

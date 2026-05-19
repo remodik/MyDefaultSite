@@ -18,6 +18,8 @@ import * as contactPage from './pages/contact.js';
 import * as botPage from './pages/bot.js';
 import * as adminPanelPage from './pages/admin-panel.js';
 import * as notFoundPage from './pages/not-found.js';
+import * as privacyPage from './pages/privacy.js';
+import * as termsPage from './pages/terms.js';
 import * as worksPage from './pages/works.js';
 import * as workDetailPage from './pages/work-detail.js';
 
@@ -41,6 +43,8 @@ router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: tru
 router.addRoute('/works', worksPage);
 router.addRoute('/works/:slug', workDetailPage);
 
+router.addRoute('/privacy', privacyPage);
+router.addRoute('/terms', termsPage);
 router.setNotFound(notFoundPage);
 
 async function registerOptionalCourseRoutes() {
