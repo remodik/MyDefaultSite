@@ -21,15 +21,6 @@ class SubscribeRequest(_Strict):
         return v
 
 
-class SbpDetails(_Strict):
-    phone: str
-    bank: str
-    recipient: str
-    amount: int
-    comment: str
-    instruction: str
-
-
 class AutoMutePurchaseResponse(_Strict):
     id: str
     user_id: str
@@ -37,13 +28,14 @@ class AutoMutePurchaseResponse(_Strict):
     amount: int
     status: str
     sbp_comment: str | None = None
+    yookassa_payment_id: str | None = None
     created_at: str
     completed_at: str | None = None
 
 
 class SubscribeResponse(_Strict):
     purchase: AutoMutePurchaseResponse
-    sbp: SbpDetails | None = None
+    confirmation_url: str | None = None
 
 
 class AdminAutoMutePurchaseResponse(AutoMutePurchaseResponse):

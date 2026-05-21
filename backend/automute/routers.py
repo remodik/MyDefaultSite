@@ -58,22 +58,9 @@ def _purchase_to_dict(p: AutoMutePurchase) -> dict[str, Any]:
         "amount": int(p.amount),
         "status": p.status,
         "sbp_comment": p.sbp_comment,
+        "yookassa_payment_id": p.yookassa_payment_id,
         "created_at": dt_to_iso(p.created_at),
         "completed_at": dt_to_iso(p.completed_at),
-    }
-
-
-def _build_sbp_details(amount: int, comment: str) -> dict[str, Any]:
-    phone = os.getenv("SBP_PHONE", "+70000000000")
-    bank = os.getenv("SBP_BANK", "Тинькофф")
-    recipient = os.getenv("SBP_RECIPIENT", "Получатель не указан")
-    return {
-        "phone": phone,
-        "bank": bank,
-        "recipient": recipient,
-        "amount": int(amount),
-        "comment": comment,
-        "instruction": f"Переведите {amount} ₽ на {phone} ({bank}) с комментарием {comment}",
     }
 
 
@@ -100,6 +87,8 @@ def attach_routes(app) -> None:
         current_user: User = Depends(get_current_user_model),
         session: AsyncSession = Depends(get_session),
     ) -> dict[str, Any]:
+        from payments import create_payment as yookassa_create_payment
+
         plan = body.plan
         amount = PLAN_PRICES[plan]
 
@@ -115,23 +104,45 @@ def attach_routes(app) -> None:
                 detail="У вас уже есть ожидающая подтверждения покупка",
             )
 
-        sbp_comment = f"AM-{uuid.uuid4().hex[:8].upper()}"
+        frontend_url = os.getenv("FRONTEND_URL", "https://remod3.ru")
+
         purchase = AutoMutePurchase(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             plan=plan,
             amount=amount,
             status="pending",
-            sbp_comment=sbp_comment,
+            sbp_comment=None,
+            yookassa_payment_id=None,
             created_at=datetime.now(),
         )
         session.add(purchase)
         await session.commit()
         await session.refresh(purchase)
 
+        try:
+            payment = await yookassa_create_payment(
+                amount=amount,
+                description=f"AutoMute подписка ({plan})",
+                metadata={
+                    "kind": "automute",
+                    "purchase_id": purchase.id,
+                    "user_id": current_user.id,
+                },
+                return_url=f"{frontend_url}/automute",
+            )
+        except Exception as exc:
+            purchase.status = "cancelled"
+            await session.commit()
+            raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}")
+
+        purchase.yookassa_payment_id = payment["id"]
+        await session.commit()
+        await session.refresh(purchase)
+
         return {
             "purchase": _purchase_to_dict(purchase),
-            "sbp": _build_sbp_details(amount, sbp_comment),
+            "confirmation_url": payment["confirmation_url"],
         }
 
     @automute_router.get(

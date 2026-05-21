@@ -23,6 +23,7 @@ class AutoMutePurchase(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     sbp_comment: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    yookassa_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     license_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("licenses.id", ondelete="SET NULL"), nullable=True
     )

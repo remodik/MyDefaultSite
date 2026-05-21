@@ -57,6 +57,18 @@
             id="toast-container"
             class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
         ></div>
+        <div
+            id="wake-banner"
+            class="fixed top-16 left-0 right-0 z-40 hidden"
+        >
+            <div class="bg-discord-yellow/10 border-b border-discord-yellow/30 text-discord-yellow text-sm py-2 px-4 flex items-center justify-center gap-2">
+                <svg class="animate-spin w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+                Сервер просыпается, подождите немного…
+            </div>
+        </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
@@ -84,7 +96,7 @@
                     ) {
                         return `${protocol}//${host}:8001`;
                     }
-                    return "https://mycardsite-backend.onrender.com";
+                    return "";
                 })(),
             };
         </script>

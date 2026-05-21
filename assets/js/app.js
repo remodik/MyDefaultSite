@@ -72,13 +72,33 @@ async function registerOptionalAutomuteRoute() {
     }
 }
 
+async function checkBackendAwake() {
+    const banner = document.getElementById('wake-banner');
+    if (!banner || !API_URL || API_URL.includes('localhost') || API_URL.includes('127.0.0.1')) return;
+
+    const showTimer = setTimeout(() => banner.classList.remove('hidden'), 2000);
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        await fetch(`${API_URL}/api/health`, { method: 'HEAD', signal: controller.signal }).catch(() =>
+            fetch(`${API_URL}/`, { method: 'HEAD', signal: controller.signal })
+        );
+        clearTimeout(timeout);
+    } catch { } finally {
+        clearTimeout(showTimer);
+        banner.classList.add('hidden');
+    }
+}
+
 async function initApp() {
+    await checkBackendAwake();
     await Promise.all([
         registerOptionalCourseRoutes(),
         registerOptionalAutomuteRoute(),
     ]);
     renderNavbar();
-    syncUserAccentColor();
+    await syncUserAccentColor();
     router.init();
 }
 

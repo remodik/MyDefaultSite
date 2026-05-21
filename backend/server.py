@@ -51,6 +51,7 @@ from database import (
     init_models,
 )
 from license.routers import license_router
+from payments import create_payment as yookassa_create_payment, fetch_payment as yookassa_fetch_payment
 
 load_dotenv()
 
@@ -457,6 +458,7 @@ class PurchaseResponse(_StrictSchema):
     amount: int
     status: str
     sbp_comment: str | None
+    yookassa_payment_id: str | None = None
     created_at: str
 
     @field_validator("status")
@@ -468,23 +470,14 @@ class PurchaseResponse(_StrictSchema):
         return value
 
 
-class SbpDetails(_StrictSchema):
-    phone: str
-    bank: str
-    recipient: str
-    amount: int
-    comment: str
-    instruction: str
-
-
-class PurchaseWithSbpResponse(_StrictSchema):
+class PurchaseWithPaymentResponse(_StrictSchema):
     purchase: PurchaseResponse
-    sbp: SbpDetails | None
+    confirmation_url: str | None = None
 
     @model_validator(mode="after")
-    def validate_sbp_payload(self) -> "PurchaseWithSbpResponse":
-        if self.purchase.status == "pending" and self.sbp is None:
-            raise ValueError("Для ожидающей покупки требуются реквизиты СБП")
+    def validate_payment_payload(self) -> "PurchaseWithPaymentResponse":
+        if self.purchase.status == "pending" and not self.confirmation_url:
+            raise ValueError("Для ожидающей покупки требуется confirmation_url ЮKassa")
         return self
 
 
@@ -861,6 +854,7 @@ def _purchase_to_response(purchase: Purchase) -> dict[str, Any]:
         "amount": int(purchase.amount),
         "status": purchase.status,
         "sbp_comment": purchase.sbp_comment,
+        "yookassa_payment_id": purchase.yookassa_payment_id,
         "created_at": _to_iso(purchase.created_at),
     }
 
@@ -2510,7 +2504,7 @@ async def get_course_part_content(
     return _course_part_to_response(part, has_access=True, include_content=True)
 
 
-@app.post(path="/api/courses/{course_id}/purchase", response_model=PurchaseWithSbpResponse)
+@app.post(path="/api/courses/{course_id}/purchase", response_model=PurchaseWithPaymentResponse)
 async def purchase_course(
     course_id: str,
     current_user: User = Depends(get_current_user_model),
@@ -2544,30 +2538,53 @@ async def purchase_course(
 
     amount = int(course.price)
     is_free = amount == 0
-    sbp_comment = None if is_free else f"CRS-{uuid.uuid4().hex[:8].upper()}"
+    purchase_id = str(uuid.uuid4())
 
     purchase = Purchase(
-        id=str(uuid.uuid4()),
+        id=purchase_id,
         user_id=current_user.id,
         course_id=course.id,
         part_id=None,
         amount=amount,
         status="completed" if is_free else "pending",
-        sbp_comment=sbp_comment,
+        sbp_comment=None,
+        yookassa_payment_id=None,
         created_at=datetime.now(),
     )
     session.add(purchase)
     await session.commit()
     await session.refresh(purchase)
 
-    sbp_payload = _build_sbp_details(amount, sbp_comment) if sbp_comment else None
+    if is_free:
+        return {"purchase": _purchase_to_response(purchase), "confirmation_url": None}
+
+    try:
+        payment = await yookassa_create_payment(
+            amount=amount,
+            description=f"Курс: {course.title}",
+            metadata={
+                "kind": "course",
+                "purchase_id": purchase.id,
+                "user_id": current_user.id,
+            },
+            return_url=f"{FRONTEND_URL}/courses/{course.id}",
+        )
+    except Exception as exc:
+        purchase.status = "cancelled"
+        await session.commit()
+        raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}")
+
+    purchase.yookassa_payment_id = payment["id"]
+    await session.commit()
+    await session.refresh(purchase)
+
     return {
         "purchase": _purchase_to_response(purchase),
-        "sbp": sbp_payload,
+        "confirmation_url": payment["confirmation_url"],
     }
 
 
-@app.post(path="/api/courses/{course_id}/parts/{part_id}/purchase", response_model=PurchaseWithSbpResponse)
+@app.post(path="/api/courses/{course_id}/parts/{part_id}/purchase", response_model=PurchaseWithPaymentResponse)
 async def purchase_course_part(
     course_id: str,
     part_id: str,
@@ -2612,7 +2629,6 @@ async def purchase_course_part(
 
     amount = int(part.price)
     should_complete = amount == 0 or part.is_preview
-    sbp_comment = None if should_complete else f"PRT-{uuid.uuid4().hex[:8].upper()}"
 
     purchase = Purchase(
         id=str(uuid.uuid4()),
@@ -2621,7 +2637,8 @@ async def purchase_course_part(
         part_id=part.id,
         amount=amount,
         status="completed" if should_complete else "pending",
-        sbp_comment=sbp_comment,
+        sbp_comment=None,
+        yookassa_payment_id=None,
         created_at=datetime.now(),
     )
 
@@ -2629,10 +2646,32 @@ async def purchase_course_part(
     await session.commit()
     await session.refresh(purchase)
 
-    sbp_payload = _build_sbp_details(amount, sbp_comment) if sbp_comment else None
+    if should_complete:
+        return {"purchase": _purchase_to_response(purchase), "confirmation_url": None}
+
+    try:
+        payment = await yookassa_create_payment(
+            amount=amount,
+            description=f"Раздел курса: {part.title}",
+            metadata={
+                "kind": "course_part",
+                "purchase_id": purchase.id,
+                "user_id": current_user.id,
+            },
+            return_url=f"{FRONTEND_URL}/courses/{course_id}",
+        )
+    except Exception as exc:
+        purchase.status = "cancelled"
+        await session.commit()
+        raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}")
+
+    purchase.yookassa_payment_id = payment["id"]
+    await session.commit()
+    await session.refresh(purchase)
+
     return {
         "purchase": _purchase_to_response(purchase),
-        "sbp": sbp_payload,
+        "confirmation_url": payment["confirmation_url"],
     }
 
 
@@ -2711,6 +2750,105 @@ async def update_purchase_status(
     await session.refresh(purchase)
 
     return _purchase_to_response(purchase)
+
+
+async def _complete_course_purchase(session: AsyncSession, purchase: Purchase) -> None:
+    if purchase.status == "completed":
+        return
+    purchase.status = "completed"
+    await session.commit()
+
+
+async def _complete_automute_purchase(session: AsyncSession, purchase_id: str) -> None:
+    from automute.models import AutoMutePurchase
+    from automute.utils import PLAN_DAYS
+    from license.models import License
+    from license.utils import generate_license_key
+
+    purchase = await session.get(AutoMutePurchase, purchase_id)
+    if not purchase:
+        return
+    if purchase.status == "completed":
+        return
+    if purchase.status == "cancelled":
+        return
+
+    days = PLAN_DAYS[purchase.plan]
+    now = datetime.now()
+    expires = now + timedelta(days=days)
+
+    key: str | None = None
+    for _ in range(10):
+        candidate = generate_license_key()
+        existing = await session.execute(select(License).where(License.key == candidate))
+        if not existing.scalar_one_or_none():
+            key = candidate
+            break
+    if key is None:
+        raise RuntimeError("Не удалось сгенерировать ключ лицензии")
+
+    lic = License(
+        key=key,
+        used=False,
+        expires_at=expires,
+        created_at=now,
+        user_id=purchase.user_id,
+        plan=purchase.plan,
+    )
+    session.add(lic)
+    await session.flush()
+
+    purchase.status = "completed"
+    purchase.completed_at = now
+    purchase.license_id = lic.id
+    await session.commit()
+
+
+@app.post(path="/api/payments/webhook")
+async def yookassa_webhook(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Невалидный JSON")
+
+    event = body.get("event")
+    obj = body.get("object") or {}
+    payment_id = obj.get("id")
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="Нет id платежа в уведомлении")
+
+    try:
+        payment = await yookassa_fetch_payment(payment_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Не удалось проверить платёж: {exc}")
+
+    if payment["status"] != "succeeded" or not payment["paid"]:
+        return {"ok": True, "ignored": True, "status": payment["status"], "event": event}
+
+    metadata = payment.get("metadata") or {}
+    kind = metadata.get("kind")
+    purchase_id = metadata.get("purchase_id")
+
+    if kind in ("course", "course_part") and purchase_id:
+        purchase = await session.get(Purchase, purchase_id)
+        if purchase and purchase.yookassa_payment_id == payment_id:
+            await _complete_course_purchase(session, purchase)
+        return {"ok": True, "kind": kind, "purchase_id": purchase_id}
+
+    if kind == "automute" and purchase_id:
+        from automute.models import AutoMutePurchase
+
+        purchase = await session.get(AutoMutePurchase, purchase_id)
+        if purchase and purchase.yookassa_payment_id == payment_id:
+            await _complete_automute_purchase(session, purchase_id)
+        return {"ok": True, "kind": kind, "purchase_id": purchase_id}
+
+    return {"ok": True, "unmatched": True}
 
 
 def _work_to_dict(work: Work, include_html: bool = False) -> dict[str, Any]:

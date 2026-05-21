@@ -16,3 +16,4 @@ resend
 httpx
 Pillow>=10.0.0
 slowapi>=0.1.9
+yookassa>=3.0.0

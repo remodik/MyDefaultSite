@@ -235,6 +235,7 @@ class Purchase(Base):
     amount: Mapped[int] = mapped_column(default=0)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     sbp_comment: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    yookassa_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
