@@ -2,6 +2,7 @@ import { conversationsApi, createChatWebSocket, getToken, meApi, resolveApiUrl, 
 import { getUser } from '../auth.js';
 import { hideUserPopup, showUserPopup } from '../components/user-popup.js';
 import { debounce, escapeHtml, formatRelativeTime, formatTime, renderMarkdown, showToast } from '../utils.js';
+import { t } from '../i18n.js';
 
 const MAX_RECONNECT_ATTEMPTS = 5;
 const DM_POLL_INTERVAL_MS = 2500;
@@ -143,7 +144,7 @@ function renderEmptyState() {
     return `
         <div class="chat-empty-state">
             <div class="chat-empty-icon"><i class="fas fa-comment-dots"></i></div>
-            <h3>Пока нет сообщений. Напишите первое.</h3>
+            <h3>${escapeHtml(t('chat_empty'))}</h3>
         </div>
     `;
 }
@@ -283,8 +284,8 @@ function updateHeader() {
         applyRoomUserTrigger(partner?.id || '');
     } else {
         roomAvatarEl.innerHTML = roomAvatarHtml(null);
-        roomTitleEl.textContent = 'Общая комната';
-        roomSubtitleEl.textContent = 'Сообщения в реальном времени';
+        roomTitleEl.textContent = t('page_chat_title');
+        roomSubtitleEl.textContent = t('page_chat_sub');
         applyRoomUserTrigger('');
     }
 
@@ -315,7 +316,7 @@ function renderConversationsList() {
         <button class="dm-item dm-item-global ${mode === 'global' ? 'is-active' : ''}" data-action="global-room">
             <div class="dm-item-avatar"><span class="dm-item-avatar-fallback">#</span></div>
             <div class="dm-item-content">
-                <div class="dm-item-row"><span class="dm-item-name">Общая комната</span></div>
+                <div class="dm-item-row"><span class="dm-item-name">${escapeHtml(t('page_chat_title'))}</span></div>
                 <div class="dm-item-preview">Публичный чат сайта</div>
             </div>
         </button>
@@ -594,9 +595,9 @@ export function render() {
                     </button>
                     <div class="chat-room-header-meta">
                         <button type="button" id="chat-room-title-trigger" class="chat-room-title-trigger" aria-label="Открыть профиль пользователя">
-                            <span id="chat-room-title" class="chat-room-title">Общая комната</span>
+                            <span id="chat-room-title" class="chat-room-title">${escapeHtml(t('page_chat_title'))}</span>
                         </button>
-                        <p id="chat-room-subtitle" class="chat-room-subtitle">Сообщения в реальном времени</p>
+                        <p id="chat-room-subtitle" class="chat-room-subtitle">${escapeHtml(t('page_chat_sub'))}</p>
                     </div>
                 </div>
                 <div id="connection-status" class="chat-connection-status"></div>
@@ -615,7 +616,7 @@ export function render() {
                     </div>
                     <div class="chat-input-container">
                         <form id="chat-form" class="chat-input">
-                            <textarea id="message-input" class="input chat-textarea" placeholder="Введите сообщение..." maxlength="1000" rows="1" disabled></textarea>
+                            <textarea id="message-input" class="input chat-textarea" placeholder="${escapeHtml(t('chat_input_ph'))}" maxlength="1000" rows="1" disabled></textarea>
                             <button type="submit" class="btn btn-primary btn-sm chat-send-btn" disabled>
                                 <i class="fas fa-paper-plane"></i><span class="chat-send-label">Отправить</span>
                             </button>

@@ -5,7 +5,7 @@ import { applyUserAccentColor, escapeHtml, formatDateTime, showToast } from '../
 let profile = null;
 let subscription = null;
 let logs = null;
-let activeTab = 'profile'; // 'profile' | 'automute'
+let activeTab = 'profile';
 
 const AUTOMUTE_PLANS = [
     { id: '1d', label: '1 день', price: 19, badge: 'Попробовать' },

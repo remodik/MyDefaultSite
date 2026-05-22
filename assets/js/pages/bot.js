@@ -1,82 +1,31 @@
+import { t } from '../i18n.js';
+import { escapeHtml } from '../utils.js';
+
 const INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=1206275841395392552';
 
-const HERO_DESCRIPTION = 'remod3Bot автоматизирует рутину сервера: фиксирует действия в audit-логах, ведёт статистику и помогает поддерживать порядок. Кланы, сезоны, очки и лидерборды усиливают вовлечённость сообщества без лишней ручной работы.';
+const SEO_TITLE = 'remod3Bot — Discord bot for moderation, stats and clans';
+const SEO_DESCRIPTION = 'remod3Bot combines moderation, audit logs, activity stats, points & role shop, clans with seasons and leaderboards.';
 
-const SEO_TITLE = 'remod3Bot — Discord-бот для модерации, статистики и кланов';
-const SEO_DESCRIPTION = 'remod3Bot для Discord объединяет модерацию, audit-логи, статистику активности, очки и магазин ролей, кланы с сезонами и лидерборды для прозрачного управления сервером.';
+const FACT_KEYS = ['bot_fact_clans', 'bot_fact_audit', 'bot_fact_econ', 'bot_fact_boards'];
 
-const FACTS = [
-    'Кланы с сезонами и казной',
-    'Audit-логи и модерирование',
-    'Очки активности и магазин ролей',
-    'Лидерборды и рейтинги',
+const SYSTEMS = [
+    { icon: '📜', t_key: 'bot_sys1_t', d_key: 'bot_sys1_d' },
+    { icon: '📊', t_key: 'bot_sys2_t', d_key: 'bot_sys2_d' },
+    { icon: '🛍️', t_key: 'bot_sys3_t', d_key: 'bot_sys3_d' },
+    { icon: '🏰', t_key: 'bot_sys4_t', d_key: 'bot_sys4_d' },
+    { icon: '🏆', t_key: 'bot_sys5_t', d_key: 'bot_sys5_d' },
+    { icon: '🛡️', t_key: 'bot_sys6_t', d_key: 'bot_sys6_d' },
+    { icon: '🏷️', t_key: 'bot_sys7_t', d_key: 'bot_sys7_d' },
 ];
 
-const KEY_SYSTEMS = [
-    {
-        icon: '📜',
-        title: 'Логи сервера (audit)',
-        description: 'Гибкая система логирования по категориям: сообщения, участники, роли, модерация, каналы и изменения сервера с выбором каналов логов.',
-    },
-    {
-        icon: '📊',
-        title: 'Статистика активности + очки',
-        description: 'Учёт активности по сообщениям, таблица очков и история начислений с конфигурацией наград, whitelist/blacklist и интервалов выдачи.',
-    },
-    {
-        icon: '🛍️',
-        title: 'Магазин ролей за очки',
-        description: 'Покупка ролей за очки с подтверждением, учётом сроков действия и журналом операций для прозрачной экономики сервера.',
-    },
-    {
-        icon: '🏰',
-        title: 'Кланы: казна, апгрейды, сезоны',
-        description: 'Участники и ранги, заявки и приглашения, клановый банк и транзакции, апгрейды, сезонные настройки, награды и история сезонов.',
-    },
-    {
-        icon: '🏆',
-        title: 'Рейтинг и лидерборды',
-        description: 'Рейтинги по опыту и активности, страницы лидербордов и визуальные карточки с фоновой логикой обновления.',
-    },
-    {
-        icon: '🛡️',
-        title: 'Модерация и дисциплина',
-        description: 'Список модерации, выговоры и связанные события в едином формате для контроля действий модераторов и порядка на сервере.',
-    },
-    {
-        icon: '🏷️',
-        title: 'Управление ролями',
-        description: 'Авто-роль при входе, массовая выдача/снятие ролей и вспомогательные инструменты для ежедневного администрирования.',
-    },
-];
+const STEP_KEYS = ['bot_step1', 'bot_step2', 'bot_step3'];
 
-const STEPS = [
-    'Добавьте бота на сервер и выдайте базовые права (управление сообщениями и ролями по необходимости).',
-    'Настройте каналы логов и статистики, включите нужные категории и параметры очков.',
-    'Запустите кланы, сезоны и магазин ролей, затем отслеживайте динамику через рейтинги и лидерборды.',
-];
-
-const FAQ_ITEMS = [
-    {
-        question: 'Можно ли включить только часть функций?',
-        answer: 'Да. Системы настраиваются независимо: можно включать только нужные категории логов, активность, очки или кланы.',
-    },
-    {
-        question: 'Есть ли экономика/валюта?',
-        answer: 'Да. Очки работают как внутренняя валюта сервера и используются в экономике, включая магазин ролей.',
-    },
-    {
-        question: 'Как работают кланы и сезоны?',
-        answer: 'Кланы поддерживают участников, ранги, казну, транзакции и апгрейды, а сезоны помогают перезапускать прогресс и выдавать награды.',
-    },
-    {
-        question: 'Нужны ли права администратора?',
-        answer: 'Для полноценной настройки логов, модерации и ролей нужны соответствующие права на сервере. Рекомендуется назначить боту доступ к нужным каналам.',
-    },
-    {
-        question: 'Где смотреть команды/настройки?',
-        answer: 'Все ключевые разделы доступны на этой странице в блоке «Ключевые системы». Для перехода используйте кнопку «Команды и возможности».',
-    },
+const FAQ = [
+    { q: 'bot_faq1_q', a: 'bot_faq1_a' },
+    { q: 'bot_faq2_q', a: 'bot_faq2_a' },
+    { q: 'bot_faq3_q', a: 'bot_faq3_a' },
+    { q: 'bot_faq4_q', a: 'bot_faq4_a' },
+    { q: 'bot_faq5_q', a: 'bot_faq5_a' },
 ];
 
 let restoreMeta = null;
@@ -99,12 +48,10 @@ function setPageMeta() {
 
     return () => {
         document.title = previousTitle;
-
         if (createdDescriptionMeta) {
             descriptionMeta.remove();
             return;
         }
-
         descriptionMeta.setAttribute('content', previousDescription);
     };
 }
@@ -118,17 +65,17 @@ export function render() {
             <div class="container mx-auto px-4 py-10 max-w-6xl relative z-10">
                 <section class="bot-hero fade-in">
                     <div class="bot-hero-content">
-                        <h1 class="bot-title">remod3Bot</h1>
-                        <h2 class="bot-subheading">Модерация, статистика, экономика и кланы — в одном Discord-боте</h2>
-                        <p class="bot-subtitle">${HERO_DESCRIPTION}</p>
+                        <h1 class="bot-title">${escapeHtml(t('bot_title_full'))}</h1>
+                        <h2 class="bot-subheading">${escapeHtml(t('bot_subheading'))}</h2>
+                        <p class="bot-subtitle">${escapeHtml(t('bot_hero_desc'))}</p>
                         <div class="bot-cta-row">
                             <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
                                 <i class="fab fa-discord"></i>
-                                Добавить на сервер
+                                ${escapeHtml(t('bot_add_to_server'))}
                             </a>
                             <a href="#features" class="btn btn-outline">
                                 <i class="fas fa-terminal"></i>
-                                Команды и возможности
+                                ${escapeHtml(t('bot_commands_link'))}
                             </a>
                         </div>
                     </div>
@@ -136,61 +83,61 @@ export function render() {
 
                 <section class="bot-mini-stats bot-section fade-in">
                     <div class="bot-mini-stats-grid">
-                        ${FACTS.map(item => `
+                        ${FACT_KEYS.map(key => `
                             <article class="bot-mini-stat-card">
                                 <i class="fas fa-check-circle"></i>
-                                <p>${item}</p>
+                                <p>${escapeHtml(t(key))}</p>
                             </article>
                         `).join('')}
                     </div>
                 </section>
 
                 <section class="bot-section" id="features">
-                    <h2 class="bot-section-title">Ключевые системы</h2>
+                    <h2 class="bot-section-title">${escapeHtml(t('bot_systems_h'))}</h2>
                     <div class="bot-grid">
-                        ${KEY_SYSTEMS.map(system => `
+                        ${SYSTEMS.map(system => `
                             <article class="bot-card fade-in">
-                                <h3 class="bot-card-title">${system.icon} ${system.title}</h3>
-                                <p class="bot-card-text">${system.description}</p>
+                                <h3 class="bot-card-title">${system.icon} ${escapeHtml(t(system.t_key))}</h3>
+                                <p class="bot-card-text">${escapeHtml(t(system.d_key))}</p>
                             </article>
                         `).join('')}
                     </div>
                 </section>
 
                 <section class="bot-section" id="how">
-                    <h2 class="bot-section-title">Как начать</h2>
+                    <h2 class="bot-section-title">${escapeHtml(t('bot_howto_h'))}</h2>
                     <div class="bot-steps">
-                        ${STEPS.map((step, index) => `
+                        ${STEP_KEYS.map((key, index) => `
                             <article class="bot-step-card">
                                 <span class="bot-step-number">${index + 1}</span>
-                                <p>${step}</p>
+                                <p>${escapeHtml(t(key))}</p>
                             </article>
                         `).join('')}
                     </div>
                 </section>
 
                 <section class="bot-section" id="faq">
-                    <h2 class="bot-section-title">FAQ</h2>
+                    <h2 class="bot-section-title">${escapeHtml(t('bot_faq_h'))}</h2>
                     <div class="bot-faq-list">
-                        ${FAQ_ITEMS.map((item, index) => `
+                        ${FAQ.map((item, index) => `
                             <details class="bot-faq-item" ${index === 0 ? 'open' : ''}>
-                                <summary>${item.question}</summary>
-                                <p>${item.answer}</p>
+                                <summary>${escapeHtml(t(item.q))}</summary>
+                                <p>${escapeHtml(t(item.a))}</p>
                             </details>
                         `).join('')}
                     </div>
                 </section>
 
                 <section class="bot-bottom-cta">
-                    <h2>Готовы подключить remod3Bot?</h2>
+                    <h2>${escapeHtml(t('bot_ready_h'))}</h2>
                     <div class="bot-cta-row">
                         <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
                             <i class="fab fa-discord"></i>
-                            Добавить на сервер
+                            ${escapeHtml(t('bot_add_to_server'))}
                         </a>
                         <a href="#features" class="btn btn-outline">
                             <i class="fas fa-terminal"></i>
-                            Команды и возможности
+                            ${escapeHtml(t('bot_commands_link'))}
                         </a>
                     </div>
                 </section>

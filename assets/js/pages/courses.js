@@ -3,13 +3,14 @@ import { isAdmin } from '../auth.js';
 import { router } from '../router.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { t } from '../i18n.js';
 
 let courses = [];
 
 function formatPrice(price) {
     const amount = Number(price || 0);
     if (amount === 0) {
-        return '<span class="text-discord-green font-semibold">Бесплатно</span>';
+        return `<span class="text-discord-green font-semibold">${escapeHtml(t('price_free'))}</span>`;
     }
     return `<span class="text-white font-semibold">${amount.toLocaleString('ru-RU')} ₽</span>`;
 }
@@ -45,14 +46,14 @@ export function render() {
                 <div>
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-graduation-cap text-discord-accent mr-3"></i>
-                        Курсы
+                        ${escapeHtml(t('page_courses_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">Каталог доступных курсов</p>
+                    <p class="text-discord-text mt-2">${escapeHtml(t('page_courses_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
                     <button class="btn btn-primary" id="add-course-btn">
                         <i class="fas fa-plus"></i>
-                        Новый курс
+                        ${escapeHtml(t('page_projects_add'))}
                     </button>
                 ` : ''}
             </div>
@@ -74,8 +75,8 @@ function renderCourses() {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-graduation-cap"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Курсы не найдены</h3>
-                <p class="text-discord-text mt-2">Список курсов пока пуст</p>
+                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('courses_empty'))}</h3>
+                <p class="text-discord-text mt-2">${escapeHtml(t('page_courses_sub'))}</p>
             </div>
         `;
         return;
@@ -93,16 +94,16 @@ function renderCourses() {
                     <div class="course-card-body">
                         <div class="flex items-start justify-between gap-3 mb-2">
                             <h3 class="text-white font-bold text-lg leading-tight">${escapeHtml(course.title)}</h3>
-                            ${isAdmin() && !course.is_published ? '<span class="tag tag-warning shrink-0">Черновик</span>' : ''}
+                            ${isAdmin() && !course.is_published ? `<span class="tag tag-warning shrink-0">${escapeHtml(t('work_draft'))}</span>` : ''}
                         </div>
 
-                        <p class="text-discord-text text-sm line-clamp-2 min-h-[40px]">${escapeHtml(course.short_description || 'Без описания')}</p>
+                        <p class="text-discord-text text-sm line-clamp-2 min-h-[40px]">${escapeHtml(course.short_description || t('work_no_desc'))}</p>
 
                         <div class="course-card-footer">
                             <div class="mt-4 flex items-center justify-between gap-2">
                                 <div>${formatPrice(course.price)}</div>
                                 <button class="btn btn-outline btn-sm course-open-btn shrink-0" data-course-id="${escapeHtml(course.id)}">
-                                    Подробнее →
+                                    ${escapeHtml(t('learn_more'))} →
                                 </button>
                             </div>
 
@@ -110,7 +111,7 @@ function renderCourses() {
                                 <div class="flex gap-2 mt-4 pt-4 border-t border-discord-lighter/40">
                                     <button class="btn btn-secondary btn-sm edit-course" data-course-id="${escapeHtml(course.id)}">
                                         <i class="fas fa-edit"></i>
-                                        Редактировать
+                                        ${escapeHtml(t('common_edit'))}
                                     </button>
                                     <button class="btn btn-danger btn-sm delete-course" data-course-id="${escapeHtml(course.id)}">
                                         <i class="fas fa-trash"></i>

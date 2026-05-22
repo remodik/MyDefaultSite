@@ -2,6 +2,7 @@ import { projectsApi } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { t } from '../i18n.js';
 
 let projects = [];
 
@@ -12,14 +13,14 @@ export function render() {
                 <div>
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-folder text-discord-accent mr-3"></i>
-                        Проекты
+                        ${escapeHtml(t('page_projects_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">Мои проекты и разработки</p>
+                    <p class="text-discord-text mt-2">${escapeHtml(t('page_projects_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
                     <button class="btn btn-primary" id="add-project-btn" data-testid="add-project-btn">
                         <i class="fas fa-plus"></i>
-                        Новый проект
+                        ${escapeHtml(t('page_projects_add'))}
                     </button>
                 ` : ''}
             </div>
@@ -41,8 +42,8 @@ function renderProjects() {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-folder-open"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Проектов пока нет</h3>
-                <p class="text-discord-text mt-2">Скоро здесь появятся интересные проекты</p>
+                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('page_projects_empty_h'))}</h3>
+                <p class="text-discord-text mt-2">${escapeHtml(t('page_projects_empty_d'))}</p>
             </div>
         `;
         return;
@@ -64,13 +65,13 @@ function renderProjects() {
                         </div>
                         
                         <p class="text-discord-text text-sm line-clamp-2 mb-4">
-                            ${escapeHtml(project.description) || 'Нет описания'}
+                            ${escapeHtml(project.description) || escapeHtml(t('prj_no_desc'))}
                         </p>
-                        
+
                         <div class="flex justify-between items-center">
                             <a href="/projects/${project.id}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-eye"></i>
-                                Открыть
+                                ${escapeHtml(t('open'))}
                             </a>
                             
                             ${isAdmin() ? `
@@ -114,24 +115,24 @@ function showProjectModal(project = null) {
     const isEdit = !!project;
     
     showModal({
-        title: isEdit ? 'Редактировать проект' : 'Новый проект',
+        title: isEdit ? t('prj_modal_edit') : t('prj_modal_new'),
         content: `
             <form id="project-form" class="space-y-4">
                 <div>
-                    <label class="label" for="project-name">Название</label>
+                    <label class="label" for="project-name">${escapeHtml(t('svc_name'))}</label>
                     <input type="text" id="project-name" class="input" value="${isEdit ? escapeHtml(project.name) : ''}" required>
                 </div>
                 <div>
-                    <label class="label" for="project-description">Описание</label>
+                    <label class="label" for="project-description">${escapeHtml(t('svc_desc'))}</label>
                     <textarea id="project-description" class="input" rows="4">${isEdit ? escapeHtml(project.description) : ''}</textarea>
                 </div>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" data-close>Отмена</button>
+            <button class="btn btn-secondary" data-close>${escapeHtml(t('common_cancel'))}</button>
             <button class="btn btn-primary" id="save-project-btn">
                 <i class="fas fa-save"></i>
-                ${isEdit ? 'Сохранить' : 'Создать'}
+                ${isEdit ? escapeHtml(t('common_save')) : escapeHtml(t('common_create'))}
             </button>
         `,
     });
@@ -150,33 +151,33 @@ async function saveProject(id = null) {
     const description = document.getElementById('project-description').value.trim();
     
     if (!name) {
-        showToast('Введите название проекта', 'error');
+        showToast(t('prj_name_required'), 'error');
         return;
     }
-    
+
     try {
         if (id) {
             await projectsApi.update(id, { name, description });
-            showToast('Проект обновлён', 'success');
+            showToast(t('prj_updated'), 'success');
         } else {
             await projectsApi.create(name, description);
-            showToast('Проект создан', 'success');
+            showToast(t('prj_created'), 'success');
         }
         closeModal();
         await loadProjects();
     } catch (error) {
-        showToast(error.message || 'Ошибка сохранения', 'error');
+        showToast(error.message || t('common_save_error'), 'error');
     }
 }
 
 async function deleteProject(id) {
-    confirmModal('Удалить этот проект и все его файлы?', async () => {
+    confirmModal(t('prj_confirm_delete'), async () => {
         try {
             await projectsApi.delete(id);
-            showToast('Проект удалён', 'success');
+            showToast(t('prj_deleted'), 'success');
             await loadProjects();
         } catch (error) {
-            showToast(error.message || 'Ошибка удаления', 'error');
+            showToast(error.message || t('common_delete_error'), 'error');
         }
     });
 }
@@ -191,7 +192,7 @@ async function loadProjects() {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">Ошибка загрузки</h3>
+                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
                     <p class="text-discord-text mt-2">${error.message}</p>
                 </div>
             `;

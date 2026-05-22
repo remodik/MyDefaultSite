@@ -2,6 +2,7 @@ import { servicesApi } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { t } from '../i18n.js';
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -21,14 +22,14 @@ export function render() {
                 <div>
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-briefcase text-discord-accent mr-3"></i>
-                        Услуги
+                        ${escapeHtml(t('page_services_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">Услуги которые я предоставляю</p>
+                    <p class="text-discord-text mt-2">${escapeHtml(t('page_services_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
                     <button class="btn btn-primary" id="add-service-btn" data-testid="add-service-btn">
                         <i class="fas fa-plus"></i>
-                        Добавить услугу
+                        ${escapeHtml(t('page_services_add'))}
                     </button>
                 ` : ''}
             </div>
@@ -50,8 +51,8 @@ function renderServices() {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-briefcase"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Услуг пока нет</h3>
-                <p class="text-discord-text mt-2">Скоро здесь появятся доступные услуги</p>
+                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('page_services_empty_h'))}</h3>
+                <p class="text-discord-text mt-2">${escapeHtml(t('page_services_empty_d'))}</p>
             </div>
         `;
         return;
@@ -79,26 +80,26 @@ function renderServices() {
                     
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <span class="text-discord-text text-sm">Цена</span>
+                            <span class="text-discord-text text-sm">${escapeHtml(t('svc_price'))}</span>
                             <p class="text-discord-green font-bold text-lg">${escapeHtml(service.price)}</p>
                         </div>
                         <div>
-                            <span class="text-discord-text text-sm">Срок</span>
+                            <span class="text-discord-text text-sm">${escapeHtml(t('svc_term'))}</span>
                             <p class="text-white font-semibold">${escapeHtml(service.estimated_time)}</p>
                         </div>
                     </div>
-                    
+
                     <div class="mb-4">
-                        <span class="text-discord-text text-sm">Технологии</span>
+                        <span class="text-discord-text text-sm">${escapeHtml(t('svc_tech'))}</span>
                         <div class="skills-container mt-2">
                             ${service.frameworks.split(',').map(fw => `
                                 <span class="tag tag-primary">${escapeHtml(fw.trim())}</span>
                             `).join('')}
                         </div>
                     </div>
-                    
+
                     <div>
-                        <span class="text-discord-text text-sm">Способы оплаты</span>
+                        <span class="text-discord-text text-sm">${escapeHtml(t('svc_pay'))}</span>
                         <p class="text-white mt-1">${escapeHtml(service.payment_methods)}</p>
                     </div>
                 </div>
@@ -128,43 +129,43 @@ function showServiceModal(service = null) {
     const isEdit = !!service;
     
     showModal({
-        title: isEdit ? 'Редактировать услугу' : 'Новая услуга',
+        title: isEdit ? t('svc_modal_edit') : t('svc_modal_new'),
         content: `
             <form id="service-form" class="space-y-4">
                 <div>
-                    <label class="label" for="service-name">Название</label>
+                    <label class="label" for="service-name">${escapeHtml(t('svc_name'))}</label>
                     <input type="text" id="service-name" class="input" value="${isEdit ? escapeHtml(service.name) : ''}" required>
                 </div>
                 <div>
-                    <label class="label" for="service-description">Описание</label>
+                    <label class="label" for="service-description">${escapeHtml(t('svc_desc'))}</label>
                     <textarea id="service-description" class="input" rows="6" required>${isEdit ? escapeHtml(service.description) : ''}</textarea>
                     <p class="text-xs text-discord-text mt-1"><i class="fas fa-info-circle"></i></p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="label" for="service-price">Цена</label>
+                        <label class="label" for="service-price">${escapeHtml(t('svc_price'))}</label>
                         <input type="text" id="service-price" class="input" value="${isEdit ? escapeHtml(service.price) : ''}" placeholder="от 1000 ₽" required>
                     </div>
                     <div>
-                        <label class="label" for="service-time">Срок</label>
+                        <label class="label" for="service-time">${escapeHtml(t('svc_term'))}</label>
                         <input type="text" id="service-time" class="input" value="${isEdit ? escapeHtml(service.estimated_time) : ''}" placeholder="1-3 дня" required>
                     </div>
                 </div>
                 <div>
-                    <label class="label" for="service-frameworks">Технологии (через запятую)</label>
+                    <label class="label" for="service-frameworks">${escapeHtml(t('svc_tech'))}</label>
                     <input type="text" id="service-frameworks" class="input" value="${isEdit ? escapeHtml(service.frameworks) : ''}" placeholder="Python, JavaScript, React" required>
                 </div>
                 <div>
-                    <label class="label" for="service-payment">Способы оплаты</label>
+                    <label class="label" for="service-payment">${escapeHtml(t('svc_pay'))}</label>
                     <input type="text" id="service-payment" class="input" value="${isEdit ? escapeHtml(service.payment_methods) : ''}" placeholder="Qiwi, СБП, Крипта" required>
                 </div>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" data-close>Отмена</button>
+            <button class="btn btn-secondary" data-close>${escapeHtml(t('common_cancel'))}</button>
             <button class="btn btn-primary" id="save-service-btn">
                 <i class="fas fa-save"></i>
-                ${isEdit ? 'Сохранить' : 'Создать'}
+                ${isEdit ? escapeHtml(t('common_save')) : escapeHtml(t('common_create'))}
             </button>
         `,
         size: 'lg',
@@ -188,35 +189,35 @@ async function saveService(id = null) {
     const payment_methods = document.getElementById('service-payment').value.trim();
     
     if (!name || !description || !price || !estimated_time || !frameworks || !payment_methods) {
-        showToast('Заполните все поля', 'error');
+        showToast(t('common_required_fields'), 'error');
         return;
     }
-    
+
     const data = { name, description, price, estimated_time, frameworks, payment_methods };
-    
+
     try {
         if (id) {
             await servicesApi.update(id, data);
-            showToast('Услуга обновлена', 'success');
+            showToast(t('svc_updated'), 'success');
         } else {
             await servicesApi.create(data);
-            showToast('Услуга создана', 'success');
+            showToast(t('svc_created'), 'success');
         }
         closeModal();
         await loadServices();
     } catch (error) {
-        showToast(error.message || 'Ошибка сохранения', 'error');
+        showToast(error.message || t('common_save_error'), 'error');
     }
 }
 
 async function deleteService(id) {
-    confirmModal('Удалить эту услугу?', async () => {
+    confirmModal(t('svc_confirm_delete'), async () => {
         try {
             await servicesApi.delete(id);
-            showToast('Услуга удалена', 'success');
+            showToast(t('svc_deleted'), 'success');
             await loadServices();
         } catch (error) {
-            showToast(error.message || 'Ошибка удаления', 'error');
+            showToast(error.message || t('common_delete_error'), 'error');
         }
     });
 }
@@ -231,7 +232,7 @@ async function loadServices() {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">Ошибка загрузки</h3>
+                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
                     <p class="text-discord-text mt-2">${error.message}</p>
                 </div>
             `;

@@ -3,6 +3,7 @@ import { isAdmin, getToken } from '../auth.js';
 import { router } from '../router.js';
 import { showToast, escapeHtml, formatDate } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
+import { t } from '../i18n.js';
 
 let works = [];
 let selectedSubject = 'all';
@@ -24,7 +25,7 @@ function getIconClass(name) {
 function uniqueSubjects() {
     const map = new Map();
     works.forEach(w => {
-        const key = w.subject || 'Без раздела';
+        const key = w.subject || t('works_no_subject');
         map.set(key, (map.get(key) || 0) + 1);
     });
     return Array.from(map.entries());
@@ -37,14 +38,14 @@ export function render() {
                 <div>
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-folder-open text-discord-accent mr-3"></i>
-                        Работы
+                        ${escapeHtml(t('page_works_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">Практические работы по предметам</p>
+                    <p class="text-discord-text mt-2">${escapeHtml(t('page_works_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
                     <button class="btn btn-primary" id="add-work-btn">
                         <i class="fas fa-upload"></i>
-                        Загрузить работу
+                        ${escapeHtml(t('works_upload'))}
                     </button>
                 ` : ''}
             </div>
@@ -74,7 +75,7 @@ function renderFilters() {
         <div class="flex flex-wrap gap-2">
             <button class="btn btn-sm ${selectedSubject === 'all' ? 'btn-primary' : 'btn-secondary'}" data-subject="all">
                 <i class="fas fa-layer-group"></i>
-                Все
+                ${escapeHtml(t('works_filter_all'))}
                 <span class="ml-1 opacity-75">${works.length}</span>
             </button>
             ${subjects.map(([name, count]) => `
@@ -103,14 +104,14 @@ function renderList() {
 
     const list = selectedSubject === 'all'
         ? works
-        : works.filter(w => (w.subject || 'Без раздела') === selectedSubject);
+        : works.filter(w => (w.subject || t('works_no_subject')) === selectedSubject);
 
     if (!list.length) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-folder-open"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Работ пока нет</h3>
-                <p class="text-discord-text mt-2">${isAdmin() ? 'Загрузи первую через кнопку выше' : 'Скоро здесь что-то появится'}</p>
+                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('works_empty_h'))}</h3>
+                <p class="text-discord-text mt-2">${isAdmin() ? escapeHtml(t('works_empty_d_admin')) : escapeHtml(t('works_empty_d_user'))}</p>
             </div>
         `;
         return;
@@ -125,7 +126,7 @@ function renderList() {
                         <div class="w-12 h-12 rounded-lg bg-discord-accent/15 flex items-center justify-center flex-shrink-0">
                             <i class="${getIconClass(work.icon)} text-discord-accent text-xl"></i>
                         </div>
-                        ${!work.is_published ? '<span class="tag tag-warning">Черновик</span>' : ''}
+                        ${!work.is_published ? `<span class="tag tag-warning">${escapeHtml(t('work_draft'))}</span>` : ''}
                     </div>
 
                     ${work.subject ? `
@@ -143,7 +144,7 @@ function renderList() {
                     `}
 
                     <p class="text-discord-text text-sm line-clamp-2 mb-4 min-h-[40px]">
-                        ${escapeHtml(work.description || 'Без описания')}
+                        ${escapeHtml(work.description || t('work_no_desc'))}
                     </p>
 
                     ${work.tags && work.tags.length ? `
@@ -154,7 +155,7 @@ function renderList() {
 
                     <div class="flex items-center justify-between gap-2 pt-3 border-t border-discord-lighter/30">
                         <button class="btn btn-outline btn-sm work-open-btn" data-slug="${escapeHtml(work.slug)}">
-                            Открыть →
+                            ${escapeHtml(t('work_open'))} →
                         </button>
                         ${isAdmin() ? `
                             <div class="flex gap-1">
@@ -230,7 +231,7 @@ async function loadWorks() {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">Ошибка загрузки</h3>
+                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
                     <p class="text-discord-text mt-2">${escapeHtml(error.message)}</p>
                 </div>
             `;

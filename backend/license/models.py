@@ -11,7 +11,7 @@ from database import Base
 class License(Base):
     __tablename__ = "licenses"
     __table_args__ = (
-        Index("ix_licenses_key",  "key",  unique=True),
+        Index("ix_licenses_key", "key", unique=True),
         Index("ix_licenses_hwid", "hwid"),
         Index("ix_licenses_user_id", "user_id"),
     )
@@ -41,7 +41,7 @@ class LicenseLog(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     event: Mapped[str] = mapped_column(String(32), nullable=False)
     hwid: Mapped[str | None] = mapped_column(String(256), nullable=True)
-    key:  Mapped[str | None] = mapped_column(String(14),  nullable=True)
+    key:  Mapped[str | None] = mapped_column(String(14), nullable=True)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)

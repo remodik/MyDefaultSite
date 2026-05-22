@@ -3,6 +3,7 @@ import { renderNavbar } from './components/navbar.js';
 import { API_URL, meApi } from './api.js';
 import { isAuthenticated } from './auth.js';
 import { applyUserAccentColor } from './utils.js';
+import { getLang, applyDom } from './i18n.js';
 
 import * as homePage from './pages/home.js';
 import * as loginPage from './pages/login.js';
@@ -92,6 +93,9 @@ async function checkBackendAwake() {
 }
 
 async function initApp() {
+    document.documentElement.lang = getLang();
+    applyDom(document);
+
     await checkBackendAwake();
     await Promise.all([
         registerOptionalCourseRoutes(),
@@ -118,6 +122,12 @@ async function syncUserAccentColor() {
 
 window.addEventListener('auth-changed', () => {
     syncUserAccentColor();
+});
+
+window.addEventListener('lang-changed', () => {
+    applyDom(document);
+    const path = window.location.pathname + window.location.search;
+    router.navigate(path, true);
 });
 
 if (document.readyState === 'loading') {
