@@ -303,6 +303,11 @@ async function handlePurchaseCourse(button) {
 
     try {
         const response = await coursesApi.purchaseCourse(currentCourseId);
+        if (response?.confirmation_url) {
+            showToast('Переходим к оплате…', 'info');
+            window.location.href = response.confirmation_url;
+            return;
+        }
         if (response?.sbp) {
             showSbpModal(response.sbp, async () => {
                 await refreshReader();
@@ -334,6 +339,11 @@ async function handlePurchasePart(button) {
 
     try {
         const response = await coursesApi.purchasePart(currentCourseId, currentPartId);
+        if (response?.confirmation_url) {
+            showToast('Переходим к оплате…', 'info');
+            window.location.href = response.confirmation_url;
+            return;
+        }
         if (response?.sbp) {
             showSbpModal(response.sbp, async () => {
                 await refreshReader();

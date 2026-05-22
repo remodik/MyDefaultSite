@@ -160,6 +160,11 @@ async function handleBuy(plan) {
     }
     try {
         const res = await automuteApi.subscribe(plan);
+        if (res?.confirmation_url) {
+            showToast('Переходим к оплате…', 'info');
+            window.location.href = res.confirmation_url;
+            return;
+        }
         if (res?.sbp) {
             showSbpModal(res.sbp);
         } else {
