@@ -90,32 +90,36 @@ function renderCourses() {
                 >
                     ${renderCover(course)}
 
-                    <div class="flex items-start justify-between gap-3 mb-2">
-                        <h3 class="text-white font-bold text-lg leading-tight">${escapeHtml(course.title)}</h3>
-                        ${isAdmin() && !course.is_published ? '<span class="tag tag-warning">Черновик</span>' : ''}
-                    </div>
-
-                    <p class="text-discord-text text-sm line-clamp-2 min-h-[40px]">${escapeHtml(course.short_description || 'Без описания')}</p>
-
-                    <div class="mt-4 flex items-center justify-between gap-2">
-                        <div>${formatPrice(course.price)}</div>
-                        <button class="btn btn-outline btn-sm course-open-btn" data-course-id="${escapeHtml(course.id)}">
-                            Подробнее →
-                        </button>
-                    </div>
-
-                    ${isAdmin() ? `
-                        <div class="flex gap-2 mt-4 pt-4 border-t border-discord-lighter/40">
-                            <button class="btn btn-secondary btn-sm edit-course" data-course-id="${escapeHtml(course.id)}">
-                                <i class="fas fa-edit"></i>
-                                Редактировать
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-course" data-course-id="${escapeHtml(course.id)}">
-                                <i class="fas fa-trash"></i>
-                                Удалить
-                            </button>
+                    <div class="course-card-body">
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <h3 class="text-white font-bold text-lg leading-tight">${escapeHtml(course.title)}</h3>
+                            ${isAdmin() && !course.is_published ? '<span class="tag tag-warning shrink-0">Черновик</span>' : ''}
                         </div>
-                    ` : ''}
+
+                        <p class="text-discord-text text-sm line-clamp-2 min-h-[40px]">${escapeHtml(course.short_description || 'Без описания')}</p>
+
+                        <div class="course-card-footer">
+                            <div class="mt-4 flex items-center justify-between gap-2">
+                                <div>${formatPrice(course.price)}</div>
+                                <button class="btn btn-outline btn-sm course-open-btn shrink-0" data-course-id="${escapeHtml(course.id)}">
+                                    Подробнее →
+                                </button>
+                            </div>
+
+                            ${isAdmin() ? `
+                                <div class="flex gap-2 mt-4 pt-4 border-t border-discord-lighter/40">
+                                    <button class="btn btn-secondary btn-sm edit-course" data-course-id="${escapeHtml(course.id)}">
+                                        <i class="fas fa-edit"></i>
+                                        Редактировать
+                                    </button>
+                                    <button class="btn btn-danger btn-sm delete-course" data-course-id="${escapeHtml(course.id)}">
+                                        <i class="fas fa-trash"></i>
+                                        Удалить
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
                 </div>
             `).join('')}
         </div>
