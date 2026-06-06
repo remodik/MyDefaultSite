@@ -119,11 +119,22 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   if (tree && projectId === currentProjectId) {
     preservedExpansion = captureExpandedPaths();
   }
-  console.warn("🌲 FULL-MOUNT", {
-    ..._diag,
-    preservedLen: preservedExpansion ? preservedExpansion.length : "NULL→ВСЕ РАСКРОЮТСЯ",
-    preserved: preservedExpansion,
+  // [DIAG] подробная трассировка захвата раскрытия (одной строкой, копируемо)
+  const _folders = currentFiles.filter((f) => f.is_folder && f.path);
+  const _trace = _folders.slice(0, 40).map((f) => {
+    const slash = f.path.endsWith("/") ? f.path : `${f.path}/`;
+    const h = tree && (tree.getItem(slash) || tree.getItem(normPath(f.path)));
+    return { p: f.path, found: !!h, exp: h && h.isExpanded ? h.isExpanded() : null };
   });
+  console.warn(
+    "🌲DIAG " +
+      JSON.stringify({
+        ..._diag,
+        totalFolders: _folders.length,
+        preservedLen: preservedExpansion ? preservedExpansion.length : null,
+        trace: _trace,
+      }),
+  );
   if (tree) {
     try {
       tree.unmount();
