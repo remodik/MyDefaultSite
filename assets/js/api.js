@@ -189,7 +189,7 @@ export const filesApi = {
         });
     },
     
-    async upload(projectId, file, parentPath = '') {
+    async upload(projectId, file, parentPath = '', signal) {
         const token = getToken();
         const formData = new FormData();
         formData.append('project_id', projectId);
@@ -197,13 +197,14 @@ export const filesApi = {
         if (parentPath) {
             formData.append('parent_path', parentPath);
         }
-        
+
         const response = await fetch(`${API_URL}/api/files/upload`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
             body: formData,
+            signal,
         });
         
         if (!response.ok) {

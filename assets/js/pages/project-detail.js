@@ -14,6 +14,9 @@ import {
   renderFileTree,
   createRootFolder,
   createRootFile,
+  getFolderPathUnderCursor,
+  highlightFolder,
+  clearFolderHighlight,
 } from "../components/file-tree.js";
 
 let project = null;
@@ -283,7 +286,7 @@ function setupEventListeners() {
   const addFolderBtn = document.getElementById("add-folder-btn");
   if (addFolderBtn) {
     addFolderBtn.addEventListener("click", () => {
-      createRootFile(project.id, "file-list", project.files, (file) => {
+      createRootFolder(project.id, "file-list", project.files, (file) => {
         selectedFile = file;
         updateFileViewer();
       });
@@ -293,7 +296,7 @@ function setupEventListeners() {
   const addFileBtn = document.getElementById("add-file-btn");
   if (addFileBtn) {
     addFileBtn.addEventListener("click", () => {
-      createRootFolder(project.id, "file-list", project.files, (file) => {
+      createRootFile(project.id, "file-list", project.files, (file) => {
         selectedFile = file;
         updateFileViewer();
       });
@@ -374,14 +377,9 @@ function hasFiles(e) {
 }
 
 function getFolderUnderCursor(e) {
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !project?.files) return "";
-  const itemEl = el.closest("[data-item-id]");
-  if (!itemEl) return "";
-  const found = project.files.find(
-    (f) => f.id === itemEl.dataset.itemId && f.is_folder,
-  );
-  return found ? found.path : "";
+  if (!project?.files) return "";
+  // Дерево теперь в shadow DOM — путь папки достаём через хелпер компонента.
+  return getFolderPathUnderCursor("file-list", e.clientX, e.clientY);
 }
 
 function applyTarget(path) {
@@ -393,16 +391,7 @@ function applyTarget(path) {
     label.textContent = path ? `Загрузить в «${path}»` : "Загрузить в корень";
   }
 
-  document
-    .querySelectorAll(".dd-folder-highlight")
-    .forEach((el) => el.classList.remove("dd-folder-highlight"));
-  if (path && project?.files) {
-    const folder = project.files.find((f) => f.path === path && f.is_folder);
-    if (folder) {
-      const el = document.querySelector(`[data-item-id="${folder.id}"]`);
-      if (el) el.classList.add("dd-folder-highlight");
-    }
-  }
+  highlightFolder("file-list", path);
 }
 
 function showOverlay() {
@@ -413,9 +402,7 @@ function showOverlay() {
 function hideOverlay() {
   const o = document.getElementById("dd-overlay");
   if (o) o.style.display = "none";
-  document
-    .querySelectorAll(".dd-folder-highlight")
-    .forEach((el) => el.classList.remove("dd-folder-highlight"));
+  clearFolderHighlight("file-list");
 }
 
 function onDragEnter(e) {
@@ -429,6 +416,14 @@ function onDragEnter(e) {
 
 function onDragLeave(e) {
   if (!hasFiles(e)) return;
+  // relatedTarget === null означает, что курсор покинул окно целиком —
+  // финального dragleave может не быть, поэтому сбрасываем принудительно.
+  if (e.relatedTarget === null || e.relatedTarget === undefined) {
+    dragCounter = 0;
+    ddCurrentTarget = "";
+    hideOverlay();
+    return;
+  }
   dragCounter--;
   if (dragCounter <= 0) {
     dragCounter = 0;
@@ -466,58 +461,44 @@ async function onDrop(e) {
 
   if (!entries.length) return;
 
-  showToast(`Загружаю в «${targetPath || "корень"}»…`, "info");
-
-  let uploaded = 0,
-    failed = 0;
+  const ops = [];
   for (const entry of entries) {
-    const r = await uploadEntry(entry, targetPath);
-    uploaded += r.ok;
-    failed += r.fail;
+    await collectEntries(entry, targetPath, ops);
   }
-
-  if (uploaded) showToast(`Загружено: ${uploaded} файл(ов)`, "success");
-  if (failed) showToast(`Ошибок: ${failed}`, "error");
-
-  await loadProject(project.id);
+  await runUploadQueue(ops);
 }
 
-async function uploadEntry(entry, parentPath) {
+// Рекурсивно разворачивает перетащенные entry в плоский список операций
+// (папки идут перед своими файлами, чтобы успеть создаться до загрузки в них).
+async function collectEntries(entry, parentPath, out) {
   if (entry.isFile) {
-    return new Promise((resolve) => {
-      entry.file(
-        async (file) => {
-          try {
-            await filesApi.upload(project.id, file, parentPath);
-            resolve({ ok: 1, fail: 0 });
-          } catch {
-            resolve({ ok: 0, fail: 1 });
-          }
-        },
-        () => resolve({ ok: 0, fail: 1 }),
-      );
+    const file = await new Promise((resolve, reject) =>
+      entry.file(resolve, reject),
+    ).catch(() => null);
+    if (!file) return;
+    out.push({
+      kind: "file",
+      file,
+      name: entry.name,
+      parentPath,
+      displayPath: parentPath ? `${parentPath}/${entry.name}` : entry.name,
     });
+    return;
   }
 
   if (entry.isDirectory) {
     const folderPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
-
-    try {
-      await filesApi.createFolder(project.id, entry.name, parentPath);
-    } catch {}
-
+    out.push({
+      kind: "folder",
+      name: entry.name,
+      parentPath,
+      displayPath: folderPath,
+    });
     const children = await readDirEntries(entry);
-    let ok = 0,
-      fail = 0;
     for (const child of children) {
-      const r = await uploadEntry(child, folderPath);
-      ok += r.ok;
-      fail += r.fail;
+      await collectEntries(child, folderPath, out);
     }
-    return { ok, fail };
   }
-
-  return { ok: 0, fail: 0 };
 }
 
 function readDirEntries(dirEntry) {
@@ -544,20 +525,230 @@ function readDirEntries(dirEntry) {
 }
 
 async function handleFileUpload(e) {
-  const files = e.target.files;
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
   if (!files.length) return;
 
-  for (const file of files) {
-    try {
-      await filesApi.upload(project.id, file);
-      showToast(`Файл ${file.name} загружен`, "success");
-    } catch (error) {
-      showToast(`Ошибка загрузки ${file.name}`, "error");
+  const ops = files.map((file) => ({
+    kind: "file",
+    file,
+    name: file.name,
+    parentPath: "",
+    displayPath: file.name,
+  }));
+  await runUploadQueue(ops);
+}
+
+// ---- Очередь загрузки -------------------------------------------------------
+
+let uploadState = null;
+
+async function runUploadQueue(ops) {
+  if (!ops.length) return;
+
+  // Если предыдущая загрузка ещё идёт — прерываем её перед новой.
+  if (uploadState?.active) cancelAllUploads(true);
+
+  const items = ops.map((op, idx) => ({
+    ...op,
+    idx,
+    status: op.kind === "folder" ? "done" : "pending",
+    error: null,
+    // У каждого файла свой контроллер — для отмены по отдельности.
+    controller: op.kind === "file" ? new AbortController() : null,
+  }));
+
+  uploadState = {
+    items,
+    active: true,
+    done: 0,
+    failed: 0,
+  };
+
+  renderUploadQueue();
+  await processUploadQueue();
+}
+
+async function processUploadQueue() {
+  const state = uploadState;
+
+  for (const item of state.items) {
+    // Файл могли отменить, пока он ждал очереди.
+    if (item.status === "cancelled") continue;
+
+    if (item.kind === "folder") {
+      try {
+        await filesApi.createFolder(project.id, item.name, item.parentPath);
+      } catch {
+        // папка могла уже существовать — не критично
+      }
+      continue;
     }
+
+    item.status = "uploading";
+    renderUploadQueue();
+
+    try {
+      await filesApi.upload(
+        project.id,
+        item.file,
+        item.parentPath,
+        item.controller.signal,
+      );
+      item.status = "done";
+      state.done++;
+    } catch (err) {
+      if (item.controller.signal.aborted || err.name === "AbortError") {
+        item.status = "cancelled";
+      } else {
+        item.status = "error";
+        item.error = err.message || "Ошибка";
+        state.failed++;
+      }
+    }
+    renderUploadQueue();
   }
 
-  e.target.value = "";
-  await loadProject(project.id);
+  state.active = false;
+  renderUploadQueue();
+
+  if (project) await loadProject(project.id);
+}
+
+// Отмена одного файла: ждущий — просто помечаем, активный — прерываем запрос.
+function cancelUploadItem(idx) {
+  const item = uploadState?.items?.[idx];
+  if (!item || item.kind !== "file") return;
+  if (item.status === "pending") {
+    item.status = "cancelled";
+  } else if (item.status === "uploading") {
+    item.controller.abort();
+  }
+  renderUploadQueue();
+}
+
+function cancelAllUploads(silent = false) {
+  if (!uploadState) return;
+  for (const item of uploadState.items) {
+    if (item.kind !== "file") continue;
+    if (item.status === "pending") item.status = "cancelled";
+    else if (item.status === "uploading") item.controller.abort();
+  }
+  if (!silent) showToast("Загрузка прервана", "warning");
+  renderUploadQueue();
+}
+
+function renderUploadQueue() {
+  const state = uploadState;
+  let panel = document.getElementById("upload-queue");
+
+  if (!state) {
+    if (panel) panel.remove();
+    return;
+  }
+
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "upload-queue";
+    document.body.appendChild(panel);
+  }
+
+  const fileItems = state.items.filter((i) => i.kind === "file");
+  const total = fileItems.length;
+  const finished = fileItems.filter((i) =>
+    ["done", "error", "cancelled"].includes(i.status),
+  ).length;
+  const pct = total ? Math.round((finished / total) * 100) : 0;
+
+  const icon = {
+    pending: '<i class="fas fa-clock" style="color:#949ba4;"></i>',
+    uploading: '<div class="spinner" style="width:14px;height:14px;"></div>',
+    done: '<i class="fas fa-check-circle" style="color:#23a559;"></i>',
+    error: '<i class="fas fa-exclamation-circle" style="color:#f23f43;"></i>',
+    cancelled: '<i class="fas fa-ban" style="color:#f0b232;"></i>',
+  };
+
+  const headerText = state.active
+    ? `Загрузка ${finished}/${total}`
+    : state.failed
+      ? `Готово: ${state.done}, ошибок: ${state.failed}`
+      : `Загружено: ${state.done}`;
+
+  panel.innerHTML = `
+    <div style="
+        position:fixed; right:20px; bottom:20px; z-index:1000; width:340px;
+        max-width:calc(100vw - 40px); background:#2b2d31; color:#f2f3f5;
+        border:1px solid #1e1f22; border-radius:10px;
+        box-shadow:0 10px 30px rgba(0,0,0,.45); overflow:hidden;
+        font-size:13px;">
+      <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;
+                  border-bottom:1px solid #404249;">
+        <i class="fas fa-cloud-upload-alt" style="color:#5865f2;"></i>
+        <span style="font-weight:600; flex:1;">${headerText}</span>
+        ${
+          state.active
+            ? `<button id="upload-cancel-btn" class="btn btn-danger btn-sm">
+                 <i class="fas fa-stop"></i> Отменить всё
+               </button>`
+            : `<button id="upload-close-btn" class="btn btn-secondary btn-sm">
+                 Закрыть
+               </button>`
+        }
+      </div>
+      <div style="height:4px; background:#1e1f22;">
+        <div style="height:100%; width:${pct}%; background:#5865f2;
+                    transition:width .2s;"></div>
+      </div>
+      <div style="max-height:240px; overflow:auto; padding:6px;">
+        ${
+          total
+            ? fileItems
+                .map(
+                  (i) => `
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 6px;">
+              <span style="width:16px; text-align:center; flex-shrink:0;">${icon[i.status] || ""}</span>
+              <span title="${escapeHtml(i.displayPath)}" style="
+                  flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+                  ${i.status === "cancelled" ? "color:#949ba4;text-decoration:line-through;" : ""}">
+                ${escapeHtml(i.displayPath)}
+              </span>
+              ${i.status === "error" ? `<span style="color:#f23f43; font-size:11px;">${escapeHtml(i.error || "")}</span>` : ""}
+              ${
+                i.status === "pending" || i.status === "uploading"
+                  ? `<button class="upload-item-cancel" data-idx="${i.idx}" title="Отменить файл"
+                       style="flex-shrink:0; width:20px; height:20px; display:flex;
+                              align-items:center; justify-content:center; border:none;
+                              background:transparent; color:#b5bac1; cursor:pointer;
+                              border-radius:4px;">
+                       <i class="fas fa-times"></i>
+                     </button>`
+                  : ""
+              }
+            </div>`,
+                )
+                .join("")
+            : '<div style="padding:8px; color:#949ba4;">Нет файлов</div>'
+        }
+      </div>
+    </div>
+  `;
+
+  const cancelBtn = document.getElementById("upload-cancel-btn");
+  if (cancelBtn) cancelBtn.addEventListener("click", () => cancelAllUploads());
+
+  panel.querySelectorAll(".upload-item-cancel").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      cancelUploadItem(Number(btn.dataset.idx)),
+    );
+  });
+
+  const closeBtn = document.getElementById("upload-close-btn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      uploadState = null;
+      renderUploadQueue();
+    });
+  }
 }
 
 function showFileModal(file = null) {
@@ -715,6 +906,9 @@ export function mount(params) {
 
 export function unmount() {
   teardownDragDropZone();
+  if (uploadState?.active) cancelAllUploads(true);
+  uploadState = null;
+  renderUploadQueue();
   project = null;
   selectedFile = null;
 }

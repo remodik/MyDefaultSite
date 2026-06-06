@@ -2054,10 +2054,14 @@ a.social-link:hover::before {
     left: 100%;
 }
 
-.token.tag,
-.token.tag .token.punctuation,
-.token.tag .token.attr-name,
-.token.tag .token.attr-value {
+/* UI-классы сайта (.tag, .number и т.п.) совпадают с именами Prism-токенов
+   (.token.tag …) и протекают в подсветку кода. Сбрасываем только раскладку
+   и оформление внутри блоков кода — цвета темы Prism при этом сохраняются. */
+pre[class*="language-"] .token,
+code[class*="language-"] .token {
+    display: inline !important;
+    padding: 0 !important;
+    margin: 0 !important;
     background: none !important;
     border-radius: 0 !important;
 }
