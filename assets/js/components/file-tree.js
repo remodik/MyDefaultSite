@@ -77,16 +77,12 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
 
   const newPaths = buildTreePaths(files || []);
 
-  // Быстрый путь: тот же живой хост — обновляем пути на месте через resetPaths,
-  // раскрытие и выделение сохраняются (используется при действиях с файлами).
   if (
     tree &&
     tree.getFileTreeContainer?.() === host &&
     host.isConnected &&
     host.shadowRoot
   ) {
-    // resetPaths сбрасывает раскрытие к дефолту при любом изменении набора
-    // путей — поэтому снимаем текущее раскрытие и возвращаем его явно.
     const keepExpanded = captureExpandedPaths() || [];
     currentFiles = files || [];
     currentContainerId = containerId;
@@ -104,8 +100,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     return;
   }
 
-  // Полное монтирование (первый показ / смена проекта / пересборка контейнера).
-  // Если это тот же проект — сохраняем раскрытые папки.
   let preservedExpansion = null;
   if (tree && projectId === currentProjectId) {
     preservedExpansion = captureExpandedPaths();
@@ -136,8 +130,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     icons: { set: "standard", colored: true },
     search: true,
     density: "default",
-    // Осветляем стандартные (не цветные по типу) иконки и подсвечиваем
-    // папку-цель при перетаскивании файлов из ОС.
     unsafeCSS: `
       svg[data-icon-token="default"] {
         color: #c2c5cd !important;
@@ -150,9 +142,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
         border-radius: 6px;
       }
     `,
-    // resetPaths берёт за базу этот initialExpansion, поэтому держим "closed",
-    // а раскрытие задаём только списком: первый показ — все папки раскрыты,
-    // пересборка — восстанавливаем ранее раскрытые.
     initialExpansion: "closed",
     initialExpandedPaths:
       preservedExpansion ||
@@ -217,7 +206,6 @@ async function handleDropComplete(result) {
   await refreshTree();
 }
 
-// Перечитывает файлы с сервера и перерисовывает дерево.
 async function refreshTree() {
   if (!currentProjectId) return;
   try {
