@@ -76,6 +76,9 @@ ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    # Апекс и www основного домена разрешены всегда, даже если переменная
+    # CORS_ORIGINS на сервере задана не полностью.
+    allow_origin_regex=r"https://(www\.)?remod3\.ru",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
