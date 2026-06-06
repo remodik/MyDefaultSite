@@ -4,3 +4,5 @@
 /.vscode
 /.idea
 /.venv
+/frontend/node_modules
+/.claude
