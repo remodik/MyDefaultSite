@@ -16,7 +16,6 @@ let currentProjectId = null;
 let onSelectCb = null;
 let selectedItem = null;
 
-// Тема под Discord-вид сайта.
 const TREE_THEME = themeToTreeStyles({
   type: "dark",
   bg: "#2b2d31",
@@ -286,14 +285,4 @@ export function highlightFolder(containerId, folderPath) {
 
 export function clearFolderHighlight(containerId) {
   highlightFolder(containerId, "");
-}
-
-// ---- Совместимость с прежним API --------------------------------------------
-
-export function clearSelection() {
-  selectedItem = null;
-}
-
-export function getSelectedItem() {
-  return selectedItem;
 }
