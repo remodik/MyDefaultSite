@@ -5,7 +5,7 @@ import {
 } from "@pierre/trees";
 import { filesApi, projectsApi } from "../api.js";
 import { getFileTypeFromName, showToast } from "../utils.js";
-import { closeModal, showModal } from "./modal.js";
+import { closeModal, confirmModal, showModal } from "./modal.js";
 
 // ---- Состояние компонента ---------------------------------------------------
 
@@ -16,18 +16,21 @@ let currentProjectId = null;
 let onSelectCb = null;
 let selectedItem = null;
 
-const TREE_THEME = themeToTreeStyles({
-  type: "dark",
-  bg: "#2b2d31",
-  fg: "#f2f3f5",
-  colors: {
-    "list.hoverBackground": "#313338",
-    "list.activeSelectionBackground": "#404249",
-    "list.focusBackground": "#404249",
-    "list.inactiveSelectionBackground": "#404249",
-    focusBorder: "#5865f2",
-  },
-});
+const TREE_THEME = {
+  ...themeToTreeStyles({
+    type: "dark",
+    bg: "#3a3d44",
+    fg: "#f2f3f5",
+    colors: {
+      "list.hoverBackground": "rgba(255,255,255,0.10)",
+      "list.activeSelectionBackground": "rgba(88,101,242,0.32)",
+      "list.focusBackground": "rgba(88,101,242,0.32)",
+      "list.inactiveSelectionBackground": "rgba(255,255,255,0.06)",
+      focusBorder: "#5865f2",
+    },
+  }),
+  "--trees-theme-input-bg": "#43464e",
+};
 
 // ---- Преобразование данных --------------------------------------------------
 
@@ -85,8 +88,13 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     icons: { set: "standard", colored: true },
     search: true,
     density: "default",
-    // Подсветка папки-цели при перетаскивании файлов из ОС.
+    // Осветляем стандартные (не цветные по типу) иконки и подсвечиваем
+    // папку-цель при перетаскивании файлов из ОС.
     unsafeCSS: `
+      svg[data-icon-token="default"] {
+        color: #c2c5cd !important;
+        fill: #c2c5cd !important;
+      }
       .ft-drop-hover {
         background: rgba(88,101,242,.25) !important;
         outline: 2px dashed #5865f2;
@@ -108,6 +116,8 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   });
 
   tree.render({ fileTreeContainer: host });
+
+  host.addEventListener("contextmenu", onTreeContextMenu);
 }
 
 // ---- Обработчики действий дерева ---------------------------------------------
@@ -204,25 +214,28 @@ function promptName({ title, label, placeholder, onSubmit }) {
   }, 0);
 }
 
-export function createRootFile(projectId, containerId, files, onSelect) {
-  currentProjectId = projectId;
-  currentContainerId = containerId;
-  onSelectCb = onSelect;
+// Создание файла/папки внутри parentPath ("" = корень).
+function createInFolder(parentPath, isFolder) {
   promptName({
-    title: "Создать файл",
-    label: "Имя файла",
-    placeholder: "example.js",
+    title: isFolder ? "Создать папку" : "Создать файл",
+    label: isFolder ? "Имя папки" : "Имя файла",
+    placeholder: isFolder ? "my-folder" : "example.js",
     onSubmit: async (name) => {
       try {
-        await filesApi.create(
-          projectId,
-          name,
-          "",
-          getFileTypeFromName(name),
-          "",
-          false,
-        );
-        showToast("Файл создан", "success");
+        if (isFolder) {
+          await filesApi.createFolder(currentProjectId, name, parentPath);
+          showToast("Папка создана", "success");
+        } else {
+          await filesApi.create(
+            currentProjectId,
+            name,
+            "",
+            getFileTypeFromName(name),
+            parentPath,
+            false,
+          );
+          showToast("Файл создан", "success");
+        }
       } catch (err) {
         showToast(err.message || "Ошибка", "error");
       }
@@ -231,23 +244,119 @@ export function createRootFile(projectId, containerId, files, onSelect) {
   });
 }
 
+export function createRootFile(projectId, containerId, files, onSelect) {
+  currentProjectId = projectId;
+  currentContainerId = containerId;
+  onSelectCb = onSelect;
+  createInFolder("", false);
+}
+
 export function createRootFolder(projectId, containerId, files, onSelect) {
   currentProjectId = projectId;
   currentContainerId = containerId;
   onSelectCb = onSelect;
-  promptName({
-    title: "Создать папку",
-    label: "Имя папки",
-    placeholder: "my-folder",
-    onSubmit: async (name) => {
-      try {
-        await filesApi.createFolder(projectId, name, "");
-        showToast("Папка создана", "success");
-      } catch (err) {
-        showToast(err.message || "Ошибка", "error");
-      }
-      await refreshTree();
-    },
+  createInFolder("", true);
+}
+
+// ---- Контекстное меню --------------------------------------------------------
+
+let contextMenuEl = null;
+
+function closeTreeContextMenu() {
+  if (contextMenuEl) {
+    contextMenuEl.remove();
+    contextMenuEl = null;
+  }
+  document.removeEventListener("click", closeTreeContextMenu);
+}
+
+function onTreeContextMenu(e) {
+  const host = document.getElementById(currentContainerId);
+  const sr = host?.shadowRoot;
+  if (!sr) return;
+  e.preventDefault();
+  closeTreeContextMenu();
+
+  const hit = sr.elementFromPoint(e.clientX, e.clientY);
+  const row = hit?.closest?.("[data-item-path]");
+  const rawPath = row?.getAttribute("data-item-path") || "";
+  const isFolder = row?.getAttribute("data-item-type") === "folder";
+  const file = row ? findByPath(rawPath) : null;
+
+  const items = [];
+  if (isFolder || !row) {
+    const parent = isFolder ? normPath(rawPath) : "";
+    items.push({
+      icon: "fa-file-circle-plus",
+      label: "Новый файл",
+      action: () => createInFolder(parent, false),
+    });
+    items.push({
+      icon: "fa-folder-plus",
+      label: "Новая папка",
+      action: () => createInFolder(parent, true),
+    });
+  }
+  if (file) {
+    items.push({ divider: true });
+    items.push({
+      icon: "fa-pen",
+      label: "Переименовать",
+      action: () => tree?.startRenaming(rawPath),
+    });
+    items.push({
+      icon: "fa-trash",
+      label: "Удалить",
+      danger: true,
+      action: () => deleteEntry(file),
+    });
+  }
+  if (!items.length) return;
+
+  const menu = document.createElement("div");
+  menu.className = "context-menu";
+  menu.innerHTML = items
+    .map((it, i) =>
+      it.divider
+        ? '<div class="context-menu-divider"></div>'
+        : `<button class="context-menu-item ${it.danger ? "danger" : ""}" data-i="${i}">
+             <i class="fas ${it.icon}"></i><span>${it.label}</span>
+           </button>`,
+    )
+    .join("");
+
+  menu.style.left = `${e.pageX}px`;
+  menu.style.top = `${e.pageY}px`;
+  document.body.appendChild(menu);
+  contextMenuEl = menu;
+
+  items.forEach((it, i) => {
+    if (it.divider) return;
+    const btn = menu.querySelector(`[data-i="${i}"]`);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        closeTreeContextMenu();
+        it.action();
+      });
+    }
+  });
+
+  setTimeout(() => document.addEventListener("click", closeTreeContextMenu), 0);
+}
+
+function deleteEntry(file) {
+  const message = file.is_folder
+    ? "Удалить папку и всё её содержимое?"
+    : "Удалить этот файл?";
+  confirmModal(message, async () => {
+    try {
+      await filesApi.delete(file.id);
+      showToast("Удалено", "success");
+      if (selectedItem?.id === file.id) selectedItem = null;
+    } catch (err) {
+      showToast(err.message || "Ошибка удаления", "error");
+    }
+    await refreshTree();
   });
 }
 

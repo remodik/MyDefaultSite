@@ -5,6 +5,7 @@
     "start": "npx serve ../. -l 3000 -s"
   },
   "dependencies": {
+    "@pierre/trees": "^1.0.0-beta.4",
     "serve": "^14.2.5"
   }
 }
