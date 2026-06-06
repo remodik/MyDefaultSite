@@ -75,6 +75,20 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   const host = document.getElementById(containerId);
   if (!host) return;
 
+  // [DIAG] временная диагностика — удалить после разбора
+  const _diag = {
+    hadTree: !!tree,
+    prevPid: currentProjectId,
+    newPid: projectId,
+    samePid: projectId === currentProjectId,
+    liveHost: !!(
+      tree &&
+      tree.getFileTreeContainer?.() === host &&
+      host.isConnected &&
+      host.shadowRoot
+    ),
+  };
+
   const newPaths = buildTreePaths(files || []);
 
   if (
@@ -84,6 +98,7 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     host.shadowRoot
   ) {
     const keepExpanded = captureExpandedPaths() || [];
+    console.warn("🌲 FAST-PATH", { ..._diag, keepLen: keepExpanded.length });
     currentFiles = files || [];
     currentContainerId = containerId;
     currentProjectId = projectId;
@@ -104,6 +119,11 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   if (tree && projectId === currentProjectId) {
     preservedExpansion = captureExpandedPaths();
   }
+  console.warn("🌲 FULL-MOUNT", {
+    ..._diag,
+    preservedLen: preservedExpansion ? preservedExpansion.length : "NULL→ВСЕ РАСКРОЮТСЯ",
+    preserved: preservedExpansion,
+  });
   if (tree) {
     try {
       tree.unmount();
