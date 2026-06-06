@@ -85,12 +85,15 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     host.isConnected &&
     host.shadowRoot
   ) {
+    // resetPaths сбрасывает раскрытие к дефолту при любом изменении набора
+    // путей — поэтому снимаем текущее раскрытие и возвращаем его явно.
+    const keepExpanded = captureExpandedPaths() || [];
     currentFiles = files || [];
     currentContainerId = containerId;
     currentProjectId = projectId;
     onSelectCb = onSelect;
     if (newPaths.length) {
-      tree.resetPaths(newPaths);
+      tree.resetPaths(newPaths, { initialExpandedPaths: keepExpanded });
     } else {
       try {
         tree.unmount();
