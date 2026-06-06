@@ -58,12 +58,30 @@ function findByPath(path) {
 // Снимает список раскрытых папок с текущего дерева (в форме с завершающим "/").
 function captureExpandedPaths() {
   if (!tree) return null;
-  const out = [];
+
+  // Сначала собираем папки, чьё собственное состояние = раскрыто.
+  const expandedSet = new Set();
   for (const f of currentFiles) {
     if (!f.is_folder || !f.path) continue;
-    const slash = f.path.endsWith("/") ? f.path : `${f.path}/`;
-    const h = tree.getItem(slash) || tree.getItem(normPath(f.path));
-    if (h && h.isDirectory?.() && h.isExpanded?.()) out.push(slash);
+    const p = normPath(f.path);
+    const h = tree.getItem(`${p}/`) || tree.getItem(p);
+    if (h && h.isDirectory?.() && h.isExpanded?.()) expandedSet.add(p);
+  }
+
+  // Оставляем только те, у кого ВСЕ предки тоже раскрыты. Иначе потомок
+  // свёрнутой папки в initialExpandedPaths заставит библиотеку раскрыть саму
+  // свёрнутую папку (она форсит раскрытие предков, чтобы показать потомка).
+  const out = [];
+  for (const p of expandedSet) {
+    const segs = p.split("/");
+    let allAncestorsExpanded = true;
+    for (let i = 1; i < segs.length; i++) {
+      if (!expandedSet.has(segs.slice(0, i).join("/"))) {
+        allAncestorsExpanded = false;
+        break;
+      }
+    }
+    if (allAncestorsExpanded) out.push(`${p}/`);
   }
   return out;
 }
@@ -75,20 +93,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   const host = document.getElementById(containerId);
   if (!host) return;
 
-  // [DIAG] временная диагностика — удалить после разбора
-  const _diag = {
-    hadTree: !!tree,
-    prevPid: currentProjectId,
-    newPid: projectId,
-    samePid: projectId === currentProjectId,
-    liveHost: !!(
-      tree &&
-      tree.getFileTreeContainer?.() === host &&
-      host.isConnected &&
-      host.shadowRoot
-    ),
-  };
-
   const newPaths = buildTreePaths(files || []);
 
   if (
@@ -98,7 +102,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     host.shadowRoot
   ) {
     const keepExpanded = captureExpandedPaths() || [];
-    console.warn("🌲 FAST-PATH", { ..._diag, keepLen: keepExpanded.length });
     currentFiles = files || [];
     currentContainerId = containerId;
     currentProjectId = projectId;
@@ -119,22 +122,6 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   if (tree && projectId === currentProjectId) {
     preservedExpansion = captureExpandedPaths();
   }
-  // [DIAG] подробная трассировка захвата раскрытия (одной строкой, копируемо)
-  const _folders = currentFiles.filter((f) => f.is_folder && f.path);
-  const _trace = _folders.slice(0, 40).map((f) => {
-    const slash = f.path.endsWith("/") ? f.path : `${f.path}/`;
-    const h = tree && (tree.getItem(slash) || tree.getItem(normPath(f.path)));
-    return { p: f.path, found: !!h, exp: h && h.isExpanded ? h.isExpanded() : null };
-  });
-  console.warn(
-    "🌲DIAG " +
-      JSON.stringify({
-        ..._diag,
-        totalFolders: _folders.length,
-        preservedLen: preservedExpansion ? preservedExpansion.length : null,
-        trace: _trace,
-      }),
-  );
   if (tree) {
     try {
       tree.unmount();
