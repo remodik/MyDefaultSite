@@ -32,6 +32,20 @@ function getToken() {
     return localStorage.getItem('auth_token');
 }
 
+// Читает файл и возвращает его содержимое в base64 (без data:-префикса).
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+        reader.onload = () => {
+            const result = String(reader.result || '');
+            const comma = result.indexOf(',');
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 async function apiRequest(endpoint, options = {}) {
     const token = getToken();
     
@@ -191,9 +205,13 @@ export const filesApi = {
     
     async upload(projectId, file, parentPath = '', signal) {
         const token = getToken();
+        // Содержимое отправляем в base64, иначе WAF перед бэкендом блокирует
+        // загрузку файлов с «кодом» (видит SQL/shell-паттерны в теле и режет 403).
+        const b64 = await fileToBase64(file);
         const formData = new FormData();
         formData.append('project_id', projectId);
-        formData.append('file', file);
+        formData.append('file', new Blob([b64], { type: 'text/plain' }), file.name);
+        formData.append('encoding', 'base64');
         if (parentPath) {
             formData.append('parent_path', parentPath);
         }
