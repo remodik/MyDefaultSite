@@ -150,9 +150,15 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
         border-radius: 6px;
       }
     `,
-    // Первый показ проекта — раскрыто; пересборка — восстанавливаем что было.
-    initialExpansion: preservedExpansion ? "closed" : "open",
-    initialExpandedPaths: preservedExpansion || undefined,
+    // resetPaths берёт за базу этот initialExpansion, поэтому держим "closed",
+    // а раскрытие задаём только списком: первый показ — все папки раскрыты,
+    // пересборка — восстанавливаем ранее раскрытые.
+    initialExpansion: "closed",
+    initialExpandedPaths:
+      preservedExpansion ||
+      currentFiles
+        .filter((f) => f.is_folder && f.path)
+        .map((f) => (f.path.endsWith("/") ? f.path : `${f.path}/`)),
     initialSelectedPaths: selectedItem ? [normPath(selectedItem.path)] : [],
     dragAndDrop: {
       onDropComplete: handleDropComplete,
