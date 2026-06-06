@@ -55,36 +55,81 @@ function findByPath(path) {
 
 // ---- Рендер -----------------------------------------------------------------
 
+// Снимает список раскрытых папок с текущего дерева (в форме с завершающим "/").
+function captureExpandedPaths() {
+  if (!tree) return null;
+  const out = [];
+  for (const f of currentFiles) {
+    if (!f.is_folder || !f.path) continue;
+    const slash = f.path.endsWith("/") ? f.path : `${f.path}/`;
+    const h = tree.getItem(slash) || tree.getItem(normPath(f.path));
+    if (h && h.isDirectory?.() && h.isExpanded?.()) out.push(slash);
+  }
+  return out;
+}
+
+const emptyMarkup =
+  '<div class="empty-state"><i class="fas fa-folder-open"></i><p>Нет файлов</p></div>';
+
 export function renderFileTree(files, containerId, onSelect, projectId) {
   const host = document.getElementById(containerId);
   if (!host) return;
 
-  currentFiles = files || [];
-  currentContainerId = containerId;
-  currentProjectId = projectId;
-  onSelectCb = onSelect;
+  const newPaths = buildTreePaths(files || []);
 
-  // Пересобираем дерево с нуля (проект небольшой — это дёшево и надёжно).
+  // Быстрый путь: тот же живой хост — обновляем пути на месте через resetPaths,
+  // раскрытие и выделение сохраняются (используется при действиях с файлами).
+  if (
+    tree &&
+    tree.getFileTreeContainer?.() === host &&
+    host.isConnected &&
+    host.shadowRoot
+  ) {
+    currentFiles = files || [];
+    currentContainerId = containerId;
+    currentProjectId = projectId;
+    onSelectCb = onSelect;
+    if (newPaths.length) {
+      tree.resetPaths(newPaths);
+    } else {
+      try {
+        tree.unmount();
+      } catch {}
+      tree = null;
+      host.innerHTML = emptyMarkup;
+    }
+    return;
+  }
+
+  // Полное монтирование (первый показ / смена проекта / пересборка контейнера).
+  // Если это тот же проект — сохраняем раскрытые папки.
+  let preservedExpansion = null;
+  if (tree && projectId === currentProjectId) {
+    preservedExpansion = captureExpandedPaths();
+  }
   if (tree) {
     try {
       tree.unmount();
     } catch {}
     tree = null;
   }
+
+  currentFiles = files || [];
+  currentContainerId = containerId;
+  currentProjectId = projectId;
+  onSelectCb = onSelect;
+
   host.innerHTML = "";
   Object.assign(host.style, TREE_THEME);
   host.style.height = host.style.height || "60vh";
 
-  const paths = buildTreePaths(currentFiles);
-
-  if (!paths.length) {
-    host.innerHTML =
-      '<div class="empty-state"><i class="fas fa-folder-open"></i><p>Нет файлов</p></div>';
+  if (!newPaths.length) {
+    host.innerHTML = emptyMarkup;
     return;
   }
 
   tree = new FileTree({
-    preparedInput: prepareFileTreeInput(paths),
+    preparedInput: prepareFileTreeInput(newPaths),
     icons: { set: "standard", colored: true },
     search: true,
     density: "default",
@@ -102,7 +147,9 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
         border-radius: 6px;
       }
     `,
-    initialExpansion: "open",
+    // Первый показ проекта — раскрыто; пересборка — восстанавливаем что было.
+    initialExpansion: preservedExpansion ? "closed" : "open",
+    initialExpandedPaths: preservedExpansion || undefined,
     initialSelectedPaths: selectedItem ? [normPath(selectedItem.path)] : [],
     dragAndDrop: {
       onDropComplete: handleDropComplete,

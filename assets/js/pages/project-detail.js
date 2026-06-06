@@ -674,6 +674,10 @@ function renderUploadQueue() {
       ? `Готово: ${state.done}, ошибок: ${state.failed}`
       : `Загружено: ${state.done}`;
 
+  // Сохраняем позицию прокрутки списка, чтобы перерисовка не кидала вверх.
+  const prevScroll =
+    document.getElementById("upload-queue-list")?.scrollTop || 0;
+
   panel.innerHTML = `
     <div style="
         position:fixed; right:20px; bottom:20px; z-index:1000; width:340px;
@@ -699,7 +703,7 @@ function renderUploadQueue() {
         <div style="height:100%; width:${pct}%; background:#5865f2;
                     transition:width .2s;"></div>
       </div>
-      <div style="max-height:240px; overflow:auto; padding:6px;">
+      <div id="upload-queue-list" style="max-height:240px; overflow:auto; padding:6px;">
         ${
           total
             ? fileItems
@@ -749,6 +753,10 @@ function renderUploadQueue() {
       renderUploadQueue();
     });
   }
+
+  // Возвращаем прокрутку списка на прежнее место.
+  const list = document.getElementById("upload-queue-list");
+  if (list) list.scrollTop = prevScroll;
 }
 
 function showFileModal(file = null) {
