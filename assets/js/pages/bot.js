@@ -77,6 +77,10 @@ export function render() {
                                 <i class="fas fa-terminal"></i>
                                 ${escapeHtml(t('bot_commands_link'))}
                             </a>
+                            <a href="https://panel.remod3.ru/" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                                <i class="fas fa-cog"></i>
+                                ${escapeHtml(t('bot_panel_link'))}
+                            </a>                         
                         </div>
                     </div>
                 </section>
