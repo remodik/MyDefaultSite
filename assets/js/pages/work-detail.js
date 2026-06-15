@@ -6,33 +6,23 @@ let currentSlug = null;
 
 export function render() {
     return `
-        <div class="work-viewer-page" style="height: calc(100vh - 64px); display: flex; flex-direction: column;">
-            <div class="work-viewer-toolbar" style="
-                background: #1e1f22;
-                border-bottom: 1px solid #404249;
-                padding: 10px 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                flex-wrap: wrap;
-            ">
-                <button id="work-back-btn" class="btn btn-secondary btn-sm">
+        <div class="v1-viewer" style="height: calc(100vh - 115px);">
+            <div class="v1-viewer-bar">
+                <button id="work-back-btn" class="v1-btn v1-btn-sm">
                     <i class="fas fa-arrow-left"></i>
                     К списку
                 </button>
-                <div id="work-meta" style="flex: 1; min-width: 0;">
-                    <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+                <div id="work-meta" class="v1-viewer-meta">
+                    <div class="v1-viewer-meta-sub">Загрузка…</div>
                 </div>
-                <a id="work-open-tab" class="btn btn-outline btn-sm" target="_blank" rel="noopener" style="display:none;">
+                <a id="work-open-tab" class="v1-btn v1-btn-sm" target="_blank" rel="noopener" style="display:none;">
                     <i class="fas fa-external-link-alt"></i>
                     Открыть в новой вкладке
                 </a>
             </div>
 
-            <div id="work-frame-container" style="flex: 1; background: #0a0a0a; overflow: hidden;">
-                <div class="flex justify-center items-center h-full">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+            <div id="work-frame-container" class="v1-viewer-frame">
+                <div class="v1-loading" style="padding-top:48px">${escapeHtml('Загрузка…')}</div>
             </div>
         </div>
     `;
@@ -50,8 +40,8 @@ async function loadWork(slug) {
         const metaEl = document.getElementById('work-meta');
         if (metaEl) {
             metaEl.innerHTML = `
-                <div class="text-white font-semibold truncate">${escapeHtml(work.title)}</div>
-                ${work.subject ? `<div class="text-discord-text text-xs truncate">${escapeHtml(work.subject)}${work.display_date ? ' • ' + escapeHtml(work.display_date) : ''}</div>` : ''}
+                <div class="v1-viewer-meta-title">${escapeHtml(work.title)}</div>
+                ${work.subject ? `<div class="v1-viewer-meta-sub">${escapeHtml(work.subject)}${work.display_date ? ' • ' + escapeHtml(work.display_date) : ''}</div>` : ''}
             `;
         }
 
@@ -79,10 +69,10 @@ async function loadWork(slug) {
         const container = document.getElementById('work-frame-container');
         if (container) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-circle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(error.message)}</h3>
-                    <button class="btn btn-primary mt-4" id="work-back-empty-btn">← К списку работ</button>
+                <div class="v1-empty" style="background:var(--v1-bg);height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <i class="fas fa-exclamation-circle v1-empty-icon" style="color:var(--v1-red)"></i>
+                    <div class="v1-empty-h">${escapeHtml(error.message)}</div>
+                    <button class="v1-btn v1-btn-primary" id="work-back-empty-btn" style="margin-top:16px">← К списку работ</button>
                 </div>
             `;
             document.getElementById('work-back-empty-btn')?.addEventListener('click', () => router.navigate('/works'));

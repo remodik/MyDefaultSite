@@ -33,29 +33,27 @@ function uniqueSubjects() {
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <div class="flex justify-between items-start mb-8 flex-wrap gap-4">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-folder-open text-discord-accent mr-3"></i>
-                        ${escapeHtml(t('page_works_title'))}
+        <div class="v1-doc">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// works/</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-folder-open v1-page-title-icon"></i>${escapeHtml(t('page_works_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">${escapeHtml(t('page_works_sub'))}</p>
+                    <p class="v1-page-sub">${escapeHtml(t('page_works_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
-                    <button class="btn btn-primary" id="add-work-btn">
+                    <button class="v1-btn v1-btn-primary" id="add-work-btn">
                         <i class="fas fa-upload"></i>
                         ${escapeHtml(t('works_upload'))}
                     </button>
                 ` : ''}
             </div>
 
-            <div id="works-filters" class="mb-6"></div>
+            <div id="works-filters"></div>
 
             <div id="works-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">${escapeHtml(t('loading'))}</div>
             </div>
         </div>
     `;
@@ -72,18 +70,18 @@ function renderFilters() {
     }
 
     container.innerHTML = `
-        <div class="flex flex-wrap gap-2">
-            <button class="btn btn-sm ${selectedSubject === 'all' ? 'btn-primary' : 'btn-secondary'}" data-subject="all">
+        <div class="v1-filters">
+            <button class="v1-filter ${selectedSubject === 'all' ? 'active' : ''}" data-subject="all">
                 <i class="fas fa-layer-group"></i>
                 ${escapeHtml(t('works_filter_all'))}
-                <span class="ml-1 opacity-75">${works.length}</span>
+                <span class="v1-filter-n">${works.length}</span>
             </button>
             ${subjects.map(([name, count]) => `
-                <button class="btn btn-sm ${selectedSubject === name ? 'btn-primary' : 'btn-secondary'}"
+                <button class="v1-filter ${selectedSubject === name ? 'active' : ''}"
                         data-subject="${escapeHtml(name)}">
                     <i class="fas ${SUBJECT_ICONS[name] || 'fa-book'}"></i>
                     ${escapeHtml(name)}
-                    <span class="ml-1 opacity-75">${count}</span>
+                    <span class="v1-filter-n">${count}</span>
                 </button>
             `).join('')}
         </div>
@@ -108,64 +106,57 @@ function renderList() {
 
     if (!list.length) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-folder-open"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('works_empty_h'))}</h3>
-                <p class="text-discord-text mt-2">${isAdmin() ? escapeHtml(t('works_empty_d_admin')) : escapeHtml(t('works_empty_d_user'))}</p>
+            <div class="v1-empty">
+                <i class="fas fa-folder-open v1-empty-icon"></i>
+                <div class="v1-empty-h">${escapeHtml(t('works_empty_h'))}</div>
+                <p>${isAdmin() ? escapeHtml(t('works_empty_d_admin')) : escapeHtml(t('works_empty_d_user'))}</p>
             </div>
         `;
         return;
     }
 
     container.innerHTML = `
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="v1-card-grid">
             ${list.map(work => `
-                <article class="bg-discord-light rounded-xl border border-discord-lighter/40 hover:-translate-y-1 hover:border-discord-accent/50 transition-all duration-200 p-5 cursor-pointer fade-in"
-                         data-slug="${escapeHtml(work.slug)}">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div class="w-12 h-12 rounded-lg bg-discord-accent/15 flex items-center justify-center flex-shrink-0">
-                            <i class="${getIconClass(work.icon)} text-discord-accent text-xl"></i>
-                        </div>
-                        ${!work.is_published ? `<span class="tag tag-warning">${escapeHtml(t('work_draft'))}</span>` : ''}
+                <article class="v1-wcard fade-in" data-slug="${escapeHtml(work.slug)}">
+                    <div class="v1-wcard-top">
+                        <span class="v1-wcard-icon">
+                            <i class="${getIconClass(work.icon)}"></i>
+                        </span>
+                        ${!work.is_published ? `<span class="v1-tag-warn">${escapeHtml(t('work_draft'))}</span>` : ''}
                     </div>
 
                     ${work.subject ? `
-                        <div class="text-xs text-discord-text/70 uppercase tracking-wider mb-2">
-                            ${escapeHtml(work.subject)}
-                        </div>
+                        <div class="v1-wcard-subject">${escapeHtml(work.subject)}</div>
                     ` : ''}
 
-                    <h3 class="text-white font-bold text-lg leading-tight mb-2">${escapeHtml(work.title)}</h3>
+                    <h3 class="v1-wcard-title">${escapeHtml(work.title)}</h3>
 
-                    ${work.display_date ? `
-                        <p class="text-discord-accent text-sm font-semibold mb-2">${escapeHtml(work.display_date)}</p>
-                    ` : `
-                        <p class="text-discord-text/60 text-xs mb-2">${formatDate(work.created_at)}</p>
-                    `}
+                    <div class="v1-wcard-date">
+                        ${work.display_date ? escapeHtml(work.display_date) : formatDate(work.created_at)}
+                    </div>
 
-                    <p class="text-discord-text text-sm line-clamp-2 mb-4 min-h-[40px]">
-                        ${escapeHtml(work.description || t('work_no_desc'))}
-                    </p>
+                    <p class="v1-wcard-desc">${escapeHtml(work.description || t('work_no_desc'))}</p>
 
                     ${work.tags && work.tags.length ? `
-                        <div class="flex flex-wrap gap-1.5 mb-4">
-                            ${work.tags.slice(0, 4).map(t => `<span class="tag tag-primary text-xs">${escapeHtml(t)}</span>`).join('')}
+                        <div class="v1-svc-tags">
+                            ${work.tags.slice(0, 4).map(tag => `<span class="v1-chip">${escapeHtml(tag)}</span>`).join('')}
                         </div>
                     ` : ''}
 
-                    <div class="flex items-center justify-between gap-2 pt-3 border-t border-discord-lighter/30">
-                        <button class="btn btn-outline btn-sm work-open-btn" data-slug="${escapeHtml(work.slug)}">
+                    <div class="v1-wcard-foot">
+                        <a class="v1-btn v1-btn-sm work-open-btn" data-slug="${escapeHtml(work.slug)}">
                             ${escapeHtml(t('work_open'))} →
-                        </button>
+                        </a>
                         ${isAdmin() ? `
-                            <div class="flex gap-1">
-                                <button class="btn btn-secondary btn-sm work-edit-btn" data-slug="${escapeHtml(work.slug)}" title="Редактировать">
+                            <div class="v1-wcard-actions">
+                                <button class="v1-icon-btn work-edit-btn" data-slug="${escapeHtml(work.slug)}" title="Редактировать">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-secondary btn-sm work-replace-btn" data-slug="${escapeHtml(work.slug)}" title="Перезалить HTML">
+                                <button class="v1-icon-btn work-replace-btn" data-slug="${escapeHtml(work.slug)}" title="Перезалить HTML">
                                     <i class="fas fa-sync"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm work-delete-btn" data-slug="${escapeHtml(work.slug)}" title="Удалить">
+                                <button class="v1-icon-btn danger work-delete-btn" data-slug="${escapeHtml(work.slug)}" title="Удалить">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -229,10 +220,10 @@ async function loadWorks() {
         showToast(error.message, 'error');
         if (container) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
-                    <p class="text-discord-text mt-2">${escapeHtml(error.message)}</p>
+                <div class="v1-empty">
+                    <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)"></i>
+                    <div class="v1-empty-h">${escapeHtml(t('common_load_error'))}</div>
+                    <p>${escapeHtml(error.message)}</p>
                 </div>
             `;
         }

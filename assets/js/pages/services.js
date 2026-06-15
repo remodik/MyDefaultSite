@@ -17,27 +17,25 @@ let services = [];
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-briefcase text-discord-accent mr-3"></i>
-                        ${escapeHtml(t('page_services_title'))}
+        <div class="v1-doc">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// services.ts</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-briefcase v1-page-title-icon"></i>${escapeHtml(t('page_services_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">${escapeHtml(t('page_services_sub'))}</p>
+                    <p class="v1-page-sub">${escapeHtml(t('page_services_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
-                    <button class="btn btn-primary" id="add-service-btn" data-testid="add-service-btn">
+                    <button class="v1-btn v1-btn-primary" id="add-service-btn" data-testid="add-service-btn">
                         <i class="fas fa-plus"></i>
                         ${escapeHtml(t('page_services_add'))}
                     </button>
                 ` : ''}
             </div>
-            
+
             <div id="services-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">${escapeHtml(t('loading'))}</div>
             </div>
         </div>
     `;
@@ -49,60 +47,60 @@ function renderServices() {
     
     if (services.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-briefcase"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('page_services_empty_h'))}</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(t('page_services_empty_d'))}</p>
+            <div class="v1-empty">
+                <i class="fas fa-briefcase v1-empty-icon"></i>
+                <div class="v1-empty-h">${escapeHtml(t('page_services_empty_h'))}</div>
+                <p>${escapeHtml(t('page_services_empty_d'))}</p>
             </div>
         `;
         return;
     }
-    
+
     container.innerHTML = `
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="v1-card-grid">
             ${services.map(service => `
-                <div class="service-card fade-in" data-service-id="${service.id}">
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-white">${escapeHtml(service.name)}</h3>
+                <article class="v1-scard fade-in" data-service-id="${service.id}">
+                    <div class="v1-scard-head">
+                        <h3 class="v1-scard-title">${escapeHtml(service.name)}</h3>
                         ${isAdmin() ? `
-                            <div class="flex gap-2">
-                                <button class="btn btn-secondary btn-sm edit-service" data-id="${service.id}">
+                            <div class="v1-scard-actions">
+                                <button class="v1-icon-btn edit-service" data-id="${service.id}" title="${escapeHtml(t('common_edit') || 'Edit')}">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm delete-service" data-id="${service.id}">
+                                <button class="v1-icon-btn danger delete-service" data-id="${service.id}" title="${escapeHtml(t('common_delete') || 'Delete')}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         ` : ''}
                     </div>
-                    
-                    <div class="text-discord-text mb-4 markdown-content">${marked.parse(service.description)}</div>
-                    
-                    <div class="grid grid-cols-2 gap-4 mb-4">
+
+                    <div class="v1-scard-desc markdown-content">${marked.parse(service.description)}</div>
+
+                    <div class="v1-scard-meta">
                         <div>
-                            <span class="text-discord-text text-sm">${escapeHtml(t('svc_price'))}</span>
-                            <p class="text-discord-green font-bold text-lg">${escapeHtml(service.price)}</p>
+                            <span class="v1-meta-l">${escapeHtml(t('svc_price'))}</span>
+                            <span class="v1-scard-price">${escapeHtml(service.price)}</span>
                         </div>
                         <div>
-                            <span class="text-discord-text text-sm">${escapeHtml(t('svc_term'))}</span>
-                            <p class="text-white font-semibold">${escapeHtml(service.estimated_time)}</p>
+                            <span class="v1-meta-l">${escapeHtml(t('svc_term'))}</span>
+                            <span class="v1-meta-v">${escapeHtml(service.estimated_time)}</span>
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <span class="text-discord-text text-sm">${escapeHtml(t('svc_tech'))}</span>
-                        <div class="skills-container mt-2">
+                    <div class="v1-scard-block">
+                        <span class="v1-meta-l">${escapeHtml(t('svc_tech'))}</span>
+                        <div class="v1-svc-tags">
                             ${service.frameworks.split(',').map(fw => `
-                                <span class="tag tag-primary">${escapeHtml(fw.trim())}</span>
+                                <span class="v1-chip">${escapeHtml(fw.trim())}</span>
                             `).join('')}
                         </div>
                     </div>
 
-                    <div>
-                        <span class="text-discord-text text-sm">${escapeHtml(t('svc_pay'))}</span>
-                        <p class="text-white mt-1">${escapeHtml(service.payment_methods)}</p>
+                    <div class="v1-scard-block">
+                        <span class="v1-meta-l">${escapeHtml(t('svc_pay'))}</span>
+                        <span class="v1-meta-v">${escapeHtml(service.payment_methods)}</span>
                     </div>
-                </div>
+                </article>
             `).join('')}
         </div>
     `;
@@ -230,10 +228,10 @@ async function loadServices() {
         const container = document.getElementById('services-content');
         if (container) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
-                    <p class="text-discord-text mt-2">${error.message}</p>
+                <div class="v1-empty">
+                    <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)"></i>
+                    <div class="v1-empty-h">${escapeHtml(t('common_load_error'))}</div>
+                    <p>${escapeHtml(error.message)}</p>
                 </div>
             `;
         }

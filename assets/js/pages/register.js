@@ -11,7 +11,7 @@ export function render() {
                 <div class="bg-discord-light rounded-lg shadow-xl p-8 fade-in">
                     <div class="text-center mb-8">
                         <i class="fas fa-user-plus text-6xl text-discord-accent mb-4"></i>
-                        <h1 class="text-2xl font-bold text-white">${escapeHtml(t('page_register_title'))}</h1>
+                        <h1 class="text-2xl font-bold text-white ide-h">${escapeHtml(t('page_register_title'))}</h1>
                         <p class="text-discord-text mt-2">${escapeHtml(t('page_register_sub'))}</p>
                     </div>
 

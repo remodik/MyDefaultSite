@@ -16,6 +16,11 @@
     --v1-fg-soft: #6a6a6a;
     --v1-accent: #007acc;
     --v1-accent-2: #569cd6;
+    --v1-sky: #7dd3fc;
+    --v1-violet: #a78bfa;
+    --v1-green: #86efac;
+    --v1-amber: #f59e0b;
+    --v1-red: #f87171;
 }
 
 html, body.ide-host {
@@ -1078,5 +1083,508 @@ body.ide-host {
 
     .v1-marquee {
         margin: var(--v1-space-5) calc(-1 * var(--v1-space-4));
+    }
+}
+
+/* ============================================================
+   Inner pages — shared IDE-doc primitives (services, works,
+   contact, work viewer). Reuse the home v1-* visual language.
+   ============================================================ */
+
+/* Mono heading helper for pages still using Tailwind heading utilities */
+.ide-h {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: -0.01em;
+}
+
+/* Page headings across remaining pages use the `font-bold` Tailwind utility
+   (markdown / v1 / card titles do not) — give them the IDE mono identity. */
+#app h1.font-bold,
+#app h2.font-bold,
+#app h3.font-bold {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: -0.01em;
+}
+
+/* Page header: kicker + title + subtitle + optional actions */
+.v1-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--v1-space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--v1-space-6);
+}
+
+.v1-page-header-main {
+    min-width: 0;
+}
+
+.v1-page-title {
+    font: 800 36px/1.05 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: -.02em;
+    color: var(--v1-fg);
+    margin: var(--v1-space-2) 0 0;
+}
+
+.v1-page-title-icon {
+    color: var(--v1-sky);
+    margin-right: 10px;
+}
+
+.v1-page-sub {
+    color: var(--v1-fg-dim);
+    font-size: 14px;
+    margin: var(--v1-space-2) 0 0;
+    max-width: 640px;
+    line-height: 1.6;
+}
+
+/* Generic card grid for richer cards */
+.v1-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--v1-space-4);
+}
+
+/* Small ghost icon button (admin actions) */
+.v1-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--v1-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--v1-fg-dim);
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+.v1-icon-btn:hover {
+    color: var(--v1-fg);
+    border-color: var(--v1-fg-soft);
+    background: rgba(255, 255, 255, .04);
+}
+
+.v1-icon-btn.danger:hover {
+    color: var(--v1-red);
+    border-color: var(--v1-red);
+}
+
+.v1-btn.active {
+    background: var(--v1-accent);
+    border-color: var(--v1-accent);
+    color: #fff;
+}
+
+/* Tags */
+.v1-tag-warn {
+    font: 700 10px/1.4 "JetBrains Mono", ui-monospace, monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(245, 158, 11, .15);
+    color: var(--v1-amber);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* Empty / error states */
+.v1-empty-icon {
+    display: block;
+    font-size: 40px;
+    margin-bottom: var(--v1-space-3);
+    opacity: .4;
+}
+
+.v1-empty-h {
+    color: var(--v1-fg);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+/* ---- Service detail card ---- */
+.v1-scard {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--v1-border);
+    border-radius: 8px;
+    background: var(--v1-bg-2);
+    padding: var(--v1-space-5);
+    transition: border-color .15s, transform .15s;
+}
+
+.v1-scard:hover {
+    border-color: var(--v1-accent-2);
+    transform: translateY(-2px);
+}
+
+.v1-scard-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--v1-space-3);
+    margin-bottom: var(--v1-space-3);
+}
+
+.v1-scard-title {
+    font: 700 18px/1.2 "JetBrains Mono", ui-monospace, monospace;
+    color: var(--v1-fg);
+}
+
+.v1-scard-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.v1-scard-desc {
+    color: var(--v1-fg-dim);
+    font-size: 13.5px;
+    margin-bottom: var(--v1-space-4);
+}
+
+.v1-scard-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--v1-space-4);
+    padding: var(--v1-space-4) 0;
+    border-top: 1px solid var(--v1-border);
+    border-bottom: 1px solid var(--v1-border);
+    margin-bottom: var(--v1-space-4);
+}
+
+.v1-meta-l {
+    display: block;
+    font: 600 10px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--v1-fg-soft);
+    margin-bottom: 6px;
+}
+
+.v1-meta-v {
+    color: var(--v1-fg);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.v1-scard-price {
+    font: 800 18px/1 "JetBrains Mono", ui-monospace, monospace;
+    color: var(--v1-green);
+}
+
+.v1-scard-block {
+    margin-bottom: var(--v1-space-4);
+}
+
+.v1-scard-block:last-child {
+    margin-bottom: 0;
+}
+
+/* ---- Work card ---- */
+.v1-wcard {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--v1-border);
+    border-radius: 8px;
+    background: var(--v1-bg-2);
+    padding: var(--v1-space-4);
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+}
+
+.v1-wcard:hover {
+    border-color: var(--v1-accent-2);
+    transform: translateY(-2px);
+}
+
+.v1-wcard-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--v1-space-3);
+    margin-bottom: var(--v1-space-3);
+}
+
+.v1-wcard-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(125, 211, 252, .1);
+    color: var(--v1-sky);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.v1-wcard-subject {
+    font: 600 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--v1-fg-soft);
+    margin-bottom: 6px;
+}
+
+.v1-wcard-title {
+    font: 700 16px/1.25 "JetBrains Mono", ui-monospace, monospace;
+    color: var(--v1-fg);
+    margin-bottom: 6px;
+}
+
+.v1-wcard-date {
+    font-size: 12px;
+    color: var(--v1-sky);
+    font-weight: 600;
+    margin-bottom: var(--v1-space-3);
+}
+
+.v1-wcard-desc {
+    color: var(--v1-fg-dim);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: var(--v1-space-4);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.v1-wcard-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--v1-space-2);
+    margin-top: auto;
+    padding-top: var(--v1-space-3);
+    border-top: 1px solid var(--v1-border);
+}
+
+.v1-wcard-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* ---- Filters ---- */
+.v1-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v1-space-2);
+    margin-bottom: var(--v1-space-5);
+}
+
+.v1-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid var(--v1-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--v1-fg-dim);
+    font: 600 12px/1 "JetBrains Mono", ui-monospace, monospace;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+.v1-filter:hover {
+    color: var(--v1-fg);
+    border-color: var(--v1-fg-soft);
+}
+
+.v1-filter.active {
+    background: #094771;
+    border-color: var(--v1-accent);
+    color: #fff;
+}
+
+.v1-filter-n {
+    opacity: .65;
+    font-size: 11px;
+}
+
+/* ---- Forms / panels (contact, etc.) ---- */
+.v1-panel {
+    border: 1px solid var(--v1-border);
+    border-radius: 8px;
+    background: var(--v1-bg-2);
+    padding: var(--v1-space-6);
+}
+
+.v1-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--v1-space-5);
+}
+
+.v1-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--v1-space-4);
+}
+
+.v1-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.v1-label {
+    font: 600 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--v1-fg-dim);
+}
+
+.v1-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--v1-bg);
+    border: 1px solid var(--v1-border);
+    border-radius: 4px;
+    color: var(--v1-fg);
+    font: 400 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.v1-input::placeholder {
+    color: var(--v1-fg-soft);
+}
+
+.v1-input:focus {
+    outline: none;
+    border-color: var(--v1-accent);
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, .25);
+}
+
+textarea.v1-input {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.v1-msg {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.v1-msg.error { color: var(--v1-red); }
+.v1-msg.success { color: var(--v1-green); }
+.v1-msg.hidden { display: none; }
+
+/* ---- Contact info cards ---- */
+.v1-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--v1-space-4);
+    margin-top: var(--v1-space-6);
+}
+
+.v1-contact-card {
+    border: 1px solid var(--v1-border);
+    border-radius: 8px;
+    background: var(--v1-bg-2);
+    padding: var(--v1-space-5);
+    text-align: center;
+    transition: border-color .15s, transform .15s;
+}
+
+.v1-contact-card:hover {
+    border-color: var(--v1-accent-2);
+    transform: translateY(-2px);
+}
+
+.v1-contact-card i {
+    font-size: 24px;
+    color: var(--v1-sky);
+    margin-bottom: var(--v1-space-3);
+}
+
+.v1-contact-card h3 {
+    font: 700 13px/1 "JetBrains Mono", ui-monospace, monospace;
+    color: var(--v1-fg);
+    margin-bottom: 6px;
+}
+
+.v1-contact-card a {
+    color: var(--v1-accent-2);
+    text-decoration: none;
+    font-size: 13px;
+    word-break: break-word;
+}
+
+.v1-contact-card a:hover {
+    text-decoration: underline;
+}
+
+/* ---- Work viewer (work-detail) ---- */
+.v1-viewer {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.v1-viewer-bar {
+    background: var(--v1-bg-3);
+    border-bottom: 1px solid var(--v1-border);
+    padding: 8px var(--v1-space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--v1-space-3);
+    flex-wrap: wrap;
+}
+
+.v1-viewer-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.v1-viewer-meta-title {
+    color: var(--v1-fg);
+    font-weight: 700;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v1-viewer-meta-sub {
+    color: var(--v1-fg-dim);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v1-viewer-frame {
+    flex: 1;
+    background: #fff;
+    overflow: hidden;
+}
+
+.v1-viewer-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
+@media (max-width: 900px) {
+    .v1-page-title {
+        font-size: 28px;
+    }
+
+    .v1-form-row,
+    .v1-contact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .v1-scard-meta {
+        grid-template-columns: 1fr 1fr;
     }
 }

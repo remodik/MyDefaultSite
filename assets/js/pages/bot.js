@@ -69,15 +69,15 @@ export function render() {
                         <h2 class="bot-subheading">${escapeHtml(t('bot_subheading'))}</h2>
                         <p class="bot-subtitle">${escapeHtml(t('bot_hero_desc'))}</p>
                         <div class="bot-cta-row">
-                            <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                            <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="v1-btn v1-btn-primary">
                                 <i class="fab fa-discord"></i>
                                 ${escapeHtml(t('bot_add_to_server'))}
                             </a>
-                            <a href="#features" class="btn btn-outline">
+                            <a href="#features" class="v1-btn">
                                 <i class="fas fa-terminal"></i>
                                 ${escapeHtml(t('bot_commands_link'))}
                             </a>
-                            <a href="https://panel.remod3.ru/" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                            <a href="https://panel.remod3.ru/" target="_blank" rel="noopener noreferrer" class="v1-btn v1-btn-primary">
                                 <i class="fas fa-cog"></i>
                                 ${escapeHtml(t('bot_panel_link'))}
                             </a>                         
@@ -135,11 +135,11 @@ export function render() {
                 <section class="bot-bottom-cta">
                     <h2>${escapeHtml(t('bot_ready_h'))}</h2>
                     <div class="bot-cta-row">
-                        <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                        <a href="${INVITE_URL}" target="_blank" rel="noopener noreferrer" class="v1-btn v1-btn-primary">
                             <i class="fab fa-discord"></i>
                             ${escapeHtml(t('bot_add_to_server'))}
                         </a>
-                        <a href="#features" class="btn btn-outline">
+                        <a href="#features" class="v1-btn">
                             <i class="fas fa-terminal"></i>
                             ${escapeHtml(t('bot_commands_link'))}
                         </a>
