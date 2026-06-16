@@ -1,12 +1,14 @@
-import { adminPurchasesApi, adminApi, adminAutomuteApi, API_URL } from "../api.js";
+import { adminPurchasesApi, adminApi, adminAutomuteApi, adminDonationsApi, API_URL } from "../api.js";
 import { showToast, escapeHtml, formatDate, formatDateTime } from "../utils.js";
 import { confirmModal } from "../components/modal.js";
 
 let users = [];
 let purchases = [];
 let automutePurchases = [];
+let donations = [];
 let activeTab = "users";
 let purchasesFilter = "";
+let donationsFilter = "";
 let licenseAdminSecret = "";
 let licenseFilter = null;
 let licenses = [];
@@ -38,6 +40,10 @@ export function render() {
                 <button class="btn ${activeTab === "automute" ? "btn-primary" : "btn-secondary"}" id="tab-automute">
                     <i class="fas fa-volume-mute"></i>
                     AutoMute
+                </button>
+                <button class="btn ${activeTab === "donations" ? "btn-primary" : "btn-secondary"}" id="tab-donations">
+                    <i class="fas fa-heart"></i>
+                    Донаты
                 </button>
             </div>
 
@@ -499,6 +505,84 @@ function renderPurchases() {
   });
 }
 
+function renderDonations() {
+  const container = document.getElementById("admin-content");
+  if (!container) return;
+
+  if (donations.length === 0) {
+    container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-heart"></i>
+                <h3 class="text-xl font-semibold text-white mt-4">Донатов пока нет</h3>
+                <p class="text-discord-text mt-2">Здесь появятся пожертвования через ЮKassa</p>
+            </div>
+        `;
+    return;
+  }
+
+  const completed = donations.filter((d) => d.status === "completed");
+  const total = completed.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+
+  container.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="text-discord-text">
+                    Собрано:
+                    <span class="text-discord-green font-bold text-lg">${total.toLocaleString("ru-RU")} ₽</span>
+                    <span class="text-discord-text/60 text-sm">· ${completed.length} шт.</span>
+                </div>
+                <select id="donations-status-filter" class="input max-w-xs">
+                    <option value="" ${donationsFilter === "" ? "selected" : ""}>Все статусы</option>
+                    <option value="pending" ${donationsFilter === "pending" ? "selected" : ""}>pending</option>
+                    <option value="completed" ${donationsFilter === "completed" ? "selected" : ""}>completed</option>
+                    <option value="cancelled" ${donationsFilter === "cancelled" ? "selected" : ""}>cancelled</option>
+                </select>
+            </div>
+
+            <div class="bg-discord-light rounded-lg overflow-hidden">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Сумма</th>
+                            <th>Сообщение</th>
+                            <th>Статус</th>
+                            <th>Создан</th>
+                            <th>Завершён</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${donations
+                          .map(
+                            (d) => `
+                            <tr>
+                                <td class="font-bold text-white">${Number(d.amount || 0).toLocaleString("ru-RU")} ₽</td>
+                                <td>${d.message ? escapeHtml(d.message) : '<span class="text-discord-text/60">—</span>'}</td>
+                                <td>
+                                    <span class="tag ${getPurchaseStatusClass(d.status)}">
+                                        ${escapeHtml(getPurchaseStatusLabel(d.status))}
+                                    </span>
+                                </td>
+                                <td class="text-discord-text text-sm">${formatDateTime(d.created_at)}</td>
+                                <td class="text-discord-text text-sm">${d.completed_at ? formatDateTime(d.completed_at) : '<span class="text-discord-text/60">—</span>'}</td>
+                            </tr>
+                        `,
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+  const filterSelect = document.getElementById("donations-status-filter");
+  if (filterSelect) {
+    filterSelect.addEventListener("change", async () => {
+      donationsFilter = filterSelect.value;
+      await loadDonations(donationsFilter || null);
+    });
+  }
+}
+
 function switchTab(tab) {
   activeTab = tab;
 
@@ -506,6 +590,7 @@ function switchTab(tab) {
   const tablicenses = document.getElementById("tab-licenses");
   const tabPurchases = document.getElementById("tab-purchases");
   const tabAutomute = document.getElementById("tab-automute");
+  const tabDonations = document.getElementById("tab-donations");
 
   if (tabUsers)
     tabUsers.className = `btn ${tab === "users" ? "btn-primary" : "btn-secondary"}`;
@@ -515,6 +600,8 @@ function switchTab(tab) {
     tabPurchases.className = `btn ${tab === "purchases" ? "btn-primary" : "btn-secondary"}`;
   if (tabAutomute)
     tabAutomute.className = `btn ${tab === "automute" ? "btn-primary" : "btn-secondary"}`;
+  if (tabDonations)
+    tabDonations.className = `btn ${tab === "donations" ? "btn-primary" : "btn-secondary"}`;
 
   if (tab === "users") {
     renderUsers();
@@ -524,6 +611,8 @@ function switchTab(tab) {
     renderPurchases();
   } else if (tab === "automute") {
     renderAutomute();
+  } else if (tab === "donations") {
+    renderDonations();
   }
 }
 
@@ -797,6 +886,17 @@ async function loadPurchases(status = null) {
   }
 }
 
+async function loadDonations(status = null) {
+  try {
+    donations = await adminDonationsApi.getAll(status);
+    if (activeTab === "donations") {
+      renderDonations();
+    }
+  } catch (error) {
+    showToast(error.message || "Ошибка загрузки донатов", "error");
+  }
+}
+
 export async function mount() {
   activeTab = "users";
   purchasesFilter = "";
@@ -806,12 +906,14 @@ export async function mount() {
     loadLicenses(),
     loadPurchases(),
     loadAutomutePurchases(),
+    loadDonations(),
   ]);
 
   const tabUsers = document.getElementById("tab-users");
   const tabLicenses = document.getElementById("tab-licenses");
   const tabPurchases = document.getElementById("tab-purchases");
   const tabAutomute = document.getElementById("tab-automute");
+  const tabDonations = document.getElementById("tab-donations");
 
   if (tabUsers) tabUsers.addEventListener("click", () => switchTab("users"));
   if (tabLicenses)
@@ -820,6 +922,8 @@ export async function mount() {
     tabPurchases.addEventListener("click", () => switchTab("purchases"));
   if (tabAutomute)
     tabAutomute.addEventListener("click", () => switchTab("automute"));
+  if (tabDonations)
+    tabDonations.addEventListener("click", () => switchTab("donations"));
 
   renderUsers();
 }
@@ -828,6 +932,8 @@ export function unmount() {
   users = [];
   purchases = [];
   automutePurchases = [];
+  donations = [];
   activeTab = "users";
   purchasesFilter = "";
+  donationsFilter = "";
 }

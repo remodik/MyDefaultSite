@@ -38,6 +38,7 @@ from database import (
     Course,
     CoursePart,
     DirectMessage,
+    Donation,
     File as FileModel,
     PasswordReset as PasswordResetModel,
     Project,
@@ -2860,7 +2861,17 @@ async def yookassa_webhook(
         return {"ok": True, "kind": kind, "purchase_id": purchase_id}
 
     if kind == "donation":
-        # Пожертвование: фулфилмент не требуется, платёж учтён в ЮKassa.
+        donation_id = metadata.get("donation_id")
+        if donation_id:
+            donation = await session.get(Donation, donation_id)
+            if (
+                donation
+                and donation.yookassa_payment_id == payment_id
+                and donation.status != "completed"
+            ):
+                donation.status = "completed"
+                donation.completed_at = datetime.now()
+                await session.commit()
         return {"ok": True, "kind": "donation"}
 
     return {"ok": True, "unmatched": True}
@@ -2871,23 +2882,88 @@ class DonateRequest(_StrictSchema):
     message: str | None = Field(default=None, max_length=200)
 
 
+class AdminDonationResponse(_StrictSchema):
+    id: str
+    amount: int
+    message: str | None
+    status: str
+    created_at: str | None
+    completed_at: str | None
+
+
 @app.post(path="/api/donate")
 @limiter.limit("10/minute")
-async def create_donation(request: Request, body: DonateRequest) -> dict[str, Any]:
+async def create_donation(
+    request: Request,
+    body: DonateRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    await ensure_db_connection(session)
+
+    donation = Donation(
+        id=str(uuid.uuid4()),
+        amount=body.amount,
+        message=((body.message or "").strip()[:200] or None),
+        status="pending",
+        created_at=datetime.now(),
+    )
+    session.add(donation)
+    await session.commit()
+    await session.refresh(donation)
+
     try:
         payment = await yookassa_create_payment(
             amount=body.amount,
             description="Поддержка remod3",
             metadata={
                 "kind": "donation",
-                "message": (body.message or "").strip()[:200],
+                "donation_id": donation.id,
             },
             return_url=f"{FRONTEND_URL}/donate?thanks=1",
         )
     except Exception as exc:
+        donation.status = "cancelled"
+        await session.commit()
         raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}")
 
+    donation.yookassa_payment_id = payment["id"]
+    await session.commit()
+
     return {"confirmation_url": payment["confirmation_url"]}
+
+
+@app.get(
+    path="/api/admin/donations",
+    response_model=list[AdminDonationResponse],
+    dependencies=[Depends(get_current_admin)],
+)
+async def get_admin_donations(
+    status: str | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    await ensure_db_connection(session)
+
+    if status is not None and status not in VALID_PURCHASE_STATUSES:
+        raise HTTPException(status_code=400, detail="Недопустимый статус")
+
+    query = select(Donation).order_by(Donation.created_at.desc())
+    if status is not None:
+        query = query.where(Donation.status == status)
+
+    result = await session.execute(query)
+    donations = result.scalars().all()
+
+    return [
+        {
+            "id": d.id,
+            "amount": d.amount,
+            "message": d.message,
+            "status": d.status,
+            "created_at": _to_iso(d.created_at),
+            "completed_at": _to_iso(d.completed_at),
+        }
+        for d in donations
+    ]
 
 
 def _work_to_dict(work: Work, include_html: bool = False) -> dict[str, Any]:

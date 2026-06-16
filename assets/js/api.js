@@ -520,6 +520,13 @@ export const adminPurchasesApi = {
     },
 };
 
+export const adminDonationsApi = {
+    async getAll(status = null) {
+        const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+        return apiRequest(`/api/admin/donations${qs}`);
+    },
+};
+
 export const automuteApi = {
     async subscribe(plan) {
         return apiRequest('/api/automute/subscribe', {
