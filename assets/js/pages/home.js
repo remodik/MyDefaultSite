@@ -60,6 +60,9 @@ export function render() {
                             <span style="opacity:.6">$</span> ${esc(t('cta_projects'))}
                         </a>
                         <a class="v1-btn" href="/contact">→ ${esc(t('cta_write'))}</a>
+                        <a class="v1-btn v1-btn-support" href="/donate">
+                            <i class="fas fa-heart"></i> ${esc(t('cta_support'))}
+                        </a>
                     </div>
                 </div>
 
@@ -149,6 +152,9 @@ export function render() {
                     </a>
                     <a class="v1-btn v1-btn-lg" href="https://t.me/remod3" target="_blank" rel="noopener">
                         <i class="fab fa-telegram"></i> ${esc(t('telegram'))}
+                    </a>
+                    <a class="v1-btn v1-btn-lg v1-btn-support" href="/donate">
+                        <i class="fas fa-heart"></i> ${esc(t('cta_support'))}
                     </a>
                 </div>
             </section>

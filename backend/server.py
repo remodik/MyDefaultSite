@@ -2859,7 +2859,35 @@ async def yookassa_webhook(
             await _complete_automute_purchase(session, purchase_id)
         return {"ok": True, "kind": kind, "purchase_id": purchase_id}
 
+    if kind == "donation":
+        # Пожертвование: фулфилмент не требуется, платёж учтён в ЮKassa.
+        return {"ok": True, "kind": "donation"}
+
     return {"ok": True, "unmatched": True}
+
+
+class DonateRequest(_StrictSchema):
+    amount: int = Field(..., ge=10, le=300000, description="Сумма пожертвования в рублях")
+    message: str | None = Field(default=None, max_length=200)
+
+
+@app.post(path="/api/donate")
+@limiter.limit("10/minute")
+async def create_donation(request: Request, body: DonateRequest) -> dict[str, Any]:
+    try:
+        payment = await yookassa_create_payment(
+            amount=body.amount,
+            description="Поддержка remod3",
+            metadata={
+                "kind": "donation",
+                "message": (body.message or "").strip()[:200],
+            },
+            return_url=f"{FRONTEND_URL}/donate?thanks=1",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}")
+
+    return {"confirmation_url": payment["confirmation_url"]}
 
 
 def _work_to_dict(work: Work, include_html: bool = False) -> dict[str, Any]:

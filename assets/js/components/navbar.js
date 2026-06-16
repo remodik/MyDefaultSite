@@ -13,6 +13,7 @@ const FILES = [
     { id: 'projects', path: '/projects', icon: 'json', iconColor: '#f59e0b', file_key: 'file_projects', label_key: 'nav_projects', requireAuth: true },
     { id: 'chat', path: '/chat', icon: 'sock', iconColor: '#ec4899', file_key: 'file_chat', label_key: 'nav_chat', requireAuth: true },
     { id: 'contact', path: '/contact', icon: 'yml', iconColor: '#22d3ee', file_key: 'file_contact', label_key: 'nav_contacts', public: true },
+    { id: 'donate', path: '/donate', icon: 'yml', iconColor: '#f472b6', file_key: 'file_donate', label_key: 'nav_donate', public: true },
     { id: 'profile', path: '/profile', icon: 'usr', iconColor: '#86efac', file_key: 'file_profile', label_key: 'nav_profile', requireAuth: true },
     { id: 'admin', path: '/admin', icon: 'lck', iconColor: '#f87171', file_key: 'file_admin', label_key: 'nav_admin', requireAdmin: true },
 ];

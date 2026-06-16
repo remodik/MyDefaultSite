@@ -308,6 +308,18 @@ export const contactApi = {
     },
 };
 
+export const donateApi = {
+    // Создаёт платёж ЮKassa и возвращает { confirmation_url } для редиректа.
+    async create(amount, message = null) {
+        const body = { amount };
+        if (message) body.message = message;
+        return apiRequest('/api/donate', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    },
+};
+
 export const adminApi = {
     async getUsers() {
         return apiRequest('/api/admin/users');

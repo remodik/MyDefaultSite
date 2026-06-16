@@ -1588,3 +1588,112 @@ textarea.v1-input {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* ---- Donate / support page ---- */
+.v1-btn-support {
+    border-color: rgba(244, 114, 182, .5);
+    color: #f9a8d4;
+}
+
+.v1-btn-support:hover {
+    background: rgba(244, 114, 182, .12);
+    border-color: #f472b6;
+    color: #f472b6;
+}
+
+.v1-method {
+    display: flex;
+    flex-direction: column;
+    gap: var(--v1-space-3);
+    border: 1px solid var(--v1-border);
+    border-radius: 8px;
+    background: var(--v1-bg-2);
+    padding: var(--v1-space-5);
+    transition: border-color .15s, transform .15s;
+}
+
+.v1-method:hover {
+    border-color: var(--v1-accent-2);
+    transform: translateY(-2px);
+}
+
+.v1-method-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.v1-method-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.v1-method-name {
+    font: 700 15px/1 "JetBrains Mono", ui-monospace, monospace;
+    color: var(--v1-fg);
+}
+
+.v1-method-desc {
+    color: var(--v1-fg-dim);
+    font-size: 13px;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.v1-method .v1-btn {
+    margin-top: auto;
+    justify-content: center;
+}
+
+.v1-why {
+    display: grid;
+    gap: var(--v1-space-3);
+}
+
+.v1-why-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--v1-fg-dim);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.v1-why-item i {
+    color: var(--v1-green);
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.v1-amount-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v1-space-2);
+}
+
+.v1-amount {
+    padding: 10px 16px;
+    border: 1px solid var(--v1-border);
+    border-radius: 6px;
+    background: var(--v1-bg);
+    color: var(--v1-fg);
+    font: 700 14px/1 "JetBrains Mono", ui-monospace, monospace;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+}
+
+.v1-amount:hover {
+    border-color: var(--v1-fg-soft);
+}
+
+.v1-amount.active {
+    background: #094771;
+    border-color: var(--v1-accent);
+    color: #fff;
+}

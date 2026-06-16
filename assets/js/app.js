@@ -23,6 +23,7 @@ import * as privacyPage from './pages/privacy.js';
 import * as termsPage from './pages/terms.js';
 import * as worksPage from './pages/works.js';
 import * as workDetailPage from './pages/work-detail.js';
+import * as donatePage from './pages/donate.js';
 
 window.APP_CONFIG = {
     API_URL: API_URL || 'http://localhost:8001'
@@ -43,6 +44,7 @@ router.addRoute('/bot', botPage);
 router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: true });
 router.addRoute('/works', worksPage);
 router.addRoute('/works/:slug', workDetailPage);
+router.addRoute('/donate', donatePage);
 
 router.addRoute('/privacy', privacyPage);
 router.addRoute('/terms', termsPage);
