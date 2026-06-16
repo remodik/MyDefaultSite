@@ -57,9 +57,6 @@ export function render() {
                 <button type="button" class="v1-btn v1-btn-primary v1-btn-lg" id="donate-pay" style="width:100%;justify-content:center">
                     <i class="fas fa-heart"></i> ${escapeHtml(t('donate_pay_btn'))} · <span id="donate-pay-amount">${DEFAULT_AMOUNT} ₽</span>
                 </button>
-                <p style="color:var(--v1-fg-soft);font-size:12px;margin-top:10px;display:flex;align-items:center;gap:6px">
-                    <i class="fas fa-lock"></i> ${escapeHtml(t('donate_pay_note'))}
-                </p>
             </div>
 
             <section class="v1-sec">
