@@ -26,6 +26,7 @@ import * as workDetailPage from './pages/work-detail.js';
 import * as donatePage from './pages/donate.js';
 
 window.APP_CONFIG = {
+    ...window.APP_CONFIG,
     API_URL: API_URL || 'http://localhost:8001'
 };
 
