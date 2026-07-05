@@ -1385,6 +1385,18 @@ code[class*="language-"] {
     margin-top: auto;
 }
 
+.course-card-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.4;
+    /* Жёсткая высота ровно под 2 строки — чтобы третья строка не просвечивала */
+    height: 2.8em;
+    margin-bottom: 0;
+}
+
 .course-card-cover-frame {
     flex-shrink: 0;
     height: 180px;

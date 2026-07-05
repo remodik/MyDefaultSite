@@ -98,7 +98,7 @@ function renderCourses() {
                             ${isAdmin() && !course.is_published ? `<span class="tag tag-warning shrink-0">${escapeHtml(t('work_draft'))}</span>` : ''}
                         </div>
 
-                        <p class="text-discord-text text-sm line-clamp-2 min-h-[40px]">${escapeHtml(course.short_description || t('work_no_desc'))}</p>
+                        <p class="text-discord-text text-sm course-card-desc">${escapeHtml(course.short_description || t('work_no_desc'))}</p>
 
                         <div class="course-card-footer">
                             <div class="mt-4 flex items-center justify-between gap-2">
