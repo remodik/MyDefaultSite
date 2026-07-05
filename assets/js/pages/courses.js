@@ -1,7 +1,7 @@
 import { coursesApi, resolveApiUrl } from '../api.js';
 import { isAdmin } from '../auth.js';
 import { router } from '../router.js';
-import { showToast, escapeHtml } from '../utils.js';
+import { showToast, escapeHtml, debounce } from '../utils.js';
 import { showModal, closeModal, confirmModal } from '../components/modal.js';
 import { t } from '../i18n.js';
 
@@ -23,6 +23,7 @@ function renderCover(course) {
                     src="${escapeHtml(resolveApiUrl(course.cover_url))}"
                     alt="${escapeHtml(course.title)}"
                     class="course-card-cover-image"
+                    referrerpolicy="no-referrer"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
                 <div class="course-card-cover-fallback hidden">
@@ -206,12 +207,17 @@ function showCourseModal(course = null) {
                     <input id="course-title" type="text" class="input" value="${isEdit ? escapeHtml(course.title) : ''}" maxlength="255" required>
                 </div>
                 <div>
-                    <label class="label" for="course-short-description">Короткое описание</label>
-                    <input id="course-short-description" type="text" class="input" value="${isEdit ? escapeHtml(course.short_description || '') : ''}" maxlength="512">
+                    <label class="label" for="course-short-description">Краткое описание (для карточки)</label>
+                    <textarea id="course-short-description" class="input" rows="2" maxlength="512">${isEdit ? escapeHtml(course.short_description || '') : ''}</textarea>
+                    <div class="flex justify-between text-xs text-discord-text mt-1">
+                        <span>Пара предложений для карточки. Полный текст курса — в поле ниже.</span>
+                        <span id="short-description-counter"></span>
+                    </div>
                 </div>
                 <div>
-                    <label class="label" for="course-description">Описание (Markdown)</label>
+                    <label class="label" for="course-description">Полное описание (Markdown)</label>
                     <textarea id="course-description" class="input" rows="8" maxlength="50000">${isEdit ? escapeHtml(course.description || '') : ''}</textarea>
+                    <p class="text-xs text-discord-text mt-1">Здесь пишите длинный текст курса — поддерживается Markdown, до 50 000 символов.</p>
                 </div>
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
@@ -220,7 +226,11 @@ function showCourseModal(course = null) {
                     </div>
                     <div>
                         <label class="label" for="course-cover-url">URL обложки</label>
-                        <input id="course-cover-url" type="text" class="input" maxlength="512" value="${isEdit ? escapeHtml(course.cover_url || '') : ''}">
+                        <input id="course-cover-url" type="text" class="input" maxlength="512" value="${isEdit ? escapeHtml(course.cover_url || '') : ''}" placeholder="https://...">
+                        <div id="cover-preview-wrap" class="mt-2 hidden">
+                            <img id="cover-preview-img" alt="Предпросмотр обложки" referrerpolicy="no-referrer" class="course-card-cover-image" style="max-height:120px;width:auto;border-radius:8px;border:1px solid rgba(64,66,73,0.8);">
+                            <p id="cover-preview-error" class="text-xs text-discord-red mt-1 hidden">Не удалось загрузить изображение по этому URL (проверьте ссылку или защиту хостинга от hotlink).</p>
+                        </div>
                     </div>
                 </div>
                 <label class="flex items-center gap-2 text-discord-text">
@@ -248,6 +258,44 @@ function showCourseModal(course = null) {
         }
         if (saveBtn) {
             saveBtn.addEventListener('click', () => saveCourse(course?.id || null));
+        }
+
+        const shortInput = document.getElementById('course-short-description');
+        const counter = document.getElementById('short-description-counter');
+        if (shortInput && counter) {
+            const updateCounter = () => {
+                counter.textContent = `${shortInput.value.length} / 512`;
+            };
+            shortInput.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+
+        const coverInput = document.getElementById('course-cover-url');
+        const previewWrap = document.getElementById('cover-preview-wrap');
+        const previewImg = document.getElementById('cover-preview-img');
+        const previewError = document.getElementById('cover-preview-error');
+        if (coverInput && previewWrap && previewImg && previewError) {
+            const updatePreview = () => {
+                const url = coverInput.value.trim();
+                if (!url) {
+                    previewWrap.classList.add('hidden');
+                    return;
+                }
+                previewWrap.classList.remove('hidden');
+                previewError.classList.add('hidden');
+                previewImg.style.display = '';
+                previewImg.src = resolveApiUrl(url);
+            };
+            previewImg.addEventListener('error', () => {
+                previewImg.style.display = 'none';
+                previewError.classList.remove('hidden');
+            });
+            previewImg.addEventListener('load', () => {
+                previewImg.style.display = '';
+                previewError.classList.add('hidden');
+            });
+            coverInput.addEventListener('input', debounce(updatePreview, 400));
+            updatePreview();
         }
     }, 0);
 }

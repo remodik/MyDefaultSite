@@ -23,6 +23,7 @@ function renderCover() {
                     src="${escapeHtml(resolveApiUrl(course?.cover_url))}"
                     alt="${escapeHtml(course.title)}"
                     class="course-detail-cover-image"
+                    referrerpolicy="no-referrer"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
                 <div class="course-detail-cover-fallback hidden">
