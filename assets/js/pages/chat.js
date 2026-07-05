@@ -85,26 +85,50 @@ function setInputDisabled(disabled) {
     if (submit) submit.disabled = disabled || isSending;
 }
 
+function syncChannelDot() {
+    const dot = document.getElementById('chat-channel-dot');
+    if (!dot) return;
+    const cls = globalConnectionState === 'connected'
+        ? 'is-connected'
+        : globalConnectionState === 'connecting' ? 'is-connecting' : 'is-disconnected';
+    dot.className = `chat-channel-dot ${cls}`;
+}
+
 function renderConnectionStatus() {
+    syncChannelDot();
     if (!connectionStatusEl) return;
-    const state = mode === 'dm' ? dmConnectionState : globalConnectionState;
-    if (state === 'connected') {
+
+    // Для личных диалогов справа показываем присутствие собеседника, если бэкенд
+    // его отдаёт (partner.online). Пока такого поля нет — область пустая.
+    if (mode === 'dm') {
+        const partner = currentConversation()?.partner || null;
+        if (partner && typeof partner.online === 'boolean') {
+            connectionStatusEl.innerHTML = partner.online
+                ? `<span class="chat-status-dot is-connected"></span><span class="chat-status-text is-connected">в сети</span>`
+                : `<span class="chat-status-dot is-offline"></span><span class="chat-status-text">не в сети</span>`;
+        } else {
+            connectionStatusEl.innerHTML = '';
+        }
+        return;
+    }
+
+    if (globalConnectionState === 'connected') {
         connectionStatusEl.innerHTML = `
             <span class="chat-status-dot is-connected"></span>
-            <span class="chat-status-text is-connected">Подключено</span>
+            <span class="chat-status-text is-connected">connected</span>
         `;
         return;
     }
-    if (state === 'connecting') {
+    if (globalConnectionState === 'connecting') {
         connectionStatusEl.innerHTML = `
             <span class="chat-status-dot is-connecting pulse"></span>
-            <span class="chat-status-text">Подключение...</span>
+            <span class="chat-status-text">connecting</span>
         `;
         return;
     }
     connectionStatusEl.innerHTML = `
         <span class="chat-status-dot is-disconnected pulse"></span>
-        <span class="chat-status-text is-disconnected">Отключено</span>
+        <span class="chat-status-text is-disconnected">disconnected</span>
     `;
 }
 
@@ -136,8 +160,8 @@ function renderEmptyState() {
     if (mode === 'dm') {
         return `
             <div class="chat-empty-state">
-                <div class="chat-empty-icon"><i class="fas fa-user-friends"></i></div>
-                <h3>Начните диалог, найдите пользователя справа.</h3>
+                <div class="chat-empty-icon"><i class="fas fa-comments"></i></div>
+                <h3>Выберите диалог слева</h3>
             </div>
         `;
     }
@@ -177,11 +201,16 @@ function getInitial(source) {
     return String(source || '?').charAt(0).toUpperCase();
 }
 
-function chatAvatarHtml(item) {
-    if (item?.avatar_url) {
-        return `<img src="${escapeHtml(resolveApiUrl(item.avatar_url))}" alt="" class="chat-avatar-image">`;
+// Детерминированный цвет ника из строки (для чужих сообщений в логе).
+function colorFromString(source) {
+    const value = String(source || '?');
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+        hash = value.charCodeAt(i) + ((hash << 5) - hash);
+        hash |= 0;
     }
-    return `<span class="chat-avatar-fallback">${escapeHtml(getInitial(item?.username))}</span>`;
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 62%, 68%)`;
 }
 
 function roomAvatarHtml(partner) {
@@ -231,28 +260,19 @@ function renderMessages(forceBottom = false) {
     const currentUserId = getUser()?.id;
     messagesInnerEl.innerHTML = items.map((item) => {
         if (item.type === 'system') {
-            return `
-                <div class="chat-notification chat-notification-${escapeHtml(item.systemType)}">
-                    <i class="fas fa-${escapeHtml(item.systemIcon)} mr-2"></i>${escapeHtml(item.message)}
-                </div>
-            `;
+            return `<div class="chat-log-system">// ${escapeHtml(item.message)}</div>`;
         }
 
         const own = item.user_id === currentUserId;
         const renderedMessage = renderChatMessageContent(item.message);
         const popupDataAttr = item.user_id ? ` data-user-popup-id="${escapeHtml(item.user_id)}"` : '';
+        const nameColor = own ? '#9cdcff' : colorFromString(item.user_id || item.username);
+        const nameLabel = own ? 'Вы' : escapeHtml(item.username);
         return `
-            <div class="chat-group ${own ? 'is-own' : 'is-other'}">
-                ${own ? '' : `<div class="chat-avatar"${popupDataAttr}>${chatAvatarHtml(item)}</div>`}
-                <div class="chat-group-content">
-                    ${own ? '' : `<div class="chat-group-author"${popupDataAttr}>${escapeHtml(item.username)}</div>`}
-                    <div class="chat-group-bubbles">
-                        <div class="chat-bubble is-single">
-                            <div class="chat-bubble-markdown">${renderedMessage}</div>
-                        </div>
-                    </div>
-                    <div class="chat-group-time">${formatTime(item.timestamp)}</div>
-                </div>
+            <div class="chat-log-row ${own ? 'is-own' : ''}">
+                <span class="chat-log-time">${escapeHtml(formatTime(item.timestamp))}</span>
+                <span class="chat-log-name"${popupDataAttr} style="color:${nameColor}">${nameLabel}</span>
+                <span class="chat-log-text">${renderedMessage}</span>
             </div>
         `;
     }).join('');
@@ -280,12 +300,12 @@ function updateHeader() {
         const dialogName = partner?.display_name || partner?.username || 'Пользователь';
         roomAvatarEl.innerHTML = roomAvatarHtml(partner);
         roomTitleEl.textContent = dialogName;
-        roomSubtitleEl.textContent = 'Личные сообщения';
+        roomSubtitleEl.textContent = partner?.username ? `— @${partner.username}` : '';
         applyRoomUserTrigger(partner?.id || '');
     } else {
         roomAvatarEl.innerHTML = roomAvatarHtml(null);
         roomTitleEl.textContent = t('page_chat_title');
-        roomSubtitleEl.textContent = t('page_chat_sub');
+        roomSubtitleEl.textContent = `— ${t('page_chat_sub')}`;
         applyRoomUserTrigger('');
     }
 
@@ -312,39 +332,62 @@ function avatarHtml(partner) {
 function renderConversationsList() {
     if (!conversationsListEl) return;
 
+    const dotState = globalConnectionState === 'connected'
+        ? 'is-connected'
+        : globalConnectionState === 'connecting' ? 'is-connecting' : 'is-disconnected';
+
+    const rows = conversations.map((item) => {
+        const active = mode === 'dm' && item.id === activeConversationId;
+        const partner = item.partner || {};
+        const name = partner.display_name || partner.username || 'Пользователь';
+        const previewText = stripMarkdownToPlainText(item.last_message || '') || 'Нет сообщений';
+        const time = item.last_message_at ? formatRelativeTime(item.last_message_at) : '';
+        const partnerId = partner.id ? escapeHtml(partner.id) : '';
+        const unread = Number(item.unread || 0);
+        const online = partner.online === true;
+
+        return `
+            <button class="dm-row-compact ${active ? 'is-active' : ''} ${unread > 0 ? 'has-unread' : ''}" data-conversation-id="${escapeHtml(item.id)}">
+                <span class="dm-row-avatar"${partnerId ? ` data-user-popup-id="${partnerId}"` : ''}>
+                    ${avatarHtml(partner)}
+                    <span class="dm-row-presence ${online ? 'is-online' : 'is-offline'}"></span>
+                </span>
+                <span class="dm-row-body">
+                    <span class="dm-row-top">
+                        <span class="dm-row-name">${escapeHtml(name)}</span>
+                        <span class="dm-row-time">${escapeHtml(time)}</span>
+                    </span>
+                    <span class="dm-row-bottom">
+                        <span class="dm-row-preview">${escapeHtml(previewText)}</span>
+                        ${unread > 0 ? `<span class="dm-row-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
+                    </span>
+                </span>
+            </button>
+        `;
+    }).join('');
+
     conversationsListEl.innerHTML = `
-        <button class="dm-item dm-item-global ${mode === 'global' ? 'is-active' : ''}" data-action="global-room">
-            <div class="dm-item-avatar"><span class="dm-item-avatar-fallback">#</span></div>
-            <div class="dm-item-content">
-                <div class="dm-item-row"><span class="dm-item-name">${escapeHtml(t('page_chat_title'))}</span></div>
-                <div class="dm-item-preview">Публичный чат сайта</div>
-            </div>
+        <div class="chat-sidebar-section-h">Канал</div>
+        <button class="chat-channel-row ${mode === 'global' ? 'is-active' : ''}" data-action="global-room">
+            <span class="chat-channel-icon">#</span>
+            <span class="chat-channel-body">
+                <span class="chat-channel-name">${escapeHtml(t('page_chat_title'))}</span>
+                <span class="chat-channel-sub">все участники</span>
+            </span>
+            <span id="chat-channel-dot" class="chat-channel-dot ${dotState}"></span>
         </button>
 
-        ${conversations.map((item) => {
-            const active = mode === 'dm' && item.id === activeConversationId;
-            const partner = item.partner || {};
-            const name = partner.display_name || partner.username || 'Пользователь';
-            const previewText = stripMarkdownToPlainText(item.last_message || '') || 'Нет сообщений';
-            const time = item.last_message_at ? formatRelativeTime(item.last_message_at) : '';
-            const partnerId = partner.id ? escapeHtml(partner.id) : '';
+        <div class="chat-sidebar-divider"></div>
 
-            return `
-                <button class="dm-item ${active ? 'is-active' : ''}" data-conversation-id="${escapeHtml(item.id)}">
-                    <div class="dm-item-avatar"${partnerId ? ` data-user-popup-id="${partnerId}"` : ''}>${avatarHtml(partner)}</div>
-                    <div class="dm-item-content">
-                        <div class="dm-item-row">
-                            <span class="dm-item-name">${escapeHtml(name)}</span>
-                            <span class="dm-item-time">${escapeHtml(time)}</span>
-                        </div>
-                        <div class="dm-item-preview">${escapeHtml(previewText)}</div>
-                    </div>
-                </button>
-            `;
-        }).join('') || `
+        <div class="chat-sidebar-section-h chat-sidebar-section-personal">
+            <span>Личные (${conversations.length})</span>
+            <button type="button" class="chat-section-add" data-action="new-dialog" aria-label="Новый диалог"><i class="fas fa-plus"></i></button>
+        </div>
+
+        ${rows || `
             <div class="chat-sidebar-empty">
                 <i class="fas fa-comments"></i>
-                <p>Начните диалог, найдите пользователя справа.</p>
+                <p>Пока нет диалогов. Найдите пользователя через поиск.</p>
             </div>
         `}
     `;
@@ -616,24 +659,20 @@ export function render() {
                     </div>
                     <div class="chat-input-container">
                         <form id="chat-form" class="chat-input">
-                            <textarea id="message-input" class="input chat-textarea" placeholder="${escapeHtml(t('chat_input_ph'))}" maxlength="1000" rows="1" disabled></textarea>
-                            <button type="submit" class="btn btn-primary btn-sm chat-send-btn" disabled>
-                                <i class="fas fa-paper-plane"></i><span class="chat-send-label">Отправить</span>
-                            </button>
+                            <span class="chat-input-prompt">&gt;</span>
+                            <textarea id="message-input" class="chat-input-field" placeholder="${escapeHtml(t('chat_input_ph'))}" maxlength="1000" rows="1" disabled></textarea>
+                            <button type="submit" class="chat-send-btn" disabled>send <span class="chat-send-key">↵</span></button>
                         </form>
                     </div>
                 </section>
 
                 <aside class="chat-sidebar">
-                    <div class="chat-sidebar-header">
-                        <h2>Диалоги</h2>
-                        <button type="button" id="new-dialog-btn" class="btn btn-secondary btn-sm"><i class="fas fa-plus"></i> Новый диалог</button>
-                    </div>
-                    <div class="chat-sidebar-search-wrap">
-                        <input id="dm-search-input" type="text" class="input" placeholder="Поиск по нику..." autocomplete="off">
+                    <div class="chat-sidebar-search">
+                        <i class="fas fa-search chat-sidebar-search-icon"></i>
+                        <input id="dm-search-input" type="text" class="chat-sidebar-search-input" placeholder="Поиск / новый диалог..." autocomplete="off">
                         <div id="dm-search-results" class="dm-search-results hidden"></div>
                     </div>
-                    <div id="dm-conversations-list" class="dm-conversations-list"></div>
+                    <div id="dm-conversations-list" class="chat-sidebar-scroll"></div>
                 </aside>
             </div>
         </div>
@@ -713,11 +752,18 @@ export async function mount() {
     });
 
     conversationsListEl?.addEventListener('click', (event) => {
-        const avatarTrigger = event.target.closest('.dm-item-avatar[data-user-popup-id]');
+        const avatarTrigger = event.target.closest('.dm-row-avatar[data-user-popup-id]');
         if (avatarTrigger) {
             event.preventDefault();
             event.stopPropagation();
             showPopupFromTrigger(avatarTrigger);
+            return;
+        }
+
+        const addBtn = event.target.closest('[data-action="new-dialog"]');
+        if (addBtn) {
+            event.preventDefault();
+            searchInputEl?.focus();
             return;
         }
 
@@ -748,10 +794,6 @@ export async function mount() {
     });
 
     searchInputEl?.addEventListener('input', handleSearchInput);
-
-    document.getElementById('new-dialog-btn')?.addEventListener('click', () => {
-        searchInputEl?.focus();
-    });
 
     popupWriteHandler = (event) => {
         const userId = String(event.detail?.userId || '').trim();
