@@ -6,3 +6,9 @@
 /.venv
 /frontend/node_modules
 /.claude
+/backend/__pycache__
+/backend/.mypy_cache
+/backend/.pytest_cache
+/backend/.venv
+/backend/.env
+/backend/.env.*
