@@ -16,6 +16,8 @@ from typing import Any
 import bcrypt
 import httpx
 import resend
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, \
     status
@@ -88,6 +90,8 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -165,6 +169,10 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+
+class GoogleAuthPayload(BaseModel):
+    credential: str
 
 
 class Token(BaseModel):
@@ -1120,12 +1128,91 @@ async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -
     await ensure_db_connection(session)
     result = await session.execute(select(User).where(User.username == user.username))
     db_user = result.scalar_one_or_none()
-    if not db_user or not verify_password(user.password, db_user.password_hash):
+    if not db_user or not db_user.password_hash or not verify_password(user.password, db_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": db_user.id}, expires_delta=access_token_expires)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_to_public_dict(db_user)
+    }
+
+
+async def _unique_username_from_email(session: AsyncSession, email: str) -> str:
+    base = re.sub(r"[^a-zA-Z0-9_]", "", email.split("@")[0]).lower() or "user"
+    candidate = base
+    suffix = 0
+    while True:
+        result = await session.execute(select(User).where(User.username == candidate))
+        if not result.scalar_one_or_none():
+            return candidate
+        suffix += 1
+        candidate = f"{base}{suffix}"
+
+
+@app.post(path="/api/auth/google", response_model=Token)
+async def google_login(payload: GoogleAuthPayload, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google login is not configured")
+
+    await ensure_db_connection(session)
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            payload.credential, google_auth_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    google_id = idinfo["sub"]
+    email = idinfo.get("email")
+
+    result = await session.execute(select(User).where(User.google_id == google_id))
+    db_user = result.scalar_one_or_none()
+
+    if not db_user and email:
+        result = await session.execute(select(User).where(User.email == email))
+        db_user = result.scalar_one_or_none()
+        if db_user:
+            db_user.google_id = google_id
+
+    if not db_user:
+        if not email:
+            raise HTTPException(status_code=400, detail="Google account has no email")
+        user_id = str(uuid.uuid4())
+        username = await _unique_username_from_email(session, email)
+        db_user = User(
+            id=user_id,
+            username=username,
+            email=email,
+            password_hash=None,
+            google_id=google_id,
+            role="user",
+            created_at=datetime.now(),
+        )
+        session.add(db_user)
+        session.add(
+            UserProfile(
+                user_id=user_id,
+                display_name=idinfo.get("name") or username,
+                bio="",
+                avatar_url=idinfo.get("picture"),
+                accent_color=None,
+                privacy_dm=DEFAULT_DM_PRIVACY,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+            )
+        )
+
+    await session.commit()
+    await session.refresh(db_user)
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": db_user.id}, expires_delta=access_token_expires)

@@ -3,6 +3,7 @@ import { login } from '../auth.js';
 import { router } from '../router.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { t } from '../i18n.js';
+import { renderGoogleButton } from '../google-auth.js';
 
 export function render() {
     return `
@@ -51,6 +52,14 @@ export function render() {
                             ${escapeHtml(t('btn_signin'))}
                         </button>
                     </form>
+
+                    <div class="flex items-center gap-3 my-6">
+                        <div class="flex-1 h-px bg-white/10"></div>
+                        <span class="text-discord-text text-xs uppercase">или</span>
+                        <div class="flex-1 h-px bg-white/10"></div>
+                    </div>
+
+                    <div id="google-signin-button" class="flex justify-center"></div>
 
                     <div class="mt-6 text-center space-y-2">
                         <a href="/password-reset" class="text-discord-accent hover:underline text-sm">
@@ -102,6 +111,17 @@ export function mount() {
             }
         });
     }
+
+    renderGoogleButton('google-signin-button', {
+        onSuccess: async (result) => {
+            showToast(`${t('welcome_back')} ${result.user.username}`, 'success');
+            await router.navigate('/');
+        },
+        onError: (error) => {
+            errorDiv.textContent = error.message || t('login_failed');
+            errorDiv.classList.remove('hidden');
+        },
+    });
 }
 
 export function unmount() {}

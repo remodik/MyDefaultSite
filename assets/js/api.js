@@ -127,6 +127,13 @@ export const authApi = {
             body: JSON.stringify({ username, password }),
         });
     },
+
+    async googleLogin(credential) {
+        return apiRequest('/api/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential }),
+        });
+    },
     
     async getMe() {
         return apiRequest('/api/auth/me');
