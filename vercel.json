@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "node scripts/inject-config.js",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/api/:path*",
