@@ -53,6 +53,7 @@ from database import (
     get_session,
     init_models,
 )
+import storage
 from license.routers import license_router
 from payments import create_payment as yookassa_create_payment, fetch_payment as yookassa_fetch_payment
 
@@ -1293,10 +1294,23 @@ async def upload_my_avatar(
     raw_bytes = await file.read()
     avatar = _prepare_avatar_image(raw_bytes)
 
-    avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
-    avatar.save(avatar_path, format="JPEG", quality=90, optimize=True)
+    buffer = io.BytesIO()
+    avatar.save(buffer, format="JPEG", quality=90, optimize=True)
+    jpeg_bytes = buffer.getvalue()
 
-    profile.avatar_url = f"/uploads/avatars/{current_user.id}.jpg"
+    # Метка версии в URL, чтобы браузер не показывал старую картинку из кэша.
+    version = int(datetime.now().timestamp())
+
+    if storage.is_configured():
+        # Постоянное хранилище (S3/Selectel) — переживает перезапуски Render.
+        public_url = await asyncio.to_thread(storage.upload_avatar, current_user.id, jpeg_bytes)
+        profile.avatar_url = f"{public_url}?v={version}"
+    else:
+        # Локальная разработка: диск (эфемерный на бесплатном Render).
+        avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
+        avatar_path.write_bytes(jpeg_bytes)
+        profile.avatar_url = f"/uploads/avatars/{current_user.id}.jpg?v={version}"
+
     profile.updated_at = datetime.now()
     await session.commit()
     await session.refresh(profile)
@@ -1312,9 +1326,13 @@ async def delete_my_avatar(
     await ensure_db_connection(session)
     profile = await get_or_create_profile(session, current_user, commit_on_create=False)
 
-    avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
-    with suppress(FileNotFoundError):
-        avatar_path.unlink()
+    if storage.is_configured():
+        with suppress(Exception):
+            await asyncio.to_thread(storage.delete_avatar, current_user.id)
+    else:
+        avatar_path = AVATARS_DIR / f"{current_user.id}.jpg"
+        with suppress(FileNotFoundError):
+            avatar_path.unlink()
 
     profile.avatar_url = None
     profile.updated_at = datetime.now()
