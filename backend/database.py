@@ -287,6 +287,25 @@ async def init_models() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+        # create_all() создаёт недостающие таблицы, но не добавляет новые
+        # колонки в уже существующие. Для Postgres докатываем схему вручную
+        # идемпотентными ALTER-ами, чтобы вход через Google работал без
+        # отдельного запуска Alembic. На свежей БД (колонки уже созданы
+        # create_all) и при повторном старте это no-op.
+        if "postgresql" in DATABASE_URL:
+            try:
+                await conn.exec_driver_sql(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255)"
+                )
+                await conn.exec_driver_sql(
+                    "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"
+                )
+                await conn.exec_driver_sql(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id)"
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"WARNING: google_id schema upgrade skipped: {exc}")
+
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with async_session_factory() as session:
