@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лицензии · Панель управления</title>
+<style>
+  :root {
+    --bg: #1e1f22; --panel: #2b2d31; --panel2: #313338; --line: #3f4147;
+    --text: #dbdee1; --muted: #949ba4; --accent: #5865f2; --accent2: #4752c4;
+    --ok: #23a559; --warn: #f0b232; --danger: #f23f43; --unlocked: #9b59b6;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; }
+  a { color: var(--accent); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; }
+  button:hover { background: var(--accent2); }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  button.ghost:hover { background: var(--panel2); }
+  button.ok { background: var(--ok); } button.warn { background: var(--warn); color:#1e1f22; }
+  button.danger { background: var(--danger); }
+  button.sm { padding: 5px 10px; font-size: 12px; }
+  input, textarea, select { font-family: inherit; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 13px; width: 100%; }
+  textarea { resize: vertical; }
+  label { display:block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 120px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 14px; }
+  .muted { color: var(--muted); }
+  .pill { display:inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .pill.active { background: rgba(35,165,89,.16); color: var(--ok); }
+  .pill.suspended { background: rgba(240,178,50,.16); color: var(--warn); }
+  .pill.revoked { background: rgba(242,63,67,.16); color: var(--danger); }
+  .pill.unlocked { background: rgba(155,89,182,.18); color: var(--unlocked); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing:.04em; }
+  code { background: var(--bg); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+  header { display:flex; align-items:center; gap: 16px; padding: 12px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 16px; margin: 0; }
+  nav { display:flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: transparent; color: var(--muted); border-radius: 8px; }
+  nav button.on { background: var(--panel2); color: var(--text); }
+  main { max-width: 1080px; margin: 20px auto; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 12px; }
+  .clickable { cursor: pointer; } .clickable:hover { border-color: var(--accent); }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 26px; text-align:center;
+    color: var(--muted); transition: .15s; } .drop.hot { border-color: var(--accent); color: var(--text); }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display:flex; align-items:center;
+    justify-content:center; z-index: 50; padding: 20px; }
+  .modal { background: var(--panel2); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px; max-width: 640px; width: 100%; max-height: 90vh; overflow:auto; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel2); border:1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 16px; z-index: 100; max-width: 340px; }
+  .toast.err { border-left-color: var(--danger); }
+  .flex-between { display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+  .keybox { font-family: ui-monospace, monospace; background: var(--bg); padding: 12px; border-radius: 8px;
+    word-break: break-all; border: 1px solid var(--accent); }
+  .del { color: var(--danger); } .diff-add{background:rgba(35,165,89,.18);} .diff-del{background:rgba(242,63,67,.18);}
+  .hidden { display: none; }
+  .small { font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="login" class="modal-bg">
+  <div class="modal" style="max-width:380px">
+    <h2 style="margin-top:0">Вход администратора</h2>
+    <p class="muted small">Используется тот же аккаунт, что и на сайте (роль admin).</p>
+    <label>Логин</label><input id="l-user" autocomplete="username">
+    <label>Пароль</label><input id="l-pass" type="password" autocomplete="current-password">
+    <div style="margin-top:14px"><button id="l-btn" style="width:100%">Войти</button></div>
+    <div id="l-err" class="del small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<header class="hidden" id="hdr">
+  <h1>🔐 Лицензии</h1>
+  <nav id="nav">
+    <button data-view="dashboard" class="on">Дашборд</button>
+    <button data-view="projects">Проекты</button>
+    <button data-view="clients">Клиенты и лицензии</button>
+    <button data-view="security">Security events</button>
+    <button data-view="logs">Логи доступа</button>
+  </nav>
+  <div style="margin-left:auto"><button class="ghost sm" id="logout">Выйти</button></div>
+</header>
+
+<main id="app" class="hidden"></main>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+const API = "/api/v1/licensing/admin";
+const TOKEN_KEY = "licensing_admin_token";
+let token = localStorage.getItem(TOKEN_KEY) || "";
+
+// ---- api helpers ----
+async function api(path, opts = {}) {
+  const headers = Object.assign({ "Authorization": "Bearer " + token }, opts.headers || {});
+  if (opts.body && !(opts.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(API + path, Object.assign({}, opts, { headers }));
+  if (res.status === 401 || res.status === 403) { logout(); throw new Error("Не авторизован"); }
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
+  return data;
+}
+function toast(msg, err = false) {
+  const t = document.createElement("div");
+  t.className = "toast" + (err ? " err" : "");
+  t.textContent = msg;
+  document.getElementById("toast-root").appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+function esc(s) { return (s ?? "").toString().replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function fmtDate(s) { return s ? new Date(s).toLocaleString() : "—"; }
+function pill(status) { return `<span class="pill ${status}">${status}</span>`; }
+
+// ---- modal ----
+function modal(html) {
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `<div class="modal-bg"><div class="modal">${html}</div></div>`;
+  root.querySelector(".modal-bg").addEventListener("click", e => { if (e.target.classList.contains("modal-bg")) closeModal(); });
+}
+function closeModal() { document.getElementById("modal-root").innerHTML = ""; }
+
+// ---- auth ----
+async function login() {
+  const username = document.getElementById("l-user").value.trim();
+  const password = document.getElementById("l-pass").value;
+  document.getElementById("l-err").textContent = "";
+  try {
+    const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Ошибка входа");
+    if ((data.user || {}).role !== "admin") throw new Error("Требуется учётная запись администратора");
+    token = data.access_token; localStorage.setItem(TOKEN_KEY, token);
+    boot();
+  } catch (e) { document.getElementById("l-err").textContent = e.message; }
+}
+function logout() {
+  token = ""; localStorage.removeItem(TOKEN_KEY);
+  document.getElementById("hdr").classList.add("hidden");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+function boot() {
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("hdr").classList.remove("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  navigate("dashboard");
+}
+
+// ---- navigation ----
+const views = {};
+function navigate(name, arg) {
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === name));
+  (views[name] || views.dashboard)(arg);
+}
+
+// ================= DASHBOARD =================
+views.dashboard = async () => {
+  const app = document.getElementById("app");
+  app.innerHTML = `<h2>Дашборд</h2><div id="dash">Загрузка…</div>`;
+  try {
+    const d = await api("/dashboard");
+    const proj = d.projects.map(p => `
+      <div class="card"><div class="flex-between"><b>${esc(p.name)}</b><code>${esc(p.slug)}</code></div>
+      <div class="row" style="margin-top:8px">
+        <div>${pill("active")} ${p.active}</div><div>${pill("suspended")} ${p.suspended}</div>
+        <div>${pill("revoked")} ${p.revoked}</div><div>${pill("unlocked")} ${p.unlocked}</div>
+      </div></div>`).join("") || `<p class="muted">Пока нет проектов.</p>`;
+    const a = d.anomalies;
+    const anomHtml = `
+      <div class="card"><b>Аномалии (последний час)</b>
+        <p class="small">Открытых security-флагов: <b>${a.open_security_flags}</b></p>
+        ${a.failing_ips.length ? `<p class="small">IP с множеством отказов:</p><ul class="small">${
+          a.failing_ips.map(x => `<li><code>${esc(x.ip)}</code> — ${x.failures} отказов</li>`).join("")}</ul>` : ""}
+        ${a.keys_multi_fingerprint.length ? `<p class="small">Ключи с разных устройств:</p><ul class="small">${
+          a.keys_multi_fingerprint.map(x => `<li>Лицензия #${x.license_id} — ${x.fingerprints} fingerprint</li>`).join("")}</ul>` : ""}
+        ${(!a.failing_ips.length && !a.keys_multi_fingerprint.length) ? `<p class="muted small">Подозрительной активности не обнаружено.</p>` : ""}
+      </div>`;
+    const recent = `<div class="card"><b>Последние обращения</b><table><thead><tr>
+      <th>Время</th><th>Лиц.</th><th>Режим</th><th>Entrypoint</th><th>IP</th><th>Итог</th></tr></thead><tbody>${
+      d.recent_access.map(r => `<tr><td class="small">${fmtDate(r.requested_at)}</td><td>${r.license_id ?? "—"}</td>
+        <td>${esc(r.mode) || "—"}</td><td class="small">${esc(r.entrypoint) || "—"}</td><td class="small">${esc(r.ip_address)}</td>
+        <td>${r.success ? "✅" : `<span class="del">✕ ${esc(r.reason) || ""}</span>`}</td></tr>`).join("")}</tbody></table></div>`;
+    document.getElementById("dash").innerHTML = `<div class="grid">${proj}</div>${anomHtml}${recent}`;
+  } catch (e) { toast(e.message, true); }
+};
+
+// ================= PROJECTS =================
+views.projects = async () => {
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="flex-between"><h2>Проекты</h2>
+    <button onclick="newProject()">+ Новый проект</button></div><div id="plist">Загрузка…</div>`;
+  try {
+    const list = await api("/projects");
+    document.getElementById("plist").innerHTML = `<div class="grid">${
+      list.map(p => `<div class="card clickable" onclick="openProject(${p.id})">
+        <div class="flex-between"><b>${esc(p.name)}</b><code>${esc(p.slug)}</code></div>
+        <p class="muted small">${esc(p.description) || "без описания"}</p>
+        <div class="small muted">${p.file_count} файлов · ${p.active_licenses} активных лицензий</div>
+      </div>`).join("") || `<p class="muted">Проектов пока нет.</p>`}</div>`;
+  } catch (e) { toast(e.message, true); }
+};
+function newProject() {
+  modal(`<h3>Новый проект</h3>
+    <label>Название</label><input id="np-name">
+    <label>Slug (латиницей, без пробелов)</label><input id="np-slug" placeholder="economy-bot">
+    <label>Описание</label><textarea id="np-desc" rows="2"></textarea>
+    <div class="row" style="margin-top:14px"><button onclick="createProject()">Создать</button>
+    <button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+async function createProject() {
+  try {
+    await api("/projects", { method: "POST", body: {
+      name: document.getElementById("np-name").value.trim(),
+      slug: document.getElementById("np-slug").value.trim(),
+      description: document.getElementById("np-desc").value.trim() } });
+    closeModal(); toast("Проект создан"); views.projects();
+  } catch (e) { toast(e.message, true); }
+}
+async function openProject(id) {
+  try {
+    const p = await api("/projects/" + id);
+    const files = p.files.map(f => `<tr>
+      <td><code>${esc(f.relative_path)}</code></td>
+      <td class="small">v${f.version}</td>
+      <td class="small muted">${esc(f.checksum).slice(0,10)}…</td>
+      <td>${f.is_enabled ? pill("active") : `<span class="pill revoked">off</span>`}</td>
+      <td style="white-space:nowrap">
+        <button class="ghost sm" onclick="editFile(${f.id})">Открыть</button>
+        <button class="ghost sm" onclick="toggleFile(${f.id}, ${!f.is_enabled}, ${id})">${f.is_enabled ? "Выкл" : "Вкл"}</button>
+        <button class="ghost sm del" onclick="deleteFile(${f.id}, ${id})">✕</button>
+      </td></tr>`).join("");
+    const app = document.getElementById("app");
+    app.innerHTML = `<button class="ghost sm" onclick="views.projects()">← Проекты</button>
+      <div class="flex-between" style="margin-top:8px"><h2>${esc(p.name)} <code>${esc(p.slug)}</code></h2></div>
+      <div class="card"><b>Файлы проекта (${p.files.length})</b>
+        <table><thead><tr><th>Путь</th><th>Вер.</th><th>Checksum</th><th></th><th></th></tr></thead>
+        <tbody>${files || `<tr><td colspan="5" class="muted">Файлов пока нет.</td></tr>`}</tbody></table></div>
+      <div class="card"><b>Загрузить файлы</b>
+        <p class="small muted">Перетащите .py файлы или папку проекта — относительные пути сохраняются. Повторная загрузка того же пути создаёт новую версию.</p>
+        <div class="drop" id="drop">Перетащите сюда файлы / папку<br><span class="small">или</span><br>
+          <div class="row" style="margin-top:8px;max-width:420px">
+            <button class="ghost sm" onclick="document.getElementById('fi').click()">Выбрать файлы</button>
+            <button class="ghost sm" onclick="document.getElementById('fd').click()">Выбрать папку</button>
+            <button class="ghost sm" onclick="addFileManual(${id})">Добавить вручную</button>
+          </div>
+        </div>
+        <input id="fi" type="file" multiple accept=".py" class="hidden">
+        <input id="fd" type="file" webkitdirectory directory multiple class="hidden">
+      </div>`;
+    setupDrop(id);
+  } catch (e) { toast(e.message, true); }
+}
+function setupDrop(projectId) {
+  const drop = document.getElementById("drop");
+  const fi = document.getElementById("fi"), fd = document.getElementById("fd");
+  const handle = files => collectFiles(files, projectId);
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hot"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("hot"); }));
+  drop.addEventListener("drop", async e => {
+    const items = e.dataTransfer.items;
+    if (items && items[0] && items[0].webkitGetAsEntry) {
+      const out = []; await Promise.all([...items].map(it => walkEntry(it.webkitGetAsEntry(), "", out)));
+      uploadCollected(out, projectId);
+    } else { handle(e.dataTransfer.files); }
+  });
+  fi.addEventListener("change", () => handle(fi.files));
+  fd.addEventListener("change", () => handle(fd.files));
+}
+function walkEntry(entry, path, out) {
+  return new Promise(resolve => {
+    if (!entry) return resolve();
+    if (entry.isFile) entry.file(f => { out.push({ file: f, path: (path + f.name) }); resolve(); });
+    else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      reader.readEntries(async entries => {
+        await Promise.all(entries.map(e => walkEntry(e, path + entry.name + "/", out)));
+        resolve();
+      });
+    } else resolve();
+  });
+}
+async function collectFiles(fileList, projectId) {
+  const out = [];
+  for (const f of fileList) out.push({ file: f, path: f.webkitRelativePath || f.name });
+  uploadCollected(out, projectId);
+}
+async function uploadCollected(items, projectId) {
+  const py = items.filter(i => i.path.endsWith(".py"));
+  if (!py.length) return toast("Нет .py файлов", true);
+  try {
+    const files = await Promise.all(py.map(async i => {
+      let rp = i.path.replace(/\\/g, "/").replace(/^\/+/, "");
+      // Drop a leading top folder if a whole folder was dropped.
+      return { relative_path: rp, content: await i.file.text() };
+    }));
+    await api(`/projects/${projectId}/files`, { method: "POST", body: { files } });
+    toast(`Загружено файлов: ${files.length}`); openProject(projectId);
+  } catch (e) { toast(e.message, true); }
+}
+function addFileManual(projectId) {
+  modal(`<h3>Добавить файл</h3>
+    <label>Относительный путь</label><input id="mf-path" placeholder="economy/core.py">
+    <label>Содержимое (.py)</label><textarea id="mf-content" rows="12" style="font-family:ui-monospace,monospace"></textarea>
+    <div class="row" style="margin-top:12px"><button onclick="saveManual(${projectId})">Сохранить</button>
+    <button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+async function saveManual(projectId) {
+  try {
+    await api(`/projects/${projectId}/files`, { method: "POST", body: { files: [{
+      relative_path: document.getElementById("mf-path").value.trim(),
+      content: document.getElementById("mf-content").value }] } });
+    closeModal(); toast("Файл сохранён"); openProject(projectId);
+  } catch (e) { toast(e.message, true); }
+}
+async function editFile(fileId) {
+  try {
+    const f = await api("/files/" + fileId);
+    window._editFile = f;
+    modal(`<h3><code>${esc(f.relative_path)}</code> <span class="muted small">v${f.version}</span></h3>
+      <textarea id="ef-content" rows="16" style="font-family:ui-monospace,monospace">${esc(f.content)}</textarea>
+      <div class="row" style="margin-top:12px">
+        <button onclick="previewDiff(${f.project_id})">Показать diff и сохранить новую версию</button>
+        <button class="ghost" onclick="closeModal()">Закрыть</button></div>`);
+  } catch (e) { toast(e.message, true); }
+}
+function previewDiff(projectId) {
+  const oldC = (window._editFile.content || "").split("\n");
+  const newC = document.getElementById("ef-content").value.split("\n");
+  const rows = []; const n = Math.max(oldC.length, newC.length);
+  for (let i = 0; i < n; i++) {
+    const a = oldC[i], b = newC[i];
+    if (a === b) rows.push(`<div class="small">${esc(a ?? "")}</div>`);
+    else {
+      if (a !== undefined) rows.push(`<div class="small diff-del">- ${esc(a)}</div>`);
+      if (b !== undefined) rows.push(`<div class="small diff-add">+ ${esc(b)}</div>`);
+    }
+  }
+  const f = window._editFile;
+  modal(`<h3>Предпросмотр изменений · <code>${esc(f.relative_path)}</code></h3>
+    <div class="card" style="max-height:340px;overflow:auto;font-family:ui-monospace,monospace">${rows.join("")}</div>
+    <div class="row"><button onclick="commitFile(${projectId})">Сохранить как v${f.version + 1}</button>
+    <button class="ghost" onclick="editFile(${f.id})">Назад</button></div>`);
+}
+async function commitFile(projectId) {
+  try {
+    const f = window._editFile;
+    await api(`/projects/${projectId}/files`, { method: "POST", body: { files: [{
+      relative_path: f.relative_path, content: document.getElementById("ef-content")?.value ?? f.content }] } });
+    closeModal(); toast("Новая версия сохранена"); openProject(projectId);
+  } catch (e) { toast(e.message, true); }
+}
+async function toggleFile(fileId, enable, projectId) {
+  try { await api("/files/" + fileId, { method: "PATCH", body: { is_enabled: enable } });
+    toast("Обновлено"); openProject(projectId); } catch (e) { toast(e.message, true); }
+}
+async function deleteFile(fileId, projectId) {
+  if (!confirm("Удалить файл из проекта?")) return;
+  try { await api("/files/" + fileId, { method: "DELETE" }); toast("Удалено"); openProject(projectId); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ================= CLIENTS & LICENSES =================
+views.clients = async () => {
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="flex-between"><h2>Клиенты и лицензии</h2>
+    <div><button class="ghost" onclick="newClient()">+ Клиент</button>
+    <button onclick="newLicense()">+ Лицензия</button></div></div><div id="clist">Загрузка…</div>`;
+  try {
+    const clients = await api("/clients");
+    const blocks = await Promise.all(clients.map(async c => {
+      const lics = await api("/licenses?client_id=" + c.id);
+      const rows = lics.map(l => `<tr>
+        <td>#${l.id} <code>…${esc(l.key_last4)}</code></td>
+        <td>${esc(l.project_slug)}</td><td>${pill(l.status)}</td>
+        <td class="small">${esc(l.plan)}${l.expires_at ? " · до " + fmtDate(l.expires_at) : " · ∞"}</td>
+        <td style="white-space:nowrap">
+          <button class="ghost sm" onclick="manageLicense(${l.id})">Управление</button>
+        </td></tr>`).join("");
+      return `<div class="card"><div class="flex-between">
+        <div><b>${esc(c.name)}</b> <span class="muted small">${esc(c.contact) || ""}</span></div>
+        <button class="ghost sm" onclick="newLicense(${c.id})">+ лицензия</button></div>
+        <table><tbody>${rows || `<tr><td class="muted small">Лицензий нет</td></tr>`}</tbody></table></div>`;
+    }));
+    document.getElementById("clist").innerHTML = blocks.join("") || `<p class="muted">Клиентов пока нет.</p>`;
+  } catch (e) { toast(e.message, true); }
+};
+function newClient() {
+  modal(`<h3>Новый клиент</h3><label>Имя</label><input id="nc-name">
+    <label>Контакт</label><input id="nc-contact" placeholder="email / telegram">
+    <div class="row" style="margin-top:12px"><button onclick="createClient()">Создать</button>
+    <button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+async function createClient() {
+  try { await api("/clients", { method: "POST", body: {
+    name: document.getElementById("nc-name").value.trim(),
+    contact: document.getElementById("nc-contact").value.trim() || null } });
+    closeModal(); toast("Клиент создан"); views.clients(); } catch (e) { toast(e.message, true); }
+}
+async function newLicense(clientId) {
+  try {
+    const [clients, projects] = await Promise.all([api("/clients"), api("/projects")]);
+    modal(`<h3>Новая лицензия</h3>
+      <label>Клиент</label><select id="nl-client">${clients.map(c =>
+        `<option value="${c.id}" ${c.id===clientId?"selected":""}>${esc(c.name)}</option>`).join("")}</select>
+      <label>Проект</label><select id="nl-project">${projects.map(p =>
+        `<option value="${p.id}">${esc(p.name)} (${esc(p.slug)})</option>`).join("")}</select>
+      <label>Тариф</label><select id="nl-plan">
+        <option value="month">Месяц</option><option value="year">Год</option>
+        <option value="lifetime" selected>Навсегда</option></select>
+      <label>Hardware fingerprint (опционально)</label><input id="nl-fp" placeholder="привязка к устройству">
+      <label>Заметка</label><input id="nl-note">
+      <div class="row" style="margin-top:12px"><button onclick="createLicense()">Создать и показать ключ</button>
+      <button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+  } catch (e) { toast(e.message, true); }
+}
+async function createLicense() {
+  try {
+    const l = await api("/licenses", { method: "POST", body: {
+      client_id: +document.getElementById("nl-client").value,
+      project_id: +document.getElementById("nl-project").value,
+      plan: document.getElementById("nl-plan").value,
+      hardware_fingerprint: document.getElementById("nl-fp").value.trim() || null,
+      note: document.getElementById("nl-note").value.trim() || null } });
+    modal(`<h3>Лицензия создана</h3>
+      <p class="small muted">Ключ показывается <b>один раз</b>. Скопируйте и передайте клиенту — в БД хранится только хеш.</p>
+      <div class="keybox" id="keyout">${esc(l.license_key)}</div>
+      <div class="row" style="margin-top:12px">
+        <button onclick="navigator.clipboard.writeText('${esc(l.license_key)}').then(()=>toast('Скопировано'))">Скопировать</button>
+        <button class="ghost" onclick="closeModal(); views.clients()">Готово</button></div>`);
+  } catch (e) { toast(e.message, true); }
+}
+async function manageLicense(id) {
+  try {
+    const lics = await api("/licenses");
+    const l = lics.find(x => x.id === id);
+    const mods = await api(`/licenses/${id}/modules`);
+    const modRows = mods.map(m => `<tr>
+      <td><code>${esc(m.relative_path)}</code></td>
+      <td>${m.global_enabled ? "" : `<span class="muted small">глобально выкл</span>`}
+          ${m.effective_enabled ? pill("active") : `<span class="pill revoked">нет доступа</span>`}</td>
+      <td style="white-space:nowrap">
+        <button class="ghost sm" onclick="setModule(${id}, ${m.project_file_id}, true)">Вкл</button>
+        <button class="ghost sm" onclick="setModule(${id}, ${m.project_file_id}, false)">Выкл</button>
+        <button class="ghost sm" onclick="clearModule(${id}, ${m.project_file_id})">Сброс</button>
+        <span class="small muted">${m.override===null?"наследует":(m.override?"override: on":"override: off")}</span>
+      </td></tr>`).join("");
+    modal(`<h3>Лицензия #${l.id} <code>…${esc(l.key_last4)}</code> ${pill(l.status)}</h3>
+      <p class="small muted">${esc(l.client_name)} · проект <code>${esc(l.project_slug)}</code> · ${esc(l.plan)}
+        ${l.expires_at ? "· до " + fmtDate(l.expires_at) : "· бессрочно"}</p>
+      <div class="row">
+        <button class="warn sm" onclick="setStatus(${id},'suspended')">Suspend</button>
+        <button class="ok sm" onclick="setStatus(${id},'active')">Reactivate</button>
+        <button class="danger sm" onclick="revokeLic(${id})">Revoke</button>
+        <button class="ghost sm" onclick="setStatus(${id},'unlocked')">Unlocked (передан)</button>
+      </div>
+      <label>Продлить / изменить тариф</label>
+      <div class="row"><select id="ext-plan"><option value="month">Месяц</option><option value="year">Год</option>
+        <option value="lifetime">Навсегда</option></select>
+        <button class="ghost sm" onclick="extendLic(${id})">Применить</button></div>
+      <h4 style="margin-bottom:4px">Модули для этого клиента</h4>
+      <p class="small muted">Персональное вкл/выкл файлов, не затрагивая остальных клиентов.</p>
+      <table><tbody>${modRows || `<tr><td class="muted small">В проекте нет файлов</td></tr>`}</tbody></table>
+      <div style="margin-top:12px"><button class="ghost" onclick="closeModal()">Закрыть</button></div>`);
+  } catch (e) { toast(e.message, true); }
+}
+async function setStatus(id, status) {
+  try { await api(`/licenses/${id}/status`, { method: "PATCH", body: { status } });
+    toast("Статус: " + status); manageLicense(id); views.clients(); } catch (e) { toast(e.message, true); }
+}
+async function revokeLic(id) {
+  if (!confirm("Отозвать лицензию? Это необратимо — доступ прекратится немедленно.")) return;
+  await setStatus(id, "revoked");
+}
+async function extendLic(id) {
+  try { await api(`/licenses/${id}/extend`, { method: "PATCH", body: { plan: document.getElementById("ext-plan").value } });
+    toast("Обновлено"); manageLicense(id); } catch (e) { toast(e.message, true); }
+}
+async function setModule(licId, fileId, enabled) {
+  try { await api(`/licenses/${licId}/modules`, { method: "PATCH", body: { project_file_id: fileId, is_enabled: enabled } });
+    manageLicense(licId); } catch (e) { toast(e.message, true); }
+}
+async function clearModule(licId, fileId) {
+  try { await api(`/licenses/${licId}/modules/${fileId}`, { method: "DELETE" }); manageLicense(licId); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ================= SECURITY EVENTS =================
+views.security = async () => {
+  const app = document.getElementById("app");
+  app.innerHTML = `<h2>Security events</h2>
+    <p class="muted small">Автоматические срабатывания kill-switch. Подтвердите revoke или снимите подозрение.</p>
+    <div id="sec">Загрузка…</div>`;
+  try {
+    const events = await api("/security-events");
+    document.getElementById("sec").innerHTML = `<div class="card"><table><thead><tr>
+      <th>Время</th><th>Лиц.</th><th>Тип</th><th>Действие</th><th>Детали</th><th>Статус</th><th></th></tr></thead><tbody>${
+      events.map(e => `<tr>
+        <td class="small">${fmtDate(e.detected_at)}</td>
+        <td>#${e.license_id} <code>…${esc(e.license_last4)||""}</code></td>
+        <td><span class="pill suspended">${esc(e.flag_type)}</span></td>
+        <td class="small">${esc(e.auto_action)||"—"}</td>
+        <td class="small muted">${esc(e.details)||""}</td>
+        <td>${e.resolved ? `<span class="muted small">${esc(e.resolution)}</span>` : `<span class="del small">открыт</span>`}</td>
+        <td style="white-space:nowrap">${e.resolved ? "" : `
+          <button class="danger sm" onclick="resolveEvent(${e.id},'revoke')">Revoke</button>
+          <button class="ghost sm" onclick="resolveEvent(${e.id},'dismiss')">Снять</button>`}</td>
+      </tr>`).join("") || `<tr><td colspan="7" class="muted">Событий нет.</td></tr>`}</tbody></table></div>`;
+  } catch (e) { toast(e.message, true); }
+};
+async function resolveEvent(id, resolution) {
+  if (resolution === "revoke" && !confirm("Отозвать лицензию?")) return;
+  try { await api(`/security-events/${id}`, { method: "PATCH", body: { resolution } });
+    toast(resolution === "revoke" ? "Лицензия отозвана" : "Подозрение снято"); views.security(); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ================= ACCESS LOGS =================
+let logState = { offset: 0, limit: 100 };
+views.logs = async () => {
+  const app = document.getElementById("app");
+  app.innerHTML = `<h2>Логи доступа</h2>
+    <div class="card"><div class="row">
+      <div><label>Проект ID</label><input id="lf-proj" type="number"></div>
+      <div><label>Лицензия ID</label><input id="lf-lic" type="number"></div>
+      <div><label>Итог</label><select id="lf-succ"><option value="">все</option>
+        <option value="true">успех</option><option value="false">отказ</option></select></div>
+      <div><label>С даты</label><input id="lf-from" type="date"></div>
+      <div><label>По дату</label><input id="lf-to" type="date"></div>
+      <div style="align-self:end"><button onclick="logState.offset=0;loadLogs()">Фильтр</button></div>
+    </div></div><div id="logs">Загрузка…</div>`;
+  loadLogs();
+};
+async function loadLogs() {
+  const q = new URLSearchParams();
+  const proj = document.getElementById("lf-proj")?.value, lic = document.getElementById("lf-lic")?.value;
+  const succ = document.getElementById("lf-succ")?.value, from = document.getElementById("lf-from")?.value, to = document.getElementById("lf-to")?.value;
+  if (proj) q.set("project_id", proj); if (lic) q.set("license_id", lic);
+  if (succ) q.set("success", succ);
+  if (from) q.set("date_from", from + "T00:00:00"); if (to) q.set("date_to", to + "T23:59:59");
+  q.set("limit", logState.limit); q.set("offset", logState.offset);
+  try {
+    const d = await api("/logs?" + q.toString());
+    document.getElementById("logs").innerHTML = `<div class="card">
+      <div class="flex-between"><b>Записей: ${d.total}</b>
+        <div><button class="ghost sm" onclick="pageLogs(-1)" ${logState.offset<=0?"disabled":""}>←</button>
+        <span class="small muted">${logState.offset+1}–${Math.min(logState.offset+logState.limit, d.total)}</span>
+        <button class="ghost sm" onclick="pageLogs(1)" ${logState.offset+logState.limit>=d.total?"disabled":""}>→</button></div></div>
+      <table><thead><tr><th>Время</th><th>Лиц.</th><th>Режим</th><th>Entrypoint</th><th>IP</th><th>FP</th><th>Итог</th><th>Причина</th></tr></thead>
+      <tbody>${d.items.map(r => `<tr>
+        <td class="small">${fmtDate(r.requested_at)}</td><td>${r.license_id ?? (r.attempted_key_last4?("…"+esc(r.attempted_key_last4)):"—")}</td>
+        <td class="small">${esc(r.mode)||"—"}</td><td class="small">${esc(r.entrypoint)||"—"}</td>
+        <td class="small">${esc(r.ip_address)||"—"}</td><td class="small muted">${(esc(r.hardware_fingerprint)||"").slice(0,8)}</td>
+        <td>${r.success ? "✅" : "✕"}</td><td class="small">${esc(r.reason)||""}</td></tr>`).join("")}</tbody></table></div>`;
+  } catch (e) { toast(e.message, true); }
+}
+function pageLogs(dir) { logState.offset = Math.max(0, logState.offset + dir * logState.limit); loadLogs(); }
+
+// ---- wire up ----
+document.getElementById("l-btn").addEventListener("click", login);
+document.getElementById("l-pass").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+document.getElementById("logout").addEventListener("click", logout);
+document.getElementById("nav").addEventListener("click", e => { if (e.target.dataset.view) navigate(e.target.dataset.view); });
+if (token) boot();
+</script>
+</body>
+</html>

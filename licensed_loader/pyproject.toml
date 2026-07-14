@@ -1,0 +1,17 @@
+[project]
+name = "licensed-loader"
+version = "1.0.0"
+description = "Client library for licensed, server-gated Python projects (Discord bots)."
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.24",
+    "cryptography>=42.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["licensed_loader"]
+package-dir = { "licensed_loader" = "." }

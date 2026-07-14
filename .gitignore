@@ -12,3 +12,5 @@
 /backend/.venv
 /backend/.env
 /backend/.env.*
+/backend/licensing/__pycache__
+/licensed_loader/__pycache__
