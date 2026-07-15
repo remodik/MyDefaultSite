@@ -59,6 +59,10 @@ class ValidateResponse(BaseModel):
     status: str | None = None
     expires_at: str | None = None
     revalidate_after_seconds: int
+    # Dotted names of the modules this license may currently use (global
+    # enable AND per-license override). Lets a *running* client notice that a
+    # module was switched off without restarting. Only sent when valid.
+    modules: list[str] | None = None
 
 
 # --------------------------------------------------------------------------- #

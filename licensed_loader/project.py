@@ -17,6 +17,7 @@ import json
 import logging
 import sys
 import time
+from contextlib import suppress
 from typing import Any, Callable
 
 from . import _http, crypto
@@ -43,6 +44,10 @@ class LicensedProject:
         verify_ssl: bool = True,
         on_revoke: Callable[[], None] | None = None,
         anti_debug: bool = True,
+        denial_message: str = (
+            "Этот модуль недоступен: требуется оплата или продление лицензии. "
+            "Свяжитесь с администратором."
+        ),
     ) -> None:
         if mode not in ("local", "remote"):
             raise ValueError("mode must be 'local' or 'remote'")
@@ -58,11 +63,19 @@ class LicensedProject:
         self.verify_ssl = verify_ssl
         self.on_revoke = on_revoke
         self.anti_debug = anti_debug
+        self.denial_message = denial_message
 
         self._package: LoadedPackage | None = None
         self._blocked = False
         self._revalidate_task: asyncio.Task | None = None
         self._payload_received_at: float | None = None
+        # Every module the project ships (dotted names), filled on load().
+        self._project_modules: set[str] = set()
+        # Modules currently allowed for this license, refreshed by /validate.
+        # None = not known yet (never assume "disabled" without an answer).
+        self._enabled_modules: set[str] | None = None
+        self._last_validate: float = 0.0
+        self._status: str | None = None
 
     # -- helpers ------------------------------------------------------------ #
     def _guard(self) -> None:
@@ -111,6 +124,12 @@ class LicensedProject:
         if self._package is not None:
             self._package.unload()
         self._package = LoadedPackage(sources, guard=self._guard)
+
+        # Remember what the project consists of, and treat everything we were
+        # just served as enabled until /validate says otherwise.
+        self._project_modules = {_dotted_name(p) for p in sources} - {""}
+        self._enabled_modules = set(self._project_modules)
+        self._last_validate = time.monotonic()
 
         self._start_revalidation()
         self._check_debugger()
@@ -172,6 +191,35 @@ class LicensedProject:
             return
         self._revalidate_task = loop.create_task(self._revalidation_loop())
 
+    def start_revalidation(self) -> None:
+        """(Re)start the revalidation loop in the *current* event loop.
+
+        Idempotent. Needed when :meth:`load` ran in a throw-away loop — e.g. a
+        synchronous py-cord ``load_extension`` before ``bot.run()`` — because
+        the background task dies with that loop. Call it once the real loop is
+        running (the generated Discord extension does this on ``on_ready``).
+        """
+        if self.revalidate_interval <= 0 or self._blocked:
+            return
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # no loop yet; load()/this will be called again later
+
+        task = self._revalidate_task
+        if task is not None:
+            try:
+                alive = not task.done() and task.get_loop() is running
+            except RuntimeError:  # noqa: BLE001 - loop already closed
+                alive = False
+            if alive:
+                return
+            with suppress(Exception):
+                task.cancel()
+            self._revalidate_task = None
+
+        self._start_revalidation()
+
     async def _revalidation_loop(self) -> None:
         while not self._blocked:
             try:
@@ -181,8 +229,9 @@ class LicensedProject:
                     timeout=self.http_timeout, retries=1, verify_ssl=self.verify_ssl,
                 )
                 if not data.get("valid", False):
-                    self._block()
+                    self._block(data.get("status"))
                     return
+                self._absorb_validate(data)
             except ServerUnavailable:
                 # Transient outage must not disable a paying client — try again
                 # next cycle rather than blocking.
@@ -195,8 +244,18 @@ class LicensedProject:
             except Exception as exc:  # noqa: BLE001
                 log.debug("licensed_loader: revalidation error: %s", exc)
 
-    def _block(self) -> None:
+    def _absorb_validate(self, data: dict[str, Any]) -> None:
+        """Apply a successful /validate response (status + allowed modules)."""
+        self._last_validate = time.monotonic()
+        self._status = data.get("status")
+        modules = data.get("modules")
+        if isinstance(modules, list):
+            self._enabled_modules = {str(m) for m in modules}
+
+    def _block(self, status: str | None = None) -> None:
         self._blocked = True
+        self._status = status or "revoked"
+        self._enabled_modules = set()
         log.warning("licensed_loader: license revoked/invalid — blocking further use")
         if self._package is not None:
             self._package.unload()
@@ -206,6 +265,53 @@ class LicensedProject:
                 self.on_revoke()
             except Exception:  # noqa: BLE001
                 pass
+
+    # -- module gating ------------------------------------------------------ #
+    @property
+    def status(self) -> str | None:
+        """Last known license status ('active' / 'suspended' / 'revoked' / …)."""
+        return self._status
+
+    def owns_module(self, dotted: str | None) -> bool:
+        """Is ``dotted`` a module of this licensed project (not host bot code)?"""
+        if not dotted:
+            return False
+        if dotted in self._project_modules:
+            return True
+        # A submodule of a project package, e.g. "economy.core" under "economy".
+        return any(dotted.startswith(m + ".") for m in self._project_modules)
+
+    def module_allowed(self, dotted: str | None) -> bool:
+        """May ``dotted`` run right now?
+
+        Returns True for anything that isn't ours (never interfere with the
+        host bot's own code) and while the allowed set is still unknown.
+        """
+        if not self.owns_module(dotted):
+            return True
+        if self._blocked:
+            return False
+        if self._enabled_modules is None:
+            return True  # no answer from the server yet — fail open
+        assert dotted is not None
+        if dotted in self._enabled_modules:
+            return True
+        return any(dotted.startswith(m + ".") for m in self._enabled_modules)
+
+    async def ensure_fresh(self, max_age: float = 60.0) -> None:
+        """Revalidate if the cached state is older than ``max_age`` seconds.
+
+        Cheap gate for per-command checks: keeps reaction to an admin toggle
+        within ``max_age`` without polling the server on every interaction.
+        """
+        # Independent of the background poller: that one keeps state warm,
+        # this one guarantees freshness at the moment of a check.
+        if self._blocked:
+            return
+        if (time.monotonic() - self._last_validate) < max_age:
+            return
+        with suppress(Exception):
+            await self.revalidate_now()
 
     async def revalidate_now(self) -> bool:
         """Force an immediate revalidation. Returns True if still valid."""
@@ -220,9 +326,30 @@ class LicensedProject:
             self._block()
             return False
         if not data.get("valid", False):
-            self._block()
+            self._block(data.get("status"))
             return False
+        self._absorb_validate(data)
         return True
+
+    def attach_discord(
+        self,
+        bot: Any,
+        *,
+        message: str | None = None,
+        stale_after: float = 60.0,
+        on_denied: Callable[[Any, str], Any] | None = None,
+    ) -> list[str]:
+        """Заблокировать команды бота, когда модуль выключен админом.
+
+        Ставит глобальную проверку: команды из модулей этого проекта не
+        выполняются, если модуль выключен или лицензия неактивна — вместо
+        этого пользователю уходит ``message``. Чужие команды не затрагиваются.
+        """
+        from licensed_loader.discord_guard import attach
+
+        return attach(
+            bot, self, message=message, stale_after=stale_after, on_denied=on_denied
+        )
 
     async def aclose(self) -> None:
         """Stop the revalidation loop and unload the package."""
@@ -251,3 +378,15 @@ def _default_fingerprint() -> str:
         return hardware_fingerprint()
     except Exception:  # noqa: BLE001
         return "unknown"
+
+
+def _dotted_name(relative_path: str) -> str:
+    """``economy/core.py`` -> ``economy.core``; ``economy/__init__.py`` -> ``economy``."""
+    path = relative_path.replace("\\", "/").strip("/")
+    if path.endswith("/__init__.py"):
+        return path[: -len("/__init__.py")].replace("/", ".")
+    if path == "__init__.py":
+        return ""
+    if path.endswith(".py"):
+        path = path[: -len(".py")]
+    return path.replace("/", ".").strip(".")

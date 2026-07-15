@@ -30,15 +30,17 @@ from .exceptions import (
     LicenseRevoked,
     ServerUnavailable,
 )
+from .discord_guard import attach as attach_discord
 from .fingerprint import hardware_fingerprint
 from .loader import LoadedPackage
 from .project import LicensedProject
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "LicensedProject",
     "LoadedPackage",
+    "attach_discord",
     "LicensedLoaderError",
     "LicenseError",
     "LicenseRevoked",

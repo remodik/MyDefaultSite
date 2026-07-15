@@ -277,6 +277,7 @@ async def validate_license(
     valid = False
     stat: str | None = None
     expires: str | None = None
+    modules: list[str] | None = None
 
     if license_row is not None and project is not None and project.id == license_row.project_id:
         monitor.record_fingerprint(key_hash, body.hardware_fingerprint)
@@ -287,6 +288,11 @@ async def validate_license(
         valid = reason is None
         stat = license_row.status
         expires = license_row.expires_at.isoformat() if license_row.expires_at else None
+        if valid:
+            # The modules currently allowed for this license, so a running
+            # client can react to a module being toggled off mid-session.
+            effective = await service.get_effective_files(session, license_row)
+            modules = sorted(service.module_path_map(effective))
         await service.log_access(
             session, success=valid, reason="ok" if valid else reason,
             license_id=license_row.id, mode=None, ip_address=ip, user_agent=ua,
@@ -305,4 +311,5 @@ async def validate_license(
         "status": stat,
         "expires_at": expires,
         "revalidate_after_seconds": REVALIDATE_AFTER_SECONDS,
+        "modules": modules,
     }
