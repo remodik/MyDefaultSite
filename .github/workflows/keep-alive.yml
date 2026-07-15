@@ -1,0 +1,61 @@
+name: Keep Render awake
+
+# Render Free усыпляет сервис после ~15 минут без входящих запросов, а холодный
+# старт занимает 30–60 секунд — за это время боты клиентов получают отказ на
+# fetch/validate. Раз в 10 минут дёргаем лёгкий /api/health.
+#
+# Настройка: Settings → Secrets and variables → Actions → Variables →
+#   New repository variable → KEEP_ALIVE_URL = https://ваш-сервис.onrender.com
+#
+# Учтите: расписание GitHub Actions не гарантирует точность запуска — при
+# нагрузке старт может задержаться на 5–15 минут, и тогда сервис всё же успеет
+# уснуть. Если нужна железная надёжность, поставьте внешний пингер
+# (cron-job.org / UptimeRobot) или платный план Render.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping health endpoint
+        env:
+          BASE_URL: ${{ vars.KEEP_ALIVE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${BASE_URL}" ]; then
+            echo "::error::Не задана переменная KEEP_ALIVE_URL (Settings → Variables → Actions)."
+            exit 1
+          fi
+
+          URL="${BASE_URL%/}/api/health"
+          echo "Пингую ${URL}"
+
+          # --max-time 90: с запасом на холодный старт, если сервис уже уснул.
+          # Три попытки: первый запрос после сна часто отваливается по таймауту.
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
+                     --max-time 90 --connect-timeout 20 \
+                     -H 'User-Agent: keep-alive/1.0 (+github-actions)' \
+                     "${URL}") && rc=0 || rc=$?
+
+            if [ "${rc}" -eq 0 ] && [ "${code}" -ge 200 ] && [ "${code}" -lt 300 ]; then
+              echo "✅ Попытка ${attempt}: HTTP ${code} — $(cat /tmp/body.txt)"
+              exit 0
+            fi
+
+            echo "⚠️  Попытка ${attempt}: HTTP ${code:-—} (curl rc=${rc})"
+            [ "${attempt}" -lt 3 ] && sleep 20
+          done
+
+          echo "::error::Сервис не ответил после 3 попыток — проверьте Render."
+          exit 1
