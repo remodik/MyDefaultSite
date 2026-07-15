@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import sys
 from typing import Any, Callable
 
 log = logging.getLogger("licensed_loader")
@@ -76,6 +77,92 @@ async def _reply(target: Any, message: str) -> None:
             log.debug("licensed_loader: не удалось отправить сообщение: %s", exc)
 
 
+def _discord_lib(bot: Any) -> Any | None:
+    """Найти discord-библиотеку, не импортируя её (disnake / discord / py-cord)."""
+    root = type(bot).__module__.split(".")[0]
+    candidates = [root, "disnake", "discord"]
+    for name in candidates:
+        lib = sys.modules.get(name)
+        if lib is not None and getattr(lib, "ui", None) is not None:
+            return lib
+    return None
+
+
+def _patch_components(
+    bot: Any,
+    project: Any,
+    deny: Callable[[Any, str], Any],
+    stale_after: float,
+) -> list[str]:
+    """Перехватить кнопки/селекты/модалки.
+
+    Команды и компоненты идут разными путями: у компонента callback вызывает
+    сама View, минуя проверки команд. Поэтому оборачиваем диспетчер View/Modal.
+    Патч глобальный (на классе библиотеки), но срабатывает только для модулей
+    этого проекта — чужие компоненты идут дальше без изменений.
+    """
+    lib = _discord_lib(bot)
+    ui = getattr(lib, "ui", None) if lib is not None else None
+    if ui is None:
+        log.debug("licensed_loader: discord.ui не найден — компоненты не защищены")
+        return []
+
+    installed: list[str] = []
+    marker = "__licensed_guard_patched__"
+
+    def owner_module(*objects: Any) -> str | None:
+        """Модуль проекта, которому принадлежит компонент (если принадлежит)."""
+        for obj in objects:
+            if obj is None:
+                continue
+            module = getattr(obj, "__module__", None) or getattr(type(obj), "__module__", None)
+            if project.owns_module(module):
+                return module
+        return None
+
+    async def blocked(module: str, interaction: Any) -> bool:
+        await project.ensure_fresh(stale_after)
+        if project.module_allowed(module):
+            return False
+        await _maybe_await(deny(interaction, module))
+        log.info("licensed_loader: компонент модуля %s заблокирован", module)
+        return True
+
+    # --- View: кнопки, селекты ------------------------------------------- #
+    View = getattr(ui, "View", None)
+    dispatch = getattr(View, "_scheduled_task", None) if View is not None else None
+    if callable(dispatch):
+        patched_by = getattr(dispatch, marker, set())
+        if id(project) not in patched_by:
+            async def view_dispatch(self, item, interaction, *args, _orig=dispatch, **kwargs):
+                module = owner_module(self, getattr(item, "callback", None), item)
+                if module and await blocked(module, interaction):
+                    return
+                return await _orig(self, item, interaction, *args, **kwargs)
+
+            setattr(view_dispatch, marker, patched_by | {id(project)})
+            View._scheduled_task = view_dispatch
+            installed.append("components")
+
+    # --- Modal: отправка формы -------------------------------------------- #
+    Modal = getattr(ui, "Modal", None)
+    modal_dispatch = getattr(Modal, "_scheduled_task", None) if Modal is not None else None
+    if callable(modal_dispatch):
+        patched_by = getattr(modal_dispatch, marker, set())
+        if id(project) not in patched_by:
+            async def modal_dispatch_patched(self, interaction, *args, _orig=modal_dispatch, **kwargs):
+                module = owner_module(self)
+                if module and await blocked(module, interaction):
+                    return
+                return await _orig(self, interaction, *args, **kwargs)
+
+            setattr(modal_dispatch_patched, marker, patched_by | {id(project)})
+            Modal._scheduled_task = modal_dispatch_patched
+            installed.append("modals")
+
+    return installed
+
+
 def attach(
     bot: Any,
     project: Any,
@@ -94,6 +181,13 @@ def attach(
     :returns: список установленных хуков (для логов/диагностики).
     """
 
+    async def _deny(target: Any, module: str) -> None:
+        text = message or getattr(project, "denial_message", "Модуль недоступен.")
+        if on_denied is not None:
+            await _maybe_await(on_denied(target, module))
+        else:
+            await _reply(target, text)
+
     async def _check(target: Any) -> bool:
         module = _command_module(target)
         if not project.owns_module(module):
@@ -103,14 +197,8 @@ def attach(
         if project.module_allowed(module):
             return True
 
-        text = message or getattr(project, "denial_message", "Модуль недоступен.")
-        try:
-            if on_denied is not None:
-                await _maybe_await(on_denied(target, module))
-            else:
-                await _reply(target, text)
-        finally:
-            log.info("licensed_loader: доступ к модулю %s заблокирован", module)
+        await _deny(target, module)
+        log.info("licensed_loader: доступ к модулю %s заблокирован", module)
         return False
 
     installed: list[str] = []
@@ -152,6 +240,11 @@ def attach(
             installed.append("tree")
         except Exception as exc:  # noqa: BLE001
             log.debug("licensed_loader: tree.interaction_check не сработал: %s", exc)
+
+    # Кнопки/селекты/модалки не проходят через проверки команд — их диспетчер
+    # приходится оборачивать отдельно, иначе старое сообщение с кнопками
+    # продолжит работать после выключения модуля.
+    installed.extend(_patch_components(bot, project, _deny, stale_after))
 
     if not installed:
         log.warning(
