@@ -197,6 +197,34 @@ class ModuleOverrideUpdate(_Strict):
     is_enabled: bool
 
 
+class LicensePriceUpdate(_Strict):
+    """Owner sets (or clears) the price a client sees in the portal."""
+
+    # Whole currency units. ``None`` clears the price (back to "nothing to pay").
+    price_amount: int | None = Field(None, ge=0, le=100_000_000)
+    price_currency: str = Field("RUB", min_length=3, max_length=3)
+    payment_instructions: str | None = Field(None, max_length=4000)
+
+    @field_validator("price_currency")
+    @classmethod
+    def validate_currency(cls, value: str) -> str:
+        cleaned = value.strip().upper()
+        if not cleaned.isalpha():
+            raise ValueError("price_currency must be a 3-letter code, e.g. RUB")
+        return cleaned
+
+
+class PaymentConfirm(_Strict):
+    """Owner confirms the money arrived.
+
+    ``unlock`` hands the code over permanently — a one-way door, so it is
+    opt-in rather than implied by confirming payment.
+    """
+
+    unlock: bool = True
+    note: str | None = Field(None, max_length=512)
+
+
 class LicenseResponse(_Strict):
     id: int
     client_id: int
@@ -210,6 +238,12 @@ class LicenseResponse(_Strict):
     expires_at: str | None
     note: str | None
     created_at: str
+    price_amount: int | None = None
+    price_currency: str = "RUB"
+    payment_status: str = "none"
+    payment_instructions: str | None = None
+    payment_claimed_at: str | None = None
+    paid_at: str | None = None
 
 
 class LicenseCreatedResponse(LicenseResponse):
@@ -254,6 +288,72 @@ class SecurityFlagResolve(_Strict):
         if value not in ("revoke", "dismiss"):
             raise ValueError("resolution must be 'revoke' or 'dismiss'")
         return value
+
+
+# --------------------------------------------------------------------------- #
+# Client portal schemas
+# --------------------------------------------------------------------------- #
+class PortalLoginRequest(BaseModel):
+    """The license key is the credential — there are no portal passwords."""
+
+    license_key: str = Field(..., min_length=8, max_length=128)
+
+
+class PortalLoginResponse(BaseModel):
+    token: str
+    client_id: int
+    client_name: str
+    expires_in: int  # seconds
+
+
+class PortalLicense(BaseModel):
+    """One licensed project as the *client* sees it.
+
+    Deliberately narrower than :class:`LicenseResponse`: no fingerprint, no
+    admin notes, no internal security state.
+    """
+
+    id: int
+    project_name: str
+    project_slug: str
+    key_last4: str
+    status: str
+    plan: str
+    expires_at: str | None
+    created_at: str
+    price_amount: int | None
+    price_currency: str
+    payment_status: str
+    payment_instructions: str | None
+    payment_claimed_at: str | None
+    paid_at: str | None
+    # True once the code is permanently delivered (status == "unlocked"):
+    # the client may then browse and download the sources.
+    can_download: bool
+    module_count: int
+
+
+class PortalMeResponse(BaseModel):
+    client_id: int
+    client_name: str
+    contact: str | None
+    licenses: list[PortalLicense]
+
+
+class PortalPaymentClaim(BaseModel):
+    """The client asserts they have paid. A claim, never proof."""
+
+    note: str | None = Field(None, max_length=500)
+
+
+class PortalFile(BaseModel):
+    id: int
+    relative_path: str
+    checksum: str
+    version: int
+    updated_at: str | None
+    # Plaintext source; only sent on an explicit single-file request.
+    content: str | None = None
 
 
 def dt_iso(value: datetime | None) -> str | None:

@@ -57,6 +57,10 @@ import storage
 from license.routers import license_router
 from licensing.admin_routes import admin_router as licensing_admin_router, ui_router as licensing_ui_router
 from licensing.client_routes import client_router as licensing_client_router
+from licensing.portal_routes import (
+    portal_router as licensing_portal_router,
+    portal_ui_router as licensing_portal_ui_router,
+)
 from payments import create_payment as yookassa_create_payment, fetch_payment as yookassa_fetch_payment
 
 load_dotenv()
@@ -78,6 +82,8 @@ app.include_router(license_router)
 app.include_router(licensing_client_router)
 app.include_router(licensing_admin_router)
 app.include_router(licensing_ui_router)
+app.include_router(licensing_portal_router)
+app.include_router(licensing_portal_ui_router)
 
 _allowed_origins_env = os.getenv("CORS_ORIGINS", "https://remod3.ru,http://localhost:3000,http://localhost:5173,https://www.remod3.ru")
 ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]

@@ -64,6 +64,9 @@
   .pill.revoked { background:rgba(242,63,67,.14); color:var(--danger2); }
   .pill.unlocked { background:rgba(155,89,182,.16); color:var(--unlocked); }
   .pill.off { background:rgba(242,63,67,.14); color:var(--danger2); }
+  .pill.paid { background:rgba(35,165,89,.14); color:var(--ok); }
+  .pill.pending { background:rgba(240,178,50,.14); color:var(--warn); }
+  .pill.unpaid { background:rgba(88,101,242,.16); color:#7983f5; }
 
   table { width:100%; border-collapse:collapse; }
   th { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); color:var(--muted);
@@ -137,6 +140,12 @@
       <button data-view="security"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg><span style="flex:1">Security</span><span id="flag-badge" class="badge hidden"></span></button>
       <button data-view="logs"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>Логи доступа</button>
     </nav>
+    <!-- Адрес, который вы даёте клиенту: он входит туда своим лицензионным ключом. -->
+    <a href="/licensing/portal" target="_blank" style="display:flex; align-items:center; gap:10px; margin-top:14px;
+       padding:9px 10px; border-radius:8px; font-size:12.5px; font-weight:600; color:var(--muted); border:1px dashed var(--border);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      Кабинет клиента
+    </a>
     <div class="side-user">
       <div class="avatar" id="user-initial">A</div>
       <div style="flex:1; min-width:0;"><div id="user-name" style="font-size:12.5px; font-weight:700;">admin</div><div class="muted" style="font-size:11px;">admin</div></div>
@@ -191,6 +200,15 @@ function toast(msg, err = false) {
 function esc(s) { return (s ?? "").toString().replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function fmtDate(s) { return s ? new Date(s).toLocaleString() : "—"; }
 function pill(status) { return `<span class="pill ${status}">${status}</span>`; }
+const PAY_LABEL = { none: "без оплаты", unpaid: "ждёт оплаты", pending: "заявлена оплата", paid: "оплачено" };
+function payPill(l) {
+  if (!l.payment_status || l.payment_status === "none") return "";
+  return `<span class="pill ${l.payment_status}">${PAY_LABEL[l.payment_status]}</span>`;
+}
+function money(amount, currency) {
+  if (amount === null || amount === undefined) return "—";
+  return new Intl.NumberFormat("ru-RU").format(amount) + " " + (currency === "RUB" ? "₽" : esc(currency));
+}
 function setFlagBadge(n) {
   const b = document.getElementById("flag-badge");
   if (!b) return;
@@ -247,7 +265,7 @@ views.dashboard = async () => {
   const app = document.getElementById("app");
   app.innerHTML = `<h1 style="margin-bottom:20px">Дашборд</h1><div id="dash" class="muted">Загрузка…</div>`;
   try {
-    const d = await api("/dashboard");
+    const [d, claims] = await Promise.all([api("/dashboard"), api("/licenses?payment_status=pending")]);
     const totals = { active: 0, suspended: 0, revoked: 0, unlocked: 0 };
     d.projects.forEach(p => { totals.active += p.active; totals.suspended += p.suspended; totals.revoked += p.revoked; totals.unlocked += p.unlocked; });
     const stat = (label, value, color) => `<div class="card" style="margin:0">
@@ -263,6 +281,18 @@ views.dashboard = async () => {
         <span class="pill active" style="flex:0">${p.active} актив.</span><span class="pill suspended" style="flex:0">${p.suspended} приост.</span>
         <span class="pill revoked" style="flex:0">${p.revoked} отозв.</span><span class="pill unlocked" style="flex:0">${p.unlocked} unlocked</span>
       </div></div>`).join("") || `<p class="muted">Пока нет проектов.</p>`}</div>`;
+    // Клиенты, заявившие об оплате: требуют вашей ручной проверки, поэтому
+    // висят наверху дашборда, а не прячутся в списке лицензий.
+    const claimsHtml = claims.length ? `<div class="card" style="border-color:var(--warn)">
+      <div class="flex-between" style="justify-content:flex-start;gap:8px;margin-bottom:10px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0b232" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+        <b style="font-size:13.5px">Заявки об оплате — проверьте поступление</b></div>
+      <table><tbody>${claims.map(l => `<tr>
+        <td><b>${esc(l.client_name)}</b> <code style="color:var(--text2)">${esc(l.project_slug)}</code></td>
+        <td class="mono">${money(l.price_amount, l.price_currency)}</td>
+        <td class="muted">${fmtDate(l.payment_claimed_at)}</td>
+        <td style="text-align:right"><button class="ghost sm" onclick="manageLicense(${l.id})">Открыть</button></td>
+      </tr>`).join("")}</tbody></table></div>` : "";
     const a = d.anomalies;
     const hasAnom = a.failing_ips.length || a.keys_multi_fingerprint.length;
     const anomHtml = `<div class="card">
@@ -278,7 +308,7 @@ views.dashboard = async () => {
       d.recent_access.map(r => `<tr><td class="muted">${fmtDate(r.requested_at)}</td><td class="mono">${r.license_id ?? "—"}</td>
         <td>${esc(r.mode) || "—"}</td><td class="mono" style="color:var(--text2)">${esc(r.entrypoint) || "—"}</td><td class="muted">${esc(r.ip_address)}</td>
         <td>${r.success ? IC.ok : `<span class="del" style="display:inline-flex;align-items:center;gap:5px;font-weight:600">${IC.x}${esc(r.reason) || ""}</span>`}</td></tr>`).join("")}</tbody></table></div>`;
-    document.getElementById("dash").innerHTML = cards + proj + anomHtml + recent;
+    document.getElementById("dash").innerHTML = cards + claimsHtml + proj + anomHtml + recent;
     setFlagBadge(a.open_security_flags);
   } catch (e) { toast(e.message, true); }
 };
@@ -470,6 +500,7 @@ views.clients = async () => {
       const rows = lics.map(l => `<tr>
         <td class="mono" style="white-space:nowrap">#${l.id} <span class="muted">…${esc(l.key_last4)}</span></td>
         <td><code style="color:var(--text2)">${esc(l.project_slug)}</code></td><td>${pill(l.status)}</td>
+        <td>${payPill(l)}</td>
         <td class="muted">${planLabel(l)}</td>
         <td style="text-align:right"><button class="ghost sm" onclick="manageLicense(${l.id})">Управление</button></td></tr>`).join("");
       return `<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
@@ -558,18 +589,72 @@ async function manageLicense(id) {
         <button class="warn sm" onclick="setStatus(${id},'suspended')">Suspend</button>
         <button class="ok sm" onclick="setStatus(${id},'active')">Reactivate</button>
         <button class="danger sm" onclick="revokeLic(${id})">Revoke</button>
-        <button class="ghost sm" style="color:var(--unlocked);border-color:#9b59b6" onclick="setStatus(${id},'unlocked')">Unlocked (передан)</button>
+        <button class="ghost sm" style="color:var(--unlocked);border-color:#9b59b6" onclick="unlockLic(${id})">Unlocked (передан)</button>
       </div>
       <label>Продлить / изменить тариф</label>
       <div class="row"><select id="ext-plan"><option value="month">Месяц</option><option value="year">Год</option>
         <option value="lifetime">Навсегда</option></select>
         <button class="ghost sm" onclick="extendLic(${id})">Применить</button></div>
+      ${billingBlock(l)}
       <h4>Модули для этого клиента</h4>
       <p class="small muted" style="margin:0 0 8px">Персональное вкл/выкл файлов, не затрагивая остальных клиентов.</p>
       <table><tbody>${modRows || `<tr><td class="muted small">В проекте нет файлов</td></tr>`}</tbody></table>
       <div style="margin-top:16px"><button class="ghost" onclick="closeModal()">Закрыть</button></div>`);
   } catch (e) { toast(e.message, true); }
 }
+// ---- billing ----
+// Цена, которую клиент видит в личном кабинете (/licensing/portal), и ручное
+// подтверждение оплаты. Денег система не касается: "оплачено" — это ваше
+// утверждение после того, как вы сами проверили поступление.
+function billingBlock(l) {
+  const claimed = l.payment_claimed_at
+    ? `<p class="small" style="margin:0 0 10px;color:var(--warn)">
+         Клиент сообщил об оплате ${fmtDate(l.payment_claimed_at)} — проверьте поступление.</p>` : "";
+
+  const actions = l.payment_status === "paid"
+    ? `<p class="small muted" style="margin:10px 0 0">Оплата подтверждена ${fmtDate(l.paid_at)}.</p>`
+    : `<div class="row" style="margin-top:12px">
+         <button class="ok sm" onclick="confirmPay(${l.id})">Подтвердить оплату и выдать</button>
+         ${l.payment_status === "pending"
+            ? `<button class="ghost sm" onclick="rejectPay(${l.id})">Отклонить заявку</button>` : ""}
+       </div>`;
+
+  return `<h4>Оплата <span style="margin-left:6px">${payPill(l)}</span></h4>
+    <p class="small muted" style="margin:0 0 8px">
+      Видно клиенту в личном кабинете. Пустая цена — платить нечего.</p>
+    ${claimed}
+    <div class="row">
+      <div style="flex:2"><label style="margin-top:0">Цена (целое, ${esc(l.price_currency || "RUB")})</label>
+        <input id="pay-amount" type="number" min="0" step="1" value="${l.price_amount ?? ""}" placeholder="напр. 15000"></div>
+      <div style="flex:1"><label style="margin-top:0">Валюта</label>
+        <input id="pay-currency" value="${esc(l.price_currency || "RUB")}" maxlength="3"></div>
+    </div>
+    <label>Реквизиты для клиента</label>
+    <textarea id="pay-instructions" rows="3" placeholder="СБП +7 ..., комментарий к платежу">${esc(l.payment_instructions || "")}</textarea>
+    <div class="row" style="margin-top:10px"><button class="ghost sm" onclick="savePrice(${l.id})">Сохранить цену</button></div>
+    ${actions}`;
+}
+async function savePrice(id) {
+  const raw = document.getElementById("pay-amount").value.trim();
+  try {
+    await api(`/licenses/${id}/price`, { method: "PATCH", body: {
+      price_amount: raw === "" ? null : Number(raw),
+      price_currency: document.getElementById("pay-currency").value.trim().toUpperCase() || "RUB",
+      payment_instructions: document.getElementById("pay-instructions").value.trim() || null } });
+    toast("Цена сохранена"); manageLicense(id); views.clients();
+  } catch (e) { toast(e.message, true); }
+}
+async function confirmPay(id) {
+  if (!confirm("Подтвердить оплату и выдать код навсегда?\n\nСтатус станет unlocked — это необратимо: приостановить или отозвать такую лицензию уже нельзя.")) return;
+  try { await api(`/licenses/${id}/payment/confirm`, { method: "POST", body: { unlock: true, note: null } });
+    toast("Оплата подтверждена, доступ выдан"); manageLicense(id); views.clients(); } catch (e) { toast(e.message, true); }
+}
+async function rejectPay(id) {
+  if (!confirm("Отклонить заявку об оплате? Клиент снова увидит счёт.")) return;
+  try { await api(`/licenses/${id}/payment/reject`, { method: "POST" });
+    toast("Заявка отклонена"); manageLicense(id); views.clients(); } catch (e) { toast(e.message, true); }
+}
+
 async function setStatus(id, status) {
   try { await api(`/licenses/${id}/status`, { method: "PATCH", body: { status } });
     toast("Статус: " + status); manageLicense(id); views.clients(); } catch (e) { toast(e.message, true); }
@@ -577,6 +662,10 @@ async function setStatus(id, status) {
 async function revokeLic(id) {
   if (!confirm("Отозвать лицензию? Это необратимо — доступ прекратится немедленно.")) return;
   await setStatus(id, "revoked");
+}
+async function unlockLic(id) {
+  if (!confirm("Выдать код навсегда?\n\nunlocked — финальный статус: лицензия перестаёт проверяться, а приостановить или отозвать её потом будет нельзя.")) return;
+  await setStatus(id, "unlocked");
 }
 async function extendLic(id) {
   try { await api(`/licenses/${id}/extend`, { method: "PATCH", body: { plan: document.getElementById("ext-plan").value } });

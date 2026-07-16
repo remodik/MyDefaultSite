@@ -14,3 +14,4 @@
 /backend/.env.*
 /backend/licensing/__pycache__
 /licensed_loader/__pycache__
+/dist

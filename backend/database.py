@@ -283,6 +283,29 @@ class Donation(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+async def _add_missing_columns(conn, table: str, columns: dict[str, str]) -> None:
+    """Идемпотентно добавить недостающие колонки в существующую таблицу.
+
+    Имена таблиц/колонок и DDL здесь — константы из кода, не пользовательский
+    ввод, поэтому подстановка в SQL безопасна.
+    """
+    if "postgresql" in DATABASE_URL:
+        for name, ddl in columns.items():
+            await conn.exec_driver_sql(
+                f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {name} {ddl}"
+            )
+        return
+
+    # SQLite не знает ADD COLUMN IF NOT EXISTS — сверяемся с фактической схемой.
+    result = await conn.exec_driver_sql(f"PRAGMA table_info({table})")
+    existing = {row[1] for row in result}
+    if not existing:  # таблицы нет — её только что создал create_all()
+        return
+    for name, ddl in columns.items():
+        if name not in existing:
+            await conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+
 async def init_models() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -305,6 +328,31 @@ async def init_models() -> None:
                 )
             except Exception as exc:  # noqa: BLE001
                 print(f"WARNING: google_id schema upgrade skipped: {exc}")
+
+        # Биллинг-колонки lic_licenses (цена и статус оплаты для личного
+        # кабинета) добавлены позже самой таблицы, а create_all() уже
+        # существующие таблицы не трогает — докатываем их тем же способом.
+        try:
+            await _add_missing_columns(
+                conn,
+                "lic_licenses",
+                {
+                    "price_amount": "INTEGER",
+                    "price_currency": "VARCHAR(3) NOT NULL DEFAULT 'RUB'",
+                    "payment_status": "VARCHAR(16) NOT NULL DEFAULT 'none'",
+                    "payment_instructions": "TEXT",
+                    "payment_claimed_at": "TIMESTAMP",
+                    "paid_at": "TIMESTAMP",
+                },
+            )
+            # create_all() пропускает существующую таблицу целиком, вместе с
+            # её индексами, поэтому индекс тоже создаём вручную.
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_lic_licenses_payment_status "
+                "ON lic_licenses (payment_status)"
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARNING: lic_licenses billing schema upgrade skipped: {exc}")
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

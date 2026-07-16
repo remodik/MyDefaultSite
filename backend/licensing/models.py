@@ -33,6 +33,16 @@ from database import Base
 LICENSE_STATUSES = ("active", "suspended", "revoked", "unlocked")
 LICENSE_PLANS = ("month", "year", "lifetime")
 
+# Payment lifecycle, tracked separately from ``status`` because money and
+# access are different things: a license can be ``active`` (bot works) while
+# still ``unpaid`` (trial), and ``paid`` is what justifies going ``unlocked``.
+#
+#   none    — no price set; nothing to pay (internal / gift / trial)
+#   unpaid  — the owner set a price; waiting for the client to pay
+#   pending — the client pressed "I paid"; the owner must verify the money
+#   paid    — the owner confirmed receipt (terminal)
+PAYMENT_STATUSES = ("none", "unpaid", "pending", "paid")
+
 
 class LicProject(Base):
     __tablename__ = "lic_projects"
@@ -92,6 +102,7 @@ class LicLicense(Base):
         Index("ix_lic_licenses_key_hash", "key_hash", unique=True),
         Index("ix_lic_licenses_client_id", "client_id"),
         Index("ix_lic_licenses_project_id", "project_id"),
+        Index("ix_lic_licenses_payment_status", "payment_status"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -110,6 +121,20 @@ class LicLicense(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # Free-form admin note / last status reason.
     note: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+    # --- billing (shown to the client in the portal) ----------------------- #
+    # Whole currency units (no minor units), matching the site's existing
+    # `donations.amount` / `purchases.amount` convention. NULL = no price set.
+    price_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_currency: Mapped[str] = mapped_column(String(3), default="RUB", nullable=False)
+    payment_status: Mapped[str] = mapped_column(String(16), default="none", nullable=False)
+    # Payment details the client sees (card number, SBP phone, terms…).
+    payment_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # When the client claimed to have paid — a claim, not proof.
+    payment_claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # When the owner confirmed the money actually arrived.
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, onupdate=datetime.now, nullable=False

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мои проекты · Личный кабинет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Same tokens as the admin panel — the portal is the client-facing half of
+     the same product and must read as one system. */
+  :root {
+    --bg:#1a1b1e; --panel:#232428; --panel2:#2b2d31;
+    --line:#2f3136; --line2:#26272b; --border:#3a3c42;
+    --text:#e3e5e8; --text2:#c8cdd3; --muted:#8e959e;
+    --accent:#5865f2; --accent2:#4752c4;
+    --ok:#3dba6f; --ok2:#23a559; --warn:#f0b232; --danger:#f23f43; --danger2:#f5595d; --unlocked:#b97fd1;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-size:14px;
+    font-family:'Manrope',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+  ::-webkit-scrollbar { width:10px; height:10px; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:5px; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:none;} }
+  input::placeholder, textarea::placeholder { color:#6b7178; }
+
+  h1 { margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em; }
+  h3 { margin:0 0 4px; font-size:16px; font-weight:800; }
+  code { font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:11.5px; color:var(--muted); }
+
+  button { font-family:inherit; cursor:pointer; border:none; border-radius:9px; padding:9px 16px;
+    font-size:13px; font-weight:700; background:var(--accent); color:#fff; transition:background .15s,border-color .15s; }
+  button:hover { background:var(--accent2); }
+  button:disabled { opacity:.4; cursor:default; }
+  button.ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+  button.ghost:hover { background:var(--panel2); border-color:var(--accent); }
+  button.ok { background:var(--ok2); } button.ok:hover { background:#1e8f4c; }
+  button.sm { padding:5px 11px; font-size:12px; border-radius:7px; }
+
+  input, textarea { font-family:inherit; width:100%; background:var(--bg); color:var(--text);
+    border:1px solid var(--border); border-radius:8px; padding:9px 11px; font-size:13px; }
+  input:focus, textarea:focus { outline:none; border-color:var(--accent); }
+  textarea { resize:vertical; }
+  .mono { font-family:var(--mono); }
+  label { display:block; font-size:11px; color:var(--muted); font-weight:600; margin:10px 0 4px; }
+
+  .flex-between { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .muted { color:var(--muted); } .small { font-size:12px; } .del { color:var(--danger2); }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:14px; }
+  .pill { display:inline-block; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:700; }
+  .pill.active { background:rgba(35,165,89,.14); color:var(--ok); }
+  .pill.suspended { background:rgba(240,178,50,.14); color:var(--warn); }
+  .pill.revoked { background:rgba(242,63,67,.14); color:var(--danger2); }
+  .pill.unlocked { background:rgba(155,89,182,.16); color:var(--unlocked); }
+  .pill.paid { background:rgba(35,165,89,.14); color:var(--ok); }
+  .pill.pending { background:rgba(240,178,50,.14); color:var(--warn); }
+  .pill.unpaid { background:rgba(88,101,242,.16); color:#7983f5; }
+
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); color:var(--muted);
+    font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line2); font-size:12.5px; }
+
+  /* !important: must beat #shell{display:block} and .modal-bg{display:flex} (later rule). */
+  .hidden { display:none !important; }
+
+  /* layout: a cabinet holds a handful of projects — a centred column beats a
+     sidebar the client would never navigate. */
+  #shell { display:block; min-height:100vh; }
+  header { border-bottom:1px solid var(--line); background:var(--panel); }
+  .head-in { max-width:900px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:12px; }
+  .brand-ic { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#5865f2,#4752c4);
+    display:grid; place-items:center; color:#fff; flex-shrink:0; }
+  #app { max-width:900px; margin:0 auto; padding:28px 24px 60px; }
+
+  .price { font-size:26px; font-weight:800; letter-spacing:-0.02em; }
+  .pay-box { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:14px; }
+  .pay-box.wait { border-color:var(--warn); }
+  .pay-box.done { border-color:var(--ok2); }
+  .instr { white-space:pre-wrap; word-break:break-word; font-size:13px; color:var(--text2);
+    background:var(--panel2); border-radius:8px; padding:10px 12px; margin-top:10px; }
+  .meta { display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; }
+  .meta div { font-size:12px; } .meta span { color:var(--muted); }
+
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center;
+    justify-content:center; z-index:50; padding:20px; }
+  .modal { background:var(--panel2); border:1px solid var(--border); border-radius:14px;
+    padding:22px 24px; max-width:820px; width:100%; max-height:90vh; overflow:auto; }
+  pre.src { font-family:var(--mono); font-size:12px; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; padding:14px; overflow:auto; max-height:60vh; margin:0; color:var(--text2); }
+  .toast { position:fixed; bottom:22px; right:22px; background:var(--panel2); border:1px solid var(--border);
+    border-left:3px solid var(--accent); border-radius:10px; padding:12px 18px; z-index:100; max-width:340px;
+    font-size:13px; font-weight:600; animation:toastIn .2s ease; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+  .toast.err { border-left-color:var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- login: the license key is the only credential -->
+<div id="login" class="modal-bg">
+  <div class="modal" style="max-width:420px">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <div class="brand-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></div>
+      <div><div style="font-weight:800; font-size:16px;">Личный кабинет</div><div class="muted small">Ваши проекты и лицензии</div></div>
+    </div>
+    <p class="muted small" style="margin:10px 0 0;">Войдите лицензионным ключом — тем же, что указан в вашем боте.</p>
+    <label>Лицензионный ключ</label>
+    <input id="l-key" class="mono" placeholder="LL_..." autocomplete="off" spellcheck="false">
+    <div style="margin-top:16px"><button id="l-btn" style="width:100%">Войти</button></div>
+    <div id="l-err" class="del small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- app -->
+<div id="shell" class="hidden">
+  <header>
+    <div class="head-in">
+      <div class="brand-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></div>
+      <div style="flex:1; min-width:0;">
+        <div id="who" style="font-weight:800; font-size:15px;">—</div>
+        <div class="muted" style="font-size:11px;">Личный кабинет</div>
+      </div>
+      <button id="logout" class="ghost sm">Выйти</button>
+    </div>
+  </header>
+  <main><div id="app"></div></main>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const TOKEN_KEY = "lic_portal_token";
+  const API = "/api/v1/licensing/portal";
+
+  let token = localStorage.getItem(TOKEN_KEY) || "";
+  let me = null;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function toast(message, isError) {
+    const el = document.createElement("div");
+    el.className = "toast" + (isError ? " err" : "");
+    el.textContent = message;
+    $("toast-root").appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return isNaN(d) ? "—" : d.toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  const money = (amount, currency) =>
+    new Intl.NumberFormat("ru-RU").format(amount) + " " + (currency === "RUB" ? "₽" : esc(currency));
+
+  const STATUS = {
+    active:    { label: "Активна",         cls: "active" },
+    suspended: { label: "Приостановлена",  cls: "suspended" },
+    revoked:   { label: "Отозвана",        cls: "revoked" },
+    unlocked:  { label: "Выдана навсегда", cls: "unlocked" },
+  };
+  const PAYMENT = {
+    unpaid:  { label: "Ожидает оплаты",   cls: "unpaid" },
+    pending: { label: "Оплата на проверке", cls: "pending" },
+    paid:    { label: "Оплачено",         cls: "paid" },
+  };
+
+  // --- transport ---------------------------------------------------------- //
+  async function api(path, options = {}) {
+    const response = await fetch(API + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token,
+        ...(options.headers || {}),
+      },
+    });
+    if (response.status === 401) {  // expired or revoked session
+      logout();
+      throw new Error("Сессия истекла — войдите заново");
+    }
+    if (!response.ok) {
+      let detail = "Ошибка " + response.status;
+      try { detail = (await response.json()).detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
+    return response.status === 204 ? null : response.json();
+  }
+
+  // --- auth --------------------------------------------------------------- //
+  async function login() {
+    const key = $("l-key").value.trim();
+    if (!key) return;
+    $("l-btn").disabled = true;
+    $("l-err").textContent = "";
+    try {
+      const response = await fetch(API + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ license_key: key }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Не удалось войти");
+      token = data.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      $("login").classList.add("hidden");
+      $("shell").classList.remove("hidden");
+      await load();
+    } catch (err) {
+      $("l-err").textContent = err.message;
+    } finally {
+      $("l-btn").disabled = false;
+    }
+  }
+
+  function logout() {
+    token = "";
+    me = null;
+    localStorage.removeItem(TOKEN_KEY);
+    $("shell").classList.add("hidden");
+    $("login").classList.remove("hidden");
+    $("l-key").value = "";
+  }
+
+  // --- rendering ---------------------------------------------------------- //
+  function paymentBlock(lic) {
+    if (lic.payment_status === "none" || lic.price_amount === null) return "";
+
+    const info = PAYMENT[lic.payment_status];
+    const instructions = lic.payment_instructions
+      ? `<div class="instr">${esc(lic.payment_instructions)}</div>` : "";
+
+    if (lic.payment_status === "paid") {
+      return `<div class="pay-box done">
+        <div class="flex-between">
+          <div><div class="muted small">Оплата подтверждена</div>
+            <div class="price" style="font-size:18px">${money(lic.price_amount, lic.price_currency)}</div></div>
+          <span class="pill paid">${info.label}</span>
+        </div>
+        <div class="meta"><div><span>Подтверждено:</span> ${fmtDate(lic.paid_at)}</div></div>
+      </div>`;
+    }
+
+    if (lic.payment_status === "pending") {
+      return `<div class="pay-box wait">
+        <div class="flex-between">
+          <div><div class="muted small">Вы сообщили об оплате</div>
+            <div class="price" style="font-size:18px">${money(lic.price_amount, lic.price_currency)}</div></div>
+          <span class="pill pending">${info.label}</span>
+        </div>
+        <div class="meta"><div><span>Заявлено:</span> ${fmtDate(lic.payment_claimed_at)}</div></div>
+        <p class="muted small" style="margin:10px 0 0;">
+          Владелец проверит поступление и откроет доступ. Обычно это занимает немного времени.</p>
+        ${instructions}
+      </div>`;
+    }
+
+    // unpaid
+    return `<div class="pay-box">
+      <div class="flex-between">
+        <div><div class="muted small">К оплате</div>
+          <div class="price">${money(lic.price_amount, lic.price_currency)}</div></div>
+        <span class="pill unpaid">${info.label}</span>
+      </div>
+      ${instructions}
+      <div style="margin-top:14px">
+        <button class="ok" data-claim="${lic.id}">Я оплатил</button>
+      </div>
+    </div>`;
+  }
+
+  function licenseCard(lic) {
+    const status = STATUS[lic.status] || { label: lic.status, cls: "" };
+    const downloads = lic.can_download
+      ? `<div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+           <button data-files="${lic.id}" class="ghost sm">Просмотреть файлы</button>
+           <button data-zip="${lic.id}" class="sm">Скачать ZIP</button>
+         </div>`
+      : "";
+
+    return `<div class="card">
+      <div class="flex-between">
+        <div style="min-width:0">
+          <h3>${esc(lic.project_name)}</h3>
+          <code>${esc(lic.project_slug)}</code>
+        </div>
+        <span class="pill ${status.cls}">${status.label}</span>
+      </div>
+      <div class="meta">
+        <div><span>Ключ:</span> <span class="mono">…${esc(lic.key_last4)}</span></div>
+        <div><span>План:</span> ${esc(lic.plan)}</div>
+        <div><span>Действует до:</span> ${lic.expires_at ? fmtDate(lic.expires_at) : "бессрочно"}</div>
+        <div><span>Модулей:</span> ${lic.module_count}</div>
+      </div>
+      ${paymentBlock(lic)}
+      ${downloads}
+    </div>`;
+  }
+
+  function render() {
+    $("who").textContent = me.client_name;
+    if (!me.licenses.length) {
+      $("app").innerHTML = `<div class="card"><p class="muted" style="margin:0">
+        К вашему аккаунту пока не привязано ни одного проекта.</p></div>`;
+      return;
+    }
+    $("app").innerHTML =
+      `<h1 style="margin-bottom:16px">Мои проекты</h1>` + me.licenses.map(licenseCard).join("");
+  }
+
+  async function load() {
+    try {
+      me = await api("/me");
+      render();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  // --- actions ------------------------------------------------------------ //
+  async function claim(licenseId) {
+    if (!confirm("Подтвердить, что вы оплатили? Владелец получит уведомление и проверит поступление.")) return;
+    try {
+      await api(`/licenses/${licenseId}/claim-payment`, {
+        method: "POST",
+        body: JSON.stringify({ note: null }),
+      });
+      toast("Владелец уведомлён — ожидайте подтверждения");
+      await load();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  async function showFiles(licenseId) {
+    try {
+      const files = await api(`/licenses/${licenseId}/files`);
+      const rows = files.map((f) => `<tr>
+          <td class="mono">${esc(f.relative_path)}</td>
+          <td class="muted">v${f.version}</td>
+          <td style="text-align:right"><button class="ghost sm" data-view="${licenseId}:${f.id}">Открыть</button></td>
+        </tr>`).join("");
+      openModal(`<div class="flex-between" style="margin-bottom:14px">
+          <h3 style="margin:0">Файлы проекта</h3><button class="ghost sm" data-close="1">Закрыть</button></div>
+        <table><thead><tr><th>Файл</th><th>Версия</th><th></th></tr></thead><tbody>${rows}</tbody></table>`);
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  async function viewFile(licenseId, fileId) {
+    try {
+      const file = await api(`/licenses/${licenseId}/files/${fileId}`);
+      openModal(`<div class="flex-between" style="margin-bottom:14px">
+          <h3 style="margin:0" class="mono">${esc(file.relative_path)}</h3>
+          <button class="ghost sm" data-close="1">Закрыть</button></div>
+        <pre class="src" id="src-box"></pre>`);
+      // textContent, not innerHTML: this is source code, never markup.
+      $("src-box").textContent = file.content;
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  async function downloadZip(licenseId) {
+    try {
+      // A plain <a href> can't carry the Authorization header, so fetch the
+      // bytes and hand the browser a blob instead.
+      const response = await fetch(`${API}/licenses/${licenseId}/download`, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      if (!response.ok) {
+        let detail = "Ошибка " + response.status;
+        try { detail = (await response.json()).detail || detail; } catch (_) {}
+        throw new Error(detail);
+      }
+      const blob = await response.blob();
+      const lic = me.licenses.find((l) => l.id === licenseId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (lic ? lic.project_slug : "project") + ".zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast("Архив скачан");
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+  // --- modal -------------------------------------------------------------- //
+  function openModal(html) {
+    $("modal-root").innerHTML = `<div class="modal-bg"><div class="modal">${html}</div></div>`;
+  }
+  function closeModal() { $("modal-root").innerHTML = ""; }
+
+  // --- wiring ------------------------------------------------------------- //
+  $("l-btn").addEventListener("click", login);
+  $("l-key").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+  $("logout").addEventListener("click", logout);
+
+  document.addEventListener("click", (e) => {
+    const target = e.target.closest("[data-claim],[data-files],[data-zip],[data-view],[data-close]");
+    if (!target) return;
+    if (target.dataset.claim) claim(Number(target.dataset.claim));
+    else if (target.dataset.files) showFiles(Number(target.dataset.files));
+    else if (target.dataset.zip) downloadZip(Number(target.dataset.zip));
+    else if (target.dataset.view) {
+      const [licenseId, fileId] = target.dataset.view.split(":").map(Number);
+      viewFile(licenseId, fileId);
+    } else if (target.dataset.close) closeModal();
+  });
+
+  // Resume an existing session if the stored token is still good.
+  if (token) {
+    $("login").classList.add("hidden");
+    $("shell").classList.remove("hidden");
+    load();
+  }
+})();
+</script>
+</body>
+</html>

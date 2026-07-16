@@ -34,8 +34,10 @@ from licensing.schemas import (
     ClientUpdate,
     LicenseCreate,
     LicenseExtend,
+    LicensePriceUpdate,
     LicenseStatusUpdate,
     ModuleOverrideUpdate,
+    PaymentConfirm,
     ProjectCreate,
     ProjectFileToggle,
     ProjectFilesUpload,
@@ -319,6 +321,12 @@ async def _license_dict(session: AsyncSession, lic: LicLicense) -> dict[str, Any
         "expires_at": dt_iso(lic.expires_at),
         "note": lic.note,
         "created_at": dt_iso(lic.created_at),
+        "price_amount": lic.price_amount,
+        "price_currency": lic.price_currency,
+        "payment_status": lic.payment_status,
+        "payment_instructions": lic.payment_instructions,
+        "payment_claimed_at": dt_iso(lic.payment_claimed_at),
+        "paid_at": dt_iso(lic.paid_at),
     }
 
 
@@ -328,6 +336,7 @@ async def list_licenses(
     client_id: int | None = Query(None),
     project_id: int | None = Query(None),
     status_filter: str | None = Query(None, alias="status"),
+    payment_status: str | None = Query(None),
 ) -> list[dict[str, Any]]:
     query = select(LicLicense).order_by(LicLicense.created_at.desc())
     if client_id is not None:
@@ -336,6 +345,9 @@ async def list_licenses(
         query = query.where(LicLicense.project_id == project_id)
     if status_filter:
         query = query.where(LicLicense.status == status_filter)
+    if payment_status:
+        # Mainly to surface `payment_status=pending` — the claims awaiting you.
+        query = query.where(LicLicense.payment_status == payment_status)
     licenses = (await session.execute(query)).scalars().all()
     return [await _license_dict(session, lic) for lic in licenses]
 
@@ -384,6 +396,16 @@ async def update_license_status(license_id: int, body: LicenseStatusUpdate, sess
     lic = await session.get(LicLicense, license_id)
     if not lic:
         raise HTTPException(status_code=404, detail="License not found")
+    # ``unlocked`` means the code was handed over for good. Honour that: a
+    # license already delivered cannot be quietly suspended or revoked later.
+    if lic.status == "unlocked" and body.status != "unlocked":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Лицензия уже выдана навсегда (unlocked) — этот статус финальный "
+                "и не может быть изменён."
+            ),
+        )
     lic.status = body.status
     lic.note = f"manual: {body.status}"
     await session.commit()
@@ -409,6 +431,81 @@ async def extend_license(license_id: int, body: LicenseExtend, session: AsyncSes
         base = lic.expires_at if (lic.expires_at and lic.expires_at > datetime.now()) else datetime.now()
         lic.plan = body.plan
         lic.expires_at = _plan_expiry(body.plan, base)
+    await session.commit()
+    return await _license_dict(session, lic)
+
+
+# --- billing --------------------------------------------------------------- #
+@admin_router.patch("/licenses/{license_id}/price")
+async def set_license_price(
+    license_id: int, body: LicensePriceUpdate, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
+    """Set (or clear) the price the client sees in their portal.
+
+    Setting a price on a license with nothing outstanding starts the billing
+    cycle (``none`` → ``unpaid``). Clearing it (``price_amount: null``) means
+    "nothing to pay" and resets the cycle — unless the money already arrived,
+    which is a fact we don't overwrite.
+    """
+    lic = await session.get(LicLicense, license_id)
+    if not lic:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    lic.price_amount = body.price_amount
+    lic.price_currency = body.price_currency
+    if body.payment_instructions is not None:
+        lic.payment_instructions = body.payment_instructions
+
+    if lic.payment_status != "paid":
+        # Re-pricing an unpaid license also withdraws any outstanding claim:
+        # the client is being asked for a different amount now.
+        lic.payment_status = "unpaid" if body.price_amount is not None else "none"
+        lic.payment_claimed_at = None
+
+    await session.commit()
+    return await _license_dict(session, lic)
+
+
+@admin_router.post("/licenses/{license_id}/payment/confirm")
+async def confirm_payment(
+    license_id: int, body: PaymentConfirm, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
+    """Confirm the money arrived, and (by default) hand the code over for good.
+
+    ``unlock`` is a one-way door — see the guard in ``update_license_status``
+    — so it is spelled out explicitly rather than inferred from payment.
+    """
+    lic = await session.get(LicLicense, license_id)
+    if not lic:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    lic.payment_status = "paid"
+    lic.paid_at = datetime.now()
+    if body.unlock:
+        lic.status = "unlocked"
+    lic.note = body.note or ("paid + unlocked" if body.unlock else "paid")
+    await session.commit()
+
+    if body.unlock:
+        # Nothing may be served from a cache built while the license was still
+        # gated; unlocked licenses skip expiry/fingerprint checks entirely.
+        runtime.invalidate_license(license_id)
+    return await _license_dict(session, lic)
+
+
+@admin_router.post("/licenses/{license_id}/payment/reject")
+async def reject_payment(
+    license_id: int, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
+    """Dismiss a client's payment claim — the money never showed up."""
+    lic = await session.get(LicLicense, license_id)
+    if not lic:
+        raise HTTPException(status_code=404, detail="License not found")
+    if lic.payment_status == "paid":
+        raise HTTPException(status_code=409, detail="Оплата уже подтверждена")
+
+    lic.payment_status = "unpaid" if lic.price_amount is not None else "none"
+    lic.payment_claimed_at = None
     await session.commit()
     return await _license_dict(session, lic)
 

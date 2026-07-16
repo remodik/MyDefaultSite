@@ -26,21 +26,25 @@ All tables use the `lic_` prefix (they do **not** touch the site's existing
 | `executor.py` | Execution sandbox (thread+timeout default; `ProcessExecutor` for POSIX hardening). |
 | `runtime.py` | Mode B engine: cache, entrypoint resolution, timed execution. |
 | `security.py` | Auto-suspend triggers (scrape / leaked key / failure bursts) + webhook alerts. |
-| `client_routes.py` | Public endpoints (`/api/v1/project/*`). |
+| `client_routes.py` | Public endpoints (`/api/v1/project/*`) — the bot API. |
 | `admin_routes.py` | Admin API (JWT admin auth) + serves the panel. |
-| `deps.py` | Admin auth dependency. |
+| `portal_routes.py` | Client self-service portal (`/api/v1/licensing/portal/*`) + serves the portal page. |
+| `deps.py` | Admin auth + client-portal auth dependencies. |
 | `static/admin.html` | Self-contained admin panel (no build step). |
+| `static/portal.html` | Self-contained client portal (no build step). |
 
 ## Setup
 
-1. **Migrate** (creates the `lic_*` tables):
+1. **Schema.** Nothing to run: `init_models()` creates the `lic_*` tables on
+   startup, matching the rest of this app.
 
-   ```bash
-   alembic upgrade head
-   ```
-
-   The tables are also auto-created by `init_models()` on startup (matching the
-   rest of this app), so a fresh DB works without a separate Alembic run.
+   Migration files exist under `alembic/versions/` for reference, but this repo
+   ships **no `alembic.ini`**, so `alembic upgrade head` will not run as-is.
+   Because `create_all()` never alters an existing table, columns added after a
+   table already shipped are applied by idempotent `ALTER`s in `init_models()`
+   (see `database.py`) — that is how the billing columns reach a deployed DB.
+   **Adding a column to an existing `lic_*` table means adding it there too**,
+   otherwise production silently keeps the old schema.
 
 2. **Environment variables:**
 
@@ -63,6 +67,44 @@ All tables use the `lic_` prefix (they do **not** touch the site's existing
    per-client module toggles), Security events, Access logs (filters +
    pagination).
 
+4. **Client portal:** send clients to `/licensing/portal`. They sign in with
+   the **license key you gave them** — no accounts, no passwords. They see
+   every project tied to them, its status, its price, and (once you've
+   confirmed payment) can browse and download the sources.
+
+## Client portal & payment
+
+The portal is the client-facing half of the panel. Payment is **manual and
+out of band** — nothing here touches money or a payment gateway. "Paid" is
+your assertion, made after *you* verified the funds arrived.
+
+| Step | Who | Result |
+|---|---|---|
+| Set a price on a license (Licenses → Оплата) | you | `payment_status: unpaid`; the client sees the amount + your payment details |
+| Pay, then press "Я оплатил" | client | `payment_status: pending` + webhook alert to you |
+| Verify the money, press "Подтвердить оплату и выдать" | you | `payment_status: paid`, `status: unlocked` |
+| Browse / download the sources | client | ZIP of the license's effective files |
+
+Notes:
+
+- **Confirming is a one-way door.** It sets `unlocked`, which is terminal —
+  the server rejects any later attempt to suspend or revoke that license (see
+  *License statuses*). Use "Отклонить заявку" if the money never showed up.
+- **Downloads require `unlocked`**, nothing less. A `pending` claim grants
+  nothing.
+- **The portal respects module toggles**: a file disabled globally or for that
+  license is absent from the listing *and* the ZIP, and can't be read by id.
+- Pending claims surface on the admin dashboard, so the webhook is a
+  convenience rather than the only channel. Set `LICENSING_ALERT_WEBHOOK` to
+  get the ping.
+- Portal sessions are JWTs marked `typ: lic_portal`, valid 7 days. They are
+  rejected by the admin API, and site/admin tokens are rejected by the portal.
+- Login is rate-limited per IP (10/min) and every attempt — including a wrong
+  key — is written to `lic_access_logs` with `mode: portal`.
+
+**Amounts are whole currency units** (`15000` = 15 000 ₽), matching the site's
+existing `donations.amount` / `purchases.amount` convention.
+
 ## Typical workflow
 
 1. **Create a project** and upload its `.py` files (paths preserved, e.g.
@@ -82,7 +124,14 @@ All tables use the `lic_` prefix (they do **not** touch the site's existing
 - `revoked` — blocked, treated as permanent (needs a new license to restore).
 - `unlocked` — **delivered for good.** Validates permanently, ignoring expiry
   and fingerprint; the server is no longer the gatekeeper. Manual, final,
-  audit-only.
+  audit-only. **Enforced as terminal**: once set, the API rejects any status
+  change with 409, so a delivered license can never be quietly suspended or
+  revoked. It also unlocks source download in the client portal.
+
+Payment state (`payment_status`) is tracked *separately* from access status,
+because money and access are different questions: `none` → `unpaid` →
+`pending` → `paid`. A license can be `active` (the bot works) while still
+`unpaid` (a trial), and `paid` is what justifies going `unlocked`.
 
 ## Security notes & limitations
 
