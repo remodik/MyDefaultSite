@@ -191,7 +191,11 @@
                     ) {
                         return `${protocol}//${host}:8001`;
                     }
-                    return "https://mycardsite-backend.onrender.com";
+                    // Backend переехал с Render (засыпающий Hobby-план,
+                    // сервис там сейчас Suspended) на Pterodactyl-хост бота —
+                    // третий процесс run.py, публикуется через Cloudflare
+                    // Tunnel как licensing.remod3.ru.
+                    return "https://licensing.remod3.ru";
                 })(),
                 GOOGLE_CLIENT_ID: "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
             };

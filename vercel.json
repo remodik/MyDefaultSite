@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://5.129.198.22:8001/api/:path*"
+      "destination": "https://licensing.remod3.ru/api/:path*"
     },
     {
       "source": "/(.*)",
