@@ -73,7 +73,7 @@ function renderLoading() {
     if (!popupEl) return;
     popupEl.innerHTML = `
         <div class="user-popup-loading">
-            <div class="spinner"></div>
+            <span class="v1-loading v1-loading-inline">Загрузка…</span>
         </div>
     `;
 }
@@ -109,7 +109,7 @@ function renderProfile(profile) {
         </div>
         ${bio ? `<div class="user-popup-bio">${escapeHtml(bio)}</div>` : ''}
         ${canWrite
-        ? `<button type="button" class="btn btn-primary btn-sm user-popup-message-btn" data-action="write-message" data-user-id="${escapeHtml(profile.id)}">Написать</button>`
+        ? `<button type="button" class="v1-btn v1-btn-primary v1-btn-sm user-popup-message-btn" data-action="write-message" data-user-id="${escapeHtml(profile.id)}">Написать</button>`
         : ''}
     `;
 }

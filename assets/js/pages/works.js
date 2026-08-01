@@ -235,19 +235,19 @@ function showUploadModal() {
         title: 'Загрузить работу',
         size: 'xl',
         content: `
-            <form id="work-upload-form" class="space-y-4">
-                <div>
-                    <label class="label" for="work-file">HTML файл *</label>
-                    <input id="work-file" type="file" accept=".html,.htm" class="input" required>
-                    <p class="text-xs text-discord-text mt-1">Файл загрузится «как есть», CSS и JS внутри сохранятся.</p>
+            <form id="work-upload-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label" for="work-file">HTML файл *</label>
+                    <input id="work-file" type="file" accept=".html,.htm" class="v1-input" required>
+                    <p class="v1-muted">Файл загрузится «как есть», CSS и JS внутри сохранятся.</p>
                 </div>
-                <div>
-                    <label class="label" for="work-title">Название *</label>
-                    <input id="work-title" type="text" class="input" maxlength="255" required>
+                <div class="v1-field">
+                    <label class="v1-label" for="work-title">Название *</label>
+                    <input id="work-title" type="text" class="v1-input" maxlength="255" required>
                 </div>
-                <div>
-                    <label class="label" for="work-subject">Раздел / предмет</label>
-                    <input id="work-subject" type="text" class="input" maxlength="255"
+                <div class="v1-field">
+                    <label class="v1-label" for="work-subject">Раздел / предмет</label>
+                    <input id="work-subject" type="text" class="v1-input" maxlength="255"
                            placeholder="Например: Управление программными проектами"
                            list="work-subject-suggestions">
                     <datalist id="work-subject-suggestions">
@@ -256,40 +256,40 @@ function showUploadModal() {
                         <option value="Внедрение и поддержка компьютерных систем">
                     </datalist>
                 </div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="label" for="work-date">Дата (для отображения)</label>
-                        <input id="work-date" type="text" class="input" maxlength="64" placeholder="10 декабря 2025">
+                <div class="v1-form-row">
+                    <div class="v1-field">
+                        <label class="v1-label" for="work-date">Дата (для отображения)</label>
+                        <input id="work-date" type="text" class="v1-input" maxlength="64" placeholder="10 декабря 2025">
                     </div>
-                    <div>
-                        <label class="label" for="work-icon">Иконка (Font Awesome)</label>
-                        <input id="work-icon" type="text" class="input" maxlength="64"
+                    <div class="v1-field">
+                        <label class="v1-label" for="work-icon">Иконка (Font Awesome)</label>
+                        <input id="work-icon" type="text" class="v1-input" maxlength="64"
                                placeholder="fa-chart" value="fa-book">
                     </div>
                 </div>
-                <div>
-                    <label class="label" for="work-description">Описание</label>
-                    <textarea id="work-description" class="input" rows="3" maxlength="2000"></textarea>
+                <div class="v1-field">
+                    <label class="v1-label" for="work-description">Описание</label>
+                    <textarea id="work-description" class="v1-input" rows="3" maxlength="2000"></textarea>
                 </div>
-                <div>
-                    <label class="label" for="work-tags">Тэги (через запятую)</label>
-                    <input id="work-tags" type="text" class="input" maxlength="512"
+                <div class="v1-field">
+                    <label class="v1-label" for="work-tags">Тэги (через запятую)</label>
+                    <input id="work-tags" type="text" class="v1-input" maxlength="512"
                            placeholder="WBS, Риски, WPF">
                 </div>
-                <div>
-                    <label class="label" for="work-slug">URL slug (опционально)</label>
-                    <input id="work-slug" type="text" class="input" maxlength="160"
+                <div class="v1-field">
+                    <label class="v1-label" for="work-slug">URL slug (опционально)</label>
+                    <input id="work-slug" type="text" class="v1-input" maxlength="160"
                            placeholder="оставь пустым — сгенерируется из названия">
                 </div>
-                <label class="flex items-center gap-2 text-discord-text">
+                <label class="v1-check-row">
                     <input id="work-published" type="checkbox" checked>
                     Опубликовать сразу
                 </label>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" id="cancel-upload-btn">Отмена</button>
-            <button class="btn btn-primary" id="submit-upload-btn">
+            <button class="v1-btn" id="cancel-upload-btn">Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="submit-upload-btn">
                 <i class="fas fa-upload"></i>
                 Загрузить
             </button>
@@ -330,7 +330,7 @@ async function submitUpload() {
     const initialHtml = submitBtn?.innerHTML;
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="spinner"></div>';
+        submitBtn.textContent = 'Загрузка…';
     }
 
     try {
@@ -360,46 +360,46 @@ function showWorkEditModal(work) {
         title: 'Редактировать работу',
         size: 'xl',
         content: `
-            <form id="work-edit-form" class="space-y-4">
-                <div>
-                    <label class="label">Название</label>
-                    <input id="edit-title" type="text" class="input" value="${escapeHtml(work.title)}" maxlength="255">
+            <form id="work-edit-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label">Название</label>
+                    <input id="edit-title" type="text" class="v1-input" value="${escapeHtml(work.title)}" maxlength="255">
                 </div>
-                <div>
-                    <label class="label">Раздел</label>
-                    <input id="edit-subject" type="text" class="input" value="${escapeHtml(work.subject)}" maxlength="255">
+                <div class="v1-field">
+                    <label class="v1-label">Раздел</label>
+                    <input id="edit-subject" type="text" class="v1-input" value="${escapeHtml(work.subject)}" maxlength="255">
                 </div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="label">Дата</label>
-                        <input id="edit-date" type="text" class="input" value="${escapeHtml(work.display_date)}" maxlength="64">
+                <div class="v1-form-row">
+                    <div class="v1-field">
+                        <label class="v1-label">Дата</label>
+                        <input id="edit-date" type="text" class="v1-input" value="${escapeHtml(work.display_date)}" maxlength="64">
                     </div>
-                    <div>
-                        <label class="label">Иконка</label>
-                        <input id="edit-icon" type="text" class="input" value="${escapeHtml(work.icon)}" maxlength="64">
+                    <div class="v1-field">
+                        <label class="v1-label">Иконка</label>
+                        <input id="edit-icon" type="text" class="v1-input" value="${escapeHtml(work.icon)}" maxlength="64">
                     </div>
                 </div>
-                <div>
-                    <label class="label">Описание</label>
-                    <textarea id="edit-description" class="input" rows="3" maxlength="2000">${escapeHtml(work.description)}</textarea>
+                <div class="v1-field">
+                    <label class="v1-label">Описание</label>
+                    <textarea id="edit-description" class="v1-input" rows="3" maxlength="2000">${escapeHtml(work.description)}</textarea>
                 </div>
-                <div>
-                    <label class="label">Тэги (через запятую)</label>
-                    <input id="edit-tags" type="text" class="input" value="${escapeHtml((work.tags || []).join(', '))}" maxlength="512">
+                <div class="v1-field">
+                    <label class="v1-label">Тэги (через запятую)</label>
+                    <input id="edit-tags" type="text" class="v1-input" value="${escapeHtml((work.tags || []).join(', '))}" maxlength="512">
                 </div>
-                <div>
-                    <label class="label">Slug</label>
-                    <input id="edit-slug" type="text" class="input" value="${escapeHtml(work.slug)}" maxlength="160">
+                <div class="v1-field">
+                    <label class="v1-label">Slug</label>
+                    <input id="edit-slug" type="text" class="v1-input" value="${escapeHtml(work.slug)}" maxlength="160">
                 </div>
-                <label class="flex items-center gap-2 text-discord-text">
+                <label class="v1-check-row">
                     <input id="edit-published" type="checkbox" ${work.is_published ? 'checked' : ''}>
                     Опубликована
                 </label>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" id="edit-cancel-btn">Отмена</button>
-            <button class="btn btn-primary" id="edit-save-btn">
+            <button class="v1-btn" id="edit-cancel-btn">Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="edit-save-btn">
                 <i class="fas fa-save"></i>
                 Сохранить
             </button>
@@ -428,7 +428,7 @@ async function saveWorkEdits(originalSlug) {
     const initial = btn?.innerHTML;
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div>';
+        btn.textContent = 'Сохранение…';
     }
 
     try {
@@ -460,12 +460,14 @@ function showReplaceContentModal(slug) {
     showModal({
         title: 'Перезалить HTML',
         content: `
-            <p class="text-discord-text mb-4">Метаданные сохранятся, заменится только содержимое страницы.</p>
-            <input id="replace-file" type="file" accept=".html,.htm" class="input">
+            <div class="v1-field">
+                <p class="v1-muted">Метаданные сохранятся, заменится только содержимое страницы.</p>
+                <input id="replace-file" type="file" accept=".html,.htm" class="v1-input">
+            </div>
         `,
         footer: `
-            <button class="btn btn-secondary" id="replace-cancel-btn">Отмена</button>
-            <button class="btn btn-primary" id="replace-submit-btn">
+            <button class="v1-btn" id="replace-cancel-btn">Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="replace-submit-btn">
                 <i class="fas fa-sync"></i>
                 Заменить
             </button>

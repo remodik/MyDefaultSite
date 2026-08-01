@@ -129,39 +129,38 @@ function showServiceModal(service = null) {
     showModal({
         title: isEdit ? t('svc_modal_edit') : t('svc_modal_new'),
         content: `
-            <form id="service-form" class="space-y-4">
-                <div>
-                    <label class="label" for="service-name">${escapeHtml(t('svc_name'))}</label>
-                    <input type="text" id="service-name" class="input" value="${isEdit ? escapeHtml(service.name) : ''}" required>
+            <form id="service-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label" for="service-name">${escapeHtml(t('svc_name'))}</label>
+                    <input type="text" id="service-name" class="v1-input" value="${isEdit ? escapeHtml(service.name) : ''}" required>
                 </div>
-                <div>
-                    <label class="label" for="service-description">${escapeHtml(t('svc_desc'))}</label>
-                    <textarea id="service-description" class="input" rows="6" required>${isEdit ? escapeHtml(service.description) : ''}</textarea>
-                    <p class="text-xs text-discord-text mt-1"><i class="fas fa-info-circle"></i></p>
+                <div class="v1-field">
+                    <label class="v1-label" for="service-description">${escapeHtml(t('svc_desc'))}</label>
+                    <textarea id="service-description" class="v1-input" rows="6" required>${isEdit ? escapeHtml(service.description) : ''}</textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="label" for="service-price">${escapeHtml(t('svc_price'))}</label>
-                        <input type="text" id="service-price" class="input" value="${isEdit ? escapeHtml(service.price) : ''}" placeholder="от 1000 ₽" required>
+                <div class="v1-form-row">
+                    <div class="v1-field">
+                        <label class="v1-label" for="service-price">${escapeHtml(t('svc_price'))}</label>
+                        <input type="text" id="service-price" class="v1-input" value="${isEdit ? escapeHtml(service.price) : ''}" placeholder="от 1000 ₽" required>
                     </div>
-                    <div>
-                        <label class="label" for="service-time">${escapeHtml(t('svc_term'))}</label>
-                        <input type="text" id="service-time" class="input" value="${isEdit ? escapeHtml(service.estimated_time) : ''}" placeholder="1-3 дня" required>
+                    <div class="v1-field">
+                        <label class="v1-label" for="service-time">${escapeHtml(t('svc_term'))}</label>
+                        <input type="text" id="service-time" class="v1-input" value="${isEdit ? escapeHtml(service.estimated_time) : ''}" placeholder="1-3 дня" required>
                     </div>
                 </div>
-                <div>
-                    <label class="label" for="service-frameworks">${escapeHtml(t('svc_tech'))}</label>
-                    <input type="text" id="service-frameworks" class="input" value="${isEdit ? escapeHtml(service.frameworks) : ''}" placeholder="Python, JavaScript, React" required>
+                <div class="v1-field">
+                    <label class="v1-label" for="service-frameworks">${escapeHtml(t('svc_tech'))}</label>
+                    <input type="text" id="service-frameworks" class="v1-input" value="${isEdit ? escapeHtml(service.frameworks) : ''}" placeholder="Python, JavaScript, React" required>
                 </div>
-                <div>
-                    <label class="label" for="service-payment">${escapeHtml(t('svc_pay'))}</label>
-                    <input type="text" id="service-payment" class="input" value="${isEdit ? escapeHtml(service.payment_methods) : ''}" placeholder="Qiwi, СБП, Крипта" required>
+                <div class="v1-field">
+                    <label class="v1-label" for="service-payment">${escapeHtml(t('svc_pay'))}</label>
+                    <input type="text" id="service-payment" class="v1-input" value="${isEdit ? escapeHtml(service.payment_methods) : ''}" placeholder="Qiwi, СБП, Крипта" required>
                 </div>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" data-close>${escapeHtml(t('common_cancel'))}</button>
-            <button class="btn btn-primary" id="save-service-btn">
+            <button class="v1-btn" data-close>${escapeHtml(t('common_cancel'))}</button>
+            <button class="v1-btn v1-btn-primary" id="save-service-btn">
                 <i class="fas fa-save"></i>
                 ${isEdit ? escapeHtml(t('common_save')) : escapeHtml(t('common_create'))}
             </button>

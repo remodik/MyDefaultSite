@@ -14,23 +14,23 @@ let subscription = null;
 
 function planCard(plan) {
     return `
-        <div class="card p-6 flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-bold text-white">${plan.label}</h3>
-                <span class="tag tag-primary">${plan.badge}</span>
+        <article class="v1-card v1-plan-card">
+            <div class="v1-actions v1-actions-between">
+                <h3 class="v1-card-h">${plan.label}</h3>
+                <span class="v1-badge v1-badge-info">${plan.badge}</span>
             </div>
-            <div class="text-4xl font-bold text-white">${plan.price} <span class="text-base text-discord-text">₽</span></div>
-            <ul class="text-sm text-discord-text space-y-1">
-                <li><i class="fas fa-check text-discord-green mr-2"></i>Безлимит категорий</li>
-                <li><i class="fas fa-check text-discord-green mr-2"></i>Логи нарушений на сервере</li>
-                <li><i class="fas fa-check text-discord-green mr-2"></i>Скриншоты-доказательства</li>
-                <li><i class="fas fa-check text-discord-green mr-2"></i>Чёрный/белый список</li>
+            <div class="v1-price">${plan.price} <span>₽</span></div>
+            <ul class="v1-check-list">
+                <li><i class="fas fa-check"></i>Безлимит категорий</li>
+                <li><i class="fas fa-check"></i>Логи нарушений на сервере</li>
+                <li><i class="fas fa-check"></i>Скриншоты-доказательства</li>
+                <li><i class="fas fa-check"></i>Чёрный/белый список</li>
             </ul>
-            <button class="btn btn-success automute-buy-btn" data-plan="${plan.id}">
+            <button class="v1-btn v1-btn-primary automute-buy-btn" data-plan="${plan.id}">
                 <i class="fas fa-shopping-cart"></i>
                 Купить
             </button>
-        </div>
+        </article>
     `;
 }
 
@@ -46,28 +46,28 @@ function renderSubscriptionStatus() {
             ? Math.floor((subscription.seconds_left % 86400) / 3600) : 0;
 
         return `
-            <div class="card p-6 mb-6 border-l-4 border-discord-green">
-                <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="v1-card v1-callout success">
+                <div class="v1-actions v1-actions-between">
                     <div>
-                        <h3 class="text-xl font-bold text-white">
-                            <i class="fas fa-circle-check text-discord-green mr-2"></i>
+                        <h3 class="v1-card-h">
+                            <i class="fas fa-circle-check" aria-hidden="true"></i>
                             Подписка активна
                         </h3>
-                        <p class="text-discord-text mt-1">
-                            Тариф: <span class="text-white font-semibold">${escapeHtml(subscription.plan || '?')}</span>
+                        <p class="v1-muted">
+                            Тариф: <strong>${escapeHtml(subscription.plan || '?')}</strong>
                             · истекает ${formatDateTime(expiresIso)}
                         </p>
-                        <p class="text-discord-text mt-1">
-                            Осталось: <span class="text-white">${days}д ${hours}ч</span>
+                        <p class="v1-muted">
+                            Осталось: <strong>${days}д ${hours}ч</strong>
                         </p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-discord-text text-sm">Ваш ключ для мода:</p>
-                        <code class="text-white font-mono text-lg select-all">${escapeHtml(subscription.license_key || '—')}</code>
+                    <div class="v1-key-block">
+                        <p class="v1-meta-l">Ваш ключ для мода:</p>
+                        <code>${escapeHtml(subscription.license_key || '—')}</code>
                     </div>
                 </div>
-                <div class="mt-4 flex gap-2">
-                    <a href="/profile" class="btn btn-secondary btn-sm">
+                <div class="v1-actions" style="margin-top:var(--v1-space-4)">
+                    <a href="/profile" class="v1-btn v1-btn-sm">
                         <i class="fas fa-list"></i> Мои логи
                     </a>
                 </div>
@@ -78,14 +78,14 @@ function renderSubscriptionStatus() {
     if (subscription.pending_purchase) {
         const p = subscription.pending_purchase;
         return `
-            <div class="card p-6 mb-6 border-l-4 border-discord-yellow">
-                <h3 class="text-xl font-bold text-white">
-                    <i class="fas fa-hourglass-half text-discord-yellow mr-2"></i>
+            <div class="v1-card v1-callout warning">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-hourglass-half" aria-hidden="true"></i>
                     Ожидает подтверждения админом
                 </h3>
-                <p class="text-discord-text mt-1">
+                <p class="v1-muted">
                     Тариф ${escapeHtml(p.plan)} · ${p.amount} ₽ ·
-                    комментарий: <code class="text-white">${escapeHtml(p.sbp_comment || '')}</code>
+                    комментарий: <code>${escapeHtml(p.sbp_comment || '')}</code>
                 </p>
             </div>
         `;
@@ -93,12 +93,12 @@ function renderSubscriptionStatus() {
 
     if (subscription.license_key) {
         return `
-            <div class="card p-6 mb-6 border-l-4 border-discord-red">
-                <h3 class="text-xl font-bold text-white">
-                    <i class="fas fa-circle-exclamation text-discord-red mr-2"></i>
+            <div class="v1-card v1-callout danger">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
                     Подписка истекла
                 </h3>
-                <p class="text-discord-text mt-1">Купите новый тариф ниже, чтобы продолжить пользоваться модом.</p>
+                <p class="v1-muted">Купите новый тариф ниже, чтобы продолжить пользоваться модом.</p>
             </div>
         `;
     }
@@ -111,25 +111,25 @@ function showSbpModal(sbp) {
         title: 'Оплата через СБП',
         size: 'md',
         content: `
-            <div class="flex flex-col gap-3">
-                <p class="text-discord-text">
-                    Переведите <span class="text-white font-semibold">${sbp.amount} ₽</span>
-                    на <span class="text-white">${escapeHtml(sbp.phone)}</span>
+            <div class="v1-vstack">
+                <p class="v1-muted">
+                    Переведите <strong>${sbp.amount} ₽</strong>
+                    на <strong>${escapeHtml(sbp.phone)}</strong>
                     (${escapeHtml(sbp.bank)}) с комментарием:
                 </p>
-                <div class="bg-discord-darkest p-3 rounded">
-                    <code class="text-white font-mono text-lg select-all">${escapeHtml(sbp.comment)}</code>
+                <div class="v1-code-box">
+                    <code>${escapeHtml(sbp.comment)}</code>
                 </div>
-                <p class="text-discord-text text-sm">Получатель: ${escapeHtml(sbp.recipient)}</p>
-                <p class="text-discord-text text-sm">
+                <p class="v1-muted">Получатель: ${escapeHtml(sbp.recipient)}</p>
+                <p class="v1-muted">
                     После того как вы переведёте деньги — администратор подтвердит покупку,
                     и в вашем профиле появится лицензионный ключ для активации мода.
                 </p>
             </div>
         `,
         footer: `
-            <button class="btn btn-secondary" id="automute-close-sbp">Закрыть</button>
-            <button class="btn btn-primary" id="automute-copy-sbp" data-comment="${escapeHtml(sbp.comment)}">
+            <button class="v1-btn" id="automute-close-sbp">Закрыть</button>
+            <button class="v1-btn v1-btn-primary" id="automute-copy-sbp" data-comment="${escapeHtml(sbp.comment)}">
                 <i class="fas fa-copy"></i> Скопировать комментарий
             </button>
         `,
@@ -198,29 +198,32 @@ function rerender() {
 
 function pageHtml() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-5xl">
-            <div class="mb-8 text-center">
-                <h1 class="text-4xl font-bold text-white mb-2">
-                    <i class="fas fa-volume-mute text-discord-accent mr-2"></i>AutoMute
-                </h1>
-                <p class="text-discord-text max-w-2xl mx-auto">
+        <div class="v1-doc v1-doc-narrow">
+            <div class="v1-page-header v1-center-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// automute.js</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-volume-mute v1-page-title-icon" aria-hidden="true"></i>AutoMute
+                    </h1>
+                    <p class="v1-page-sub">
                     Клиентский мод для Minecraft 1.20.4 (Fabric) — автоматически наказывает
                     игроков за слова в чате. Логи нарушений хранятся на сервере с привязкой
                     к вашему аккаунту, скриншоты сохраняются как доказательства.
                 </p>
             </div>
+            </div>
 
             ${renderSubscriptionStatus()}
 
-            <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="v1-plan-grid">
                 ${PLANS.map(planCard).join('')}
             </div>
 
-            <div class="card p-6 mb-6">
-                <h3 class="text-xl font-bold text-white mb-3">
-                    <i class="fas fa-circle-info text-discord-accent mr-2"></i>Как это работает
+            <div class="v1-card">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-circle-info v1-title-icon" aria-hidden="true"></i>Как это работает
                 </h3>
-                <ol class="text-discord-text space-y-2 list-decimal list-inside">
+                <ol class="v1-steps-list">
                     <li>Выберите тариф и нажмите «Купить» — появятся реквизиты СБП.</li>
                     <li>Переведите указанную сумму с комментарием.</li>
                     <li>После подтверждения админом в вашем профиле появится лицензионный ключ.</li>

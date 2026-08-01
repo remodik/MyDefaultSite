@@ -67,10 +67,10 @@ async function loadSettings() {
     } catch (error) {
         loadingEl.classList.add('hidden');
         bodyEl.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Не удалось загрузить настройки</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(error.message || 'Ошибка запроса')}</p>
+            <div class="v1-empty">
+                <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+                <div class="v1-empty-h">Не удалось загрузить настройки</div>
+                <p>${escapeHtml(error.message || 'Ошибка запроса')}</p>
             </div>
         `;
         bodyEl.classList.remove('hidden');
@@ -154,40 +154,38 @@ async function handleSubmit(event) {
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-3xl">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-gear text-discord-accent mr-3"></i>
-                        Настройки
+        <div class="v1-doc v1-doc-compact">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// settings.js</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-gear v1-page-title-icon" aria-hidden="true"></i>Настройки
                     </h1>
-                    <p class="text-discord-text mt-2">Измените публичные данные профиля и приватность DM</p>
+                    <p class="v1-page-sub">Измените публичные данные профиля и приватность DM</p>
                 </div>
-                <a href="/profile" class="btn btn-secondary btn-sm">
+                <a href="/profile" class="v1-btn v1-btn-sm">
                     <i class="fas fa-arrow-left"></i>
                     К профилю
                 </a>
             </div>
 
-            <div class="profile-settings-card">
-                <div id="settings-loading" class="flex justify-center py-10">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+            <div class="profile-settings-card v1-card">
+                <div id="settings-loading" class="v1-loading">Загрузка…</div>
 
                 <div id="settings-body" class="hidden">
-                    <form id="profile-settings-form" class="space-y-5">
+                    <form id="profile-settings-form" class="v1-form">
                         <section class="settings-avatar-section">
-                            <label class="label">Аватар</label>
+                            <label class="v1-label">Аватар</label>
                             <div class="settings-avatar-row">
                                 <button type="button" id="settings-avatar-preview" class="settings-avatar-preview" aria-label="Выбрать фото профиля"></button>
                                 <div class="settings-avatar-actions">
                                     <input id="settings-avatar-input" type="file" accept="image/*" class="hidden">
                                     <div class="settings-avatar-buttons">
-                                        <button type="button" id="settings-avatar-upload" class="btn btn-secondary btn-sm">
+                                        <button type="button" id="settings-avatar-upload" class="v1-btn v1-btn-sm">
                                             <i class="fas fa-upload"></i>
                                             Загрузить фото
                                         </button>
-                                        <button type="button" id="settings-avatar-delete" class="btn btn-danger btn-sm">
+                                        <button type="button" id="settings-avatar-delete" class="v1-btn v1-btn-danger v1-btn-sm">
                                             <i class="fas fa-trash"></i>
                                             Удалить
                                         </button>
@@ -197,53 +195,53 @@ export function render() {
                             </div>
                         </section>
 
-                        <div>
-                            <label class="label" for="display-name">Публичное имя</label>
+                        <div class="v1-field">
+                            <label class="v1-label" for="display-name">Публичное имя</label>
                             <input
                                 type="text"
                                 id="display-name"
                                 name="display_name"
-                                class="input"
+                                class="v1-input"
                                 maxlength="50"
                                 placeholder="Как вас показывать в чате"
                             >
                         </div>
 
-                        <div>
-                            <label class="label" for="bio">О себе</label>
+                        <div class="v1-field">
+                            <label class="v1-label" for="bio">О себе</label>
                             <textarea
                                 id="bio"
                                 name="bio"
-                                class="input"
+                                class="v1-input"
                                 rows="4"
                                 maxlength="400"
                                 placeholder="Кратко о себе"
                             ></textarea>
                         </div>
 
-                        <div>
-                            <label class="label" for="accent-color">Accent color (опционально)</label>
+                        <div class="v1-field">
+                            <label class="v1-label" for="accent-color">Accent color (опционально)</label>
                             <input
                                 type="text"
                                 id="accent-color"
                                 name="accent_color"
-                                class="input"
+                                class="v1-input"
                                 maxlength="32"
-                                placeholder="#5865f2"
+                                placeholder="#007acc"
                             >
                         </div>
 
-                        <div>
-                            <label class="label" for="privacy-dm">Кто может писать в личку</label>
-                            <select id="privacy-dm" name="privacy_dm" class="input">
+                        <div class="v1-field">
+                            <label class="v1-label" for="privacy-dm">Кто может писать в личку</label>
+                            <select id="privacy-dm" name="privacy_dm" class="v1-input">
                                 <option value="all">Все</option>
                                 <option value="none">Никто</option>
                             </select>
                         </div>
 
-                        <div class="flex items-center justify-end gap-3 pt-2">
-                            <a href="/profile" class="btn btn-secondary">Отмена</a>
-                            <button type="submit" class="btn btn-primary">
+                        <div class="v1-actions v1-actions-end">
+                            <a href="/profile" class="v1-btn">Отмена</a>
+                            <button type="submit" class="v1-btn v1-btn-primary">
                                 <i class="fas fa-save"></i>
                                 Сохранить
                             </button>

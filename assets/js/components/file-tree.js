@@ -4,7 +4,8 @@ import {
   themeToTreeStyles,
 } from "@pierre/trees";
 import { filesApi, projectsApi } from "../api.js";
-import { getFileTypeFromName, showToast } from "../utils.js";
+import { escapeHtml, getFileTypeFromName, showToast } from "../utils.js";
+import { t } from "../i18n.js";
 import { closeModal, confirmModal, showModal } from "./modal.js";
 
 // ---- Состояние компонента ---------------------------------------------------
@@ -86,8 +87,9 @@ function captureExpandedPaths() {
   return out;
 }
 
-const emptyMarkup =
-  '<div class="empty-state"><i class="fas fa-folder-open"></i><p>Нет файлов</p></div>';
+// Считается на каждый вызов: язык может смениться без перезагрузки страницы.
+const emptyMarkup = () =>
+  `<div class="v1-empty"><i class="fas fa-folder-open v1-empty-icon" aria-hidden="true"></i><p>${escapeHtml(t("ft_empty"))}</p></div>`;
 
 export function renderFileTree(files, containerId, onSelect, projectId) {
   const host = document.getElementById(containerId);
@@ -113,7 +115,7 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
         tree.unmount();
       } catch {}
       tree = null;
-      host.innerHTML = emptyMarkup;
+      host.innerHTML = emptyMarkup();
     }
     return;
   }
@@ -139,7 +141,7 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
   host.style.height = host.style.height || "60vh";
 
   if (!newPaths.length) {
-    host.innerHTML = emptyMarkup;
+    host.innerHTML = emptyMarkup();
     return;
   }
 
@@ -169,11 +171,11 @@ export function renderFileTree(files, containerId, onSelect, projectId) {
     initialSelectedPaths: selectedItem ? [normPath(selectedItem.path)] : [],
     dragAndDrop: {
       onDropComplete: handleDropComplete,
-      onDropError: (err) => showToast(err || "Не удалось переместить", "error"),
+      onDropError: (err) => showToast(err || t("ft_move_failed"), "error"),
     },
     renaming: {
       onRename: handleRename,
-      onError: (err) => showToast(err || "Не удалось переименовать", "error"),
+      onError: (err) => showToast(err || t("ft_rename_failed"), "error"),
     },
     onSelectionChange: handleSelectionChange,
   });
@@ -200,9 +202,9 @@ async function handleRename(event) {
   const newName = normPath(event.destinationPath).split("/").pop();
   try {
     await filesApi.rename(file.id, newName);
-    showToast("Переименовано", "success");
+    showToast(t("ft_renamed"), "success");
   } catch (err) {
-    showToast(err.message || "Ошибка переименования", "error");
+    showToast(err.message || t("ft_rename_failed"), "error");
   }
   await refreshTree();
 }
@@ -217,10 +219,10 @@ async function handleDropComplete(result) {
       await filesApi.move(file.id, destDir);
       moved++;
     } catch (err) {
-      showToast(err.message || "Ошибка перемещения", "error");
+      showToast(err.message || t("ft_move_failed"), "error");
     }
   }
-  if (moved) showToast("Перемещено", "success");
+  if (moved) showToast(t("ft_moved"), "success");
   await refreshTree();
 }
 
@@ -235,7 +237,7 @@ async function refreshTree() {
       currentProjectId,
     );
   } catch (err) {
-    showToast(err.message || "Не удалось обновить дерево", "error");
+    showToast(err.message || t("ft_refresh_failed"), "error");
   }
 }
 
@@ -245,15 +247,15 @@ function promptName({ title, label, placeholder, onSubmit }) {
   showModal({
     title,
     content: `
-        <div class="space-y-4">
-            <div>
-                <label class="label">${label}</label>
-                <input type="text" id="ft-name-input" class="input" placeholder="${placeholder}" />
+        <div class="v1-form">
+            <div class="v1-field">
+                <label class="v1-label" for="ft-name-input">${escapeHtml(label)}</label>
+                <input type="text" id="ft-name-input" class="v1-input" placeholder="${escapeHtml(placeholder)}" />
             </div>
         </div>`,
     footer: `
-            <button class="btn btn-secondary" data-action="cancel">Отмена</button>
-            <button class="btn btn-primary" data-action="ok">Создать</button>`,
+            <button class="v1-btn" data-action="cancel">${escapeHtml(t("common_cancel"))}</button>
+            <button class="v1-btn v1-btn-primary" data-action="ok">${escapeHtml(t("common_create"))}</button>`,
   });
 
   setTimeout(() => {
@@ -266,7 +268,7 @@ function promptName({ title, label, placeholder, onSubmit }) {
       okBtn.addEventListener("click", async () => {
         const name = (input?.value || "").trim();
         if (!name) {
-          showToast("Введите имя", "error");
+          showToast(t("ft_enter_name"), "error");
           return;
         }
         closeModal();
@@ -279,14 +281,14 @@ function promptName({ title, label, placeholder, onSubmit }) {
 // Создание файла/папки внутри parentPath ("" = корень).
 function createInFolder(parentPath, isFolder) {
   promptName({
-    title: isFolder ? "Создать папку" : "Создать файл",
-    label: isFolder ? "Имя папки" : "Имя файла",
+    title: isFolder ? t("ft_new_folder") : t("ft_new_file"),
+    label: isFolder ? t("ft_folder_name") : t("ft_file_name"),
     placeholder: isFolder ? "my-folder" : "example.js",
     onSubmit: async (name) => {
       try {
         if (isFolder) {
           await filesApi.createFolder(currentProjectId, name, parentPath);
-          showToast("Папка создана", "success");
+          showToast(t("ft_folder_created"), "success");
         } else {
           await filesApi.create(
             currentProjectId,
@@ -296,10 +298,10 @@ function createInFolder(parentPath, isFolder) {
             parentPath,
             false,
           );
-          showToast("Файл создан", "success");
+          showToast(t("ft_file_created"), "success");
         }
       } catch (err) {
-        showToast(err.message || "Ошибка", "error");
+        showToast(err.message || t("common_save_error"), "error");
       }
       await refreshTree();
     },
@@ -350,12 +352,12 @@ function onTreeContextMenu(e) {
     const parent = isFolder ? normPath(rawPath) : "";
     items.push({
       icon: "fa-file-circle-plus",
-      label: "Новый файл",
+      label: t("ft_new_file"),
       action: () => createInFolder(parent, false),
     });
     items.push({
       icon: "fa-folder-plus",
-      label: "Новая папка",
+      label: t("ft_new_folder"),
       action: () => createInFolder(parent, true),
     });
   }
@@ -363,12 +365,12 @@ function onTreeContextMenu(e) {
     items.push({ divider: true });
     items.push({
       icon: "fa-pen",
-      label: "Переименовать",
+      label: t("common_rename"),
       action: () => tree?.startRenaming(rawPath),
     });
     items.push({
       icon: "fa-trash",
-      label: "Удалить",
+      label: t("common_delete"),
       danger: true,
       action: () => deleteEntry(file),
     });
@@ -408,15 +410,15 @@ function onTreeContextMenu(e) {
 
 function deleteEntry(file) {
   const message = file.is_folder
-    ? "Удалить папку и всё её содержимое?"
-    : "Удалить этот файл?";
+    ? t("ft_delete_folder_confirm")
+    : t("ft_delete_file_confirm");
   confirmModal(message, async () => {
     try {
       await filesApi.delete(file.id);
-      showToast("Удалено", "success");
+      showToast(t("ft_deleted"), "success");
       if (selectedItem?.id === file.id) selectedItem = null;
     } catch (err) {
-      showToast(err.message || "Ошибка удаления", "error");
+      showToast(err.message || t("common_delete_error"), "error");
     }
     await refreshTree();
   });

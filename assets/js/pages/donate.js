@@ -159,7 +159,7 @@ export function mount() {
         const message = document.getElementById('donate-message')?.value.trim() || null;
         const initial = payBtn.innerHTML;
         payBtn.disabled = true;
-        payBtn.innerHTML = '<div class="spinner" style="width:18px;height:18px"></div>';
+        payBtn.textContent = t('loading');
 
         try {
             const { confirmation_url } = await donateApi.create(amount, message);

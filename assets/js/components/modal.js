@@ -18,27 +18,27 @@ export function showModal(options) {
     closeModal();
     
     const sizeClass = {
-        sm: 'max-w-sm',
-        md: 'max-w-md',
-        lg: 'max-w-lg',
-        xl: 'max-w-xl',
-        '2xl': 'max-w-2xl',
-        full: 'max-w-4xl',
-    }[size] || 'max-w-md';
+        sm: 'v1-modal-sm',
+        md: 'v1-modal-md',
+        lg: 'v1-modal-lg',
+        xl: 'v1-modal-xl',
+        '2xl': 'v1-modal-2xl',
+        full: 'v1-modal-full',
+    }[size] || 'v1-modal-md';
     
     container.innerHTML = `
-        <div class="modal-overlay fade-in" id="modal-${id}">
-            <div class="modal ${sizeClass}" onclick="event.stopPropagation()">
-                <div class="modal-header">
-                    <h3 class="modal-title">${title}</h3>
-                    <button class="modal-close" data-close-modal>
+        <div class="v1-modal-overlay fade-in" id="modal-${id}">
+            <div class="v1-modal ${sizeClass}" role="dialog" aria-modal="true" aria-labelledby="modal-title-${id}">
+                <div class="v1-modal-header">
+                    <h3 class="v1-modal-title" id="modal-title-${id}">${title}</h3>
+                    <button class="v1-modal-close" data-close-modal aria-label="Закрыть">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="v1-modal-body">
                     ${content}
                 </div>
-                ${footer ? `<div class="modal-footer">${footer}</div>` : ''}
+                ${footer ? `<div class="v1-modal-footer">${footer}</div>` : ''}
             </div>
         </div>
     `;
@@ -85,10 +85,10 @@ function handleEscape(e) {
 export function confirmModal(message, onConfirm, onCancel) {
     const id = showModal({
         title: 'Подтверждение',
-        content: `<p class="text-discord.text">${message}</p>`,
+        content: `<p class="v1-muted">${message}</p>`,
         footer: `
-        <button class="btn btn-secondary" data-cancel>Отмена</button>
-        <button class="btn btn-danger" data-confirm>Подтвердить</button>
+        <button class="v1-btn" data-cancel>Отмена</button>
+        <button class="v1-btn v1-btn-danger" data-confirm>Подтвердить</button>
     `,
         onClose: onCancel,
     });

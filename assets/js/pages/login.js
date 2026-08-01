@@ -7,69 +7,63 @@ import { renderGoogleButton } from '../google-auth.js';
 
 export function render() {
     return `
-        <div class="min-h-screen flex items-center justify-center px-4 py-8">
-            <div class="w-full max-w-md">
-                <div class="bg-discord-light rounded-lg shadow-xl p-8 fade-in">
-                    <div class="text-center mb-8">
-                        <i class="fas fa-user-circle text-6xl text-discord-accent mb-4"></i>
-                        <h1 class="text-2xl font-bold text-white ide-h">${escapeHtml(t('page_login_title'))}</h1>
-                        <p class="text-discord-text mt-2">${escapeHtml(t('page_login_sub'))}</p>
+        <div class="v1-auth">
+            <div class="v1-auth-card fade-in">
+                <div class="v1-auth-head">
+                    <i class="fas fa-user-circle v1-auth-icon" aria-hidden="true"></i>
+                    <h1 class="v1-auth-title">${escapeHtml(t('page_login_title'))}</h1>
+                    <p class="v1-auth-sub">${escapeHtml(t('page_login_sub'))}</p>
+                </div>
+
+                <form id="login-form" class="v1-form">
+                    <div class="v1-field">
+                        <label class="v1-label" for="username">${escapeHtml(t('field_username'))}</label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_username'))}"
+                            data-testid="login-username"
+                            required
+                            autocomplete="username"
+                        >
                     </div>
 
-                    <form id="login-form" class="space-y-6">
-                        <div>
-                            <label class="label" for="username">${escapeHtml(t('field_username'))}</label>
-                            <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_username'))}"
-                                data-testid="login-username"
-                                required
-                                autocomplete="username"
-                            >
-                        </div>
-
-                        <div>
-                            <label class="label" for="password">${escapeHtml(t('field_password'))}</label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_password'))}"
-                                data-testid="login-password"
-                                required
-                                autocomplete="current-password"
-                            >
-                        </div>
-
-                        <div id="error-message" class="hidden text-discord-red text-sm"></div>
-
-                        <button type="submit" class="btn btn-primary w-full" data-testid="login-submit">
-                            <i class="fas fa-sign-in-alt"></i>
-                            ${escapeHtml(t('btn_signin'))}
-                        </button>
-                    </form>
-
-                    <div class="flex items-center gap-3 my-6">
-                        <div class="flex-1 h-px bg-white/10"></div>
-                        <span class="text-discord-text text-xs uppercase">или</span>
-                        <div class="flex-1 h-px bg-white/10"></div>
+                    <div class="v1-field">
+                        <label class="v1-label" for="password">${escapeHtml(t('field_password'))}</label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_password'))}"
+                            data-testid="login-password"
+                            required
+                            autocomplete="current-password"
+                        >
                     </div>
 
-                    <div id="google-signin-button" class="flex justify-center"></div>
+                    <div id="error-message" class="v1-msg error hidden"></div>
 
-                    <div class="mt-6 text-center space-y-2">
-                        <a href="/password-reset" class="text-discord-accent hover:underline text-sm">
-                            ${escapeHtml(t('forgot_password'))}
-                        </a>
-                        <p class="text-discord-text text-sm">
-                            ${escapeHtml(t('no_account'))}
-                            <a href="/register" class="text-discord-accent hover:underline">${escapeHtml(t('register_link'))}</a>
-                        </p>
-                    </div>
+                    <button type="submit" class="v1-btn v1-btn-primary v1-btn-block" data-testid="login-submit">
+                        <i class="fas fa-sign-in-alt"></i>
+                        ${escapeHtml(t('btn_signin'))}
+                    </button>
+                </form>
+
+                <div class="v1-divider">${escapeHtml(t('or'))}</div>
+
+                <div id="google-signin-button" class="v1-actions" style="justify-content:center"></div>
+
+                <div class="v1-vstack-sm v1-center" style="margin-top:var(--v1-space-5);display:flex;flex-direction:column">
+                    <a href="/password-reset" class="v1-link" style="font-size:13px">
+                        ${escapeHtml(t('forgot_password'))}
+                    </a>
+                    <p class="v1-muted">
+                        ${escapeHtml(t('no_account'))}
+                        <a href="/register" class="v1-link">${escapeHtml(t('register_link'))}</a>
+                    </p>
                 </div>
             </div>
         </div>
@@ -95,7 +89,7 @@ export function mount() {
 
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+            submitBtn.textContent = t('loading');
             errorDiv.classList.add('hidden');
 
             try {

@@ -1,0 +1,207 @@
+/* Final, structural-safe corrections. Keep this stylesheet last. */
+
+:root {
+    /* Small interface labels must remain legible on every IDE surface. */
+    --v1-fg-soft: var(--v1-fg-dim);
+}
+
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--v1-sky);
+    outline-offset: 2px;
+}
+
+:where(input, textarea)::placeholder {
+    color: var(--v1-fg-dim);
+    opacity: 1;
+}
+
+/* Compact labels keep their meaning without dropping below text contrast. */
+.v1-file-icon {
+    background: transparent !important;
+}
+
+.v1-file.active .v1-file-badge {
+    background: transparent;
+    color: #fff;
+}
+
+.chat-room-subtitle,
+.chat-sidebar-section-h,
+.chat-channel-sub {
+    color: var(--v1-fg-dim);
+}
+
+.chat-input-prompt {
+    color: var(--v1-accent-2);
+}
+
+.v1-tab-x {
+    min-width: 28px;
+    min-height: 28px;
+}
+
+.v1-lang-btn,
+.v1-sidebar-user-btn,
+.v1-toast-close {
+    min-height: 28px;
+}
+
+.v1-st-dot {
+    display: inline-block;
+    font-size: 10px;
+    line-height: 1;
+}
+
+/* Toasts are created with DOM APIs in utils.js and never contain raw HTML. */
+#toast-container {
+    position: fixed;
+    right: var(--v1-space-4);
+    bottom: calc(24px + var(--v1-space-4));
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--v1-space-2);
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+.v1-toast {
+    display: flex;
+    align-items: center;
+    gap: var(--v1-space-3);
+    width: min(400px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: none;
+    padding: var(--v1-space-3) var(--v1-space-4);
+    background: var(--v1-bg-2);
+    border: 1px solid var(--v1-border);
+    border-left: 4px solid var(--v1-accent);
+    border-radius: 8px;
+    color: var(--v1-fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
+    animation: slideIn .3s ease-out;
+    pointer-events: auto;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.v1-toast-success { border-left-color: var(--v1-green); }
+.v1-toast-error { border-left-color: var(--v1-red); }
+.v1-toast-warning { border-left-color: var(--v1-amber); }
+
+.v1-toast-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.v1-toast-close {
+    width: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--v1-fg-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.v1-toast-close:hover {
+    background: rgba(255, 255, 255, .08);
+    color: var(--v1-fg);
+}
+
+/* The page and chat consume the editor's available space, not the viewport. */
+.v1-page-content:has(.chat-shell) {
+    height: 100%;
+    min-height: 0;
+}
+
+#app:has(.chat-shell) {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.chat-shell {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--v1-bg);
+}
+
+.chat-layout,
+.chat-column,
+.chat-sidebar,
+.chat-messages {
+    min-height: 0;
+}
+
+.bot-page {
+    position: relative;
+    min-height: 100%;
+    overflow: hidden;
+}
+
+.bot-doc {
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 900px) {
+    .v1-body.sidebar-open::after {
+        content: "";
+        position: absolute;
+        inset: 0 0 0 40px;
+        z-index: 40;
+        background: rgba(0, 0, 0, .4);
+        cursor: pointer;
+    }
+
+    .v1-sidebar-toggle {
+        min-width: 36px;
+        min-height: 28px;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    #toast-container {
+        right: var(--v1-space-3);
+        left: var(--v1-space-3);
+        align-items: stretch;
+    }
+
+    .v1-toast {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .v1-cursor,
+    .v1-marquee-track,
+    .fade-in,
+    .slide-in,
+    .pulse,
+    .spin {
+        animation: none !important;
+    }
+
+    .v1-marquee-track {
+        transform: none !important;
+    }
+}

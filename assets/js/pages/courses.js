@@ -10,15 +10,15 @@ let courses = [];
 function formatPrice(price) {
     const amount = Number(price || 0);
     if (amount === 0) {
-        return `<span class="text-discord-green font-semibold">${escapeHtml(t('price_free'))}</span>`;
+        return `<span class="v1-price-free">${escapeHtml(t('price_free'))}</span>`;
     }
-    return `<span class="text-white font-semibold">${amount.toLocaleString('ru-RU')} ₽</span>`;
+    return `<span class="v1-price-inline">${amount.toLocaleString('ru-RU')} ₽</span>`;
 }
 
 function renderCover(course) {
     if (course.cover_url) {
         return `
-            <div class="course-card-cover-frame mb-4">
+            <div class="course-card-cover-frame">
                 <img
                     src="${escapeHtml(resolveApiUrl(course.cover_url))}"
                     alt="${escapeHtml(course.title)}"
@@ -27,32 +27,32 @@ function renderCover(course) {
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
                 <div class="course-card-cover-fallback hidden">
-                    <i class="fas fa-graduation-cap text-4xl text-discord-text/70"></i>
+                    <i class="fas fa-graduation-cap" aria-hidden="true"></i>
                 </div>
             </div>
         `;
     }
 
     return `
-        <div class="course-card-cover-frame course-card-cover-fallback mb-4">
-            <i class="fas fa-graduation-cap text-4xl text-discord-text/70"></i>
+        <div class="course-card-cover-frame course-card-cover-fallback">
+            <i class="fas fa-graduation-cap" aria-hidden="true"></i>
         </div>
     `;
 }
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-graduation-cap text-discord-accent mr-3"></i>
-                        ${escapeHtml(t('page_courses_title'))}
+        <div class="v1-doc">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// courses.md</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-graduation-cap v1-page-title-icon" aria-hidden="true"></i>${escapeHtml(t('page_courses_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">${escapeHtml(t('page_courses_sub'))}</p>
+                    <p class="v1-page-sub">${escapeHtml(t('page_courses_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
-                    <button class="btn btn-primary" id="add-course-btn">
+                    <button class="v1-btn v1-btn-primary" id="add-course-btn">
                         <i class="fas fa-plus"></i>
                         ${escapeHtml(t('page_projects_add'))}
                     </button>
@@ -60,9 +60,7 @@ export function render() {
             </div>
 
             <div id="courses-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">${escapeHtml(t('loading'))}</div>
             </div>
         </div>
     `;
@@ -74,47 +72,47 @@ function renderCourses() {
 
     if (!courses.length) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-graduation-cap"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('courses_empty'))}</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(t('page_courses_sub'))}</p>
+            <div class="v1-empty">
+                <i class="fas fa-graduation-cap v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">${escapeHtml(t('courses_empty'))}</div>
+                <p>${escapeHtml(t('page_courses_sub'))}</p>
             </div>
         `;
         return;
     }
 
     container.innerHTML = `
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="v1-card-grid">
             ${courses.map(course => `
-                <div
-                    class="course-card bg-discord-light rounded-xl border border-discord-lighter/40 hover:-translate-y-1 hover:border-discord-accent/50 transition-all duration-200 p-5 cursor-pointer fade-in"
+                <article
+                    class="course-card v1-scard fade-in"
                     data-course-id="${escapeHtml(course.id)}"
                 >
                     ${renderCover(course)}
 
                     <div class="course-card-body">
-                        <div class="flex items-start justify-between gap-3 mb-2">
-                            <h3 class="text-white font-bold text-lg leading-tight">${escapeHtml(course.title)}</h3>
-                            ${isAdmin() && !course.is_published ? `<span class="tag tag-warning shrink-0">${escapeHtml(t('work_draft'))}</span>` : ''}
+                        <div class="v1-scard-head">
+                            <h3 class="v1-scard-title">${escapeHtml(course.title)}</h3>
+                            ${isAdmin() && !course.is_published ? `<span class="v1-badge v1-badge-warn">${escapeHtml(t('work_draft'))}</span>` : ''}
                         </div>
 
-                        <p class="text-discord-text text-sm course-card-desc">${escapeHtml(course.short_description || t('work_no_desc'))}</p>
+                        <p class="v1-scard-desc course-card-desc">${escapeHtml(course.short_description || t('work_no_desc'))}</p>
 
                         <div class="course-card-footer">
-                            <div class="mt-4 flex items-center justify-between gap-2">
+                            <div class="v1-card-actions">
                                 <div>${formatPrice(course.price)}</div>
-                                <button class="btn btn-outline btn-sm course-open-btn shrink-0" data-course-id="${escapeHtml(course.id)}">
+                                <button class="v1-btn v1-btn-sm course-open-btn" data-course-id="${escapeHtml(course.id)}">
                                     ${escapeHtml(t('learn_more'))} →
                                 </button>
                             </div>
 
                             ${isAdmin() ? `
-                                <div class="flex gap-2 mt-4 pt-4 border-t border-discord-lighter/40">
-                                    <button class="btn btn-secondary btn-sm edit-course" data-course-id="${escapeHtml(course.id)}">
+                                <div class="v1-card-actions v1-card-actions-admin">
+                                    <button class="v1-btn v1-btn-sm edit-course" data-course-id="${escapeHtml(course.id)}">
                                         <i class="fas fa-edit"></i>
                                         ${escapeHtml(t('common_edit'))}
                                     </button>
-                                    <button class="btn btn-danger btn-sm delete-course" data-course-id="${escapeHtml(course.id)}">
+                                    <button class="v1-btn v1-btn-danger v1-btn-sm delete-course" data-course-id="${escapeHtml(course.id)}">
                                         <i class="fas fa-trash"></i>
                                         Удалить
                                     </button>
@@ -122,7 +120,7 @@ function renderCourses() {
                             ` : ''}
                         </div>
                     </div>
-                </div>
+                </article>
             `).join('')}
         </div>
     `;
@@ -175,9 +173,7 @@ async function loadCourses() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="flex justify-center py-12">
-            <div class="spinner spinner-lg"></div>
-        </div>
+        <div class="v1-loading">${escapeHtml(t('loading'))}</div>
     `;
 
     try {
@@ -186,10 +182,10 @@ async function loadCourses() {
     } catch (error) {
         showToast(error.message || 'Ошибка загрузки курсов', 'error');
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Ошибка загрузки</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(error.message || 'Не удалось загрузить список курсов')}</p>
+            <div class="v1-empty">
+                <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+                <div class="v1-empty-h">Ошибка загрузки</div>
+                <p>${escapeHtml(error.message || 'Не удалось загрузить список курсов')}</p>
             </div>
         `;
     }
@@ -201,47 +197,47 @@ function showCourseModal(course = null) {
     showModal({
         title: isEdit ? 'Редактировать курс' : 'Новый курс',
         content: `
-            <form id="course-form" class="space-y-4">
-                <div>
-                    <label class="label" for="course-title">Название</label>
-                    <input id="course-title" type="text" class="input" value="${isEdit ? escapeHtml(course.title) : ''}" maxlength="255" required>
+            <form id="course-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label" for="course-title">Название</label>
+                    <input id="course-title" type="text" class="v1-input" value="${isEdit ? escapeHtml(course.title) : ''}" maxlength="255" required>
                 </div>
-                <div>
-                    <label class="label" for="course-short-description">Краткое описание (для карточки)</label>
-                    <textarea id="course-short-description" class="input" rows="2" maxlength="512">${isEdit ? escapeHtml(course.short_description || '') : ''}</textarea>
-                    <div class="flex justify-between text-xs text-discord-text mt-1">
+                <div class="v1-field">
+                    <label class="v1-label" for="course-short-description">Краткое описание (для карточки)</label>
+                    <textarea id="course-short-description" class="v1-input" rows="2" maxlength="512">${isEdit ? escapeHtml(course.short_description || '') : ''}</textarea>
+                    <div class="v1-hint-row">
                         <span>Пара предложений для карточки. Полный текст курса — в поле ниже.</span>
                         <span id="short-description-counter"></span>
                     </div>
                 </div>
-                <div>
-                    <label class="label" for="course-description">Полное описание (Markdown)</label>
-                    <textarea id="course-description" class="input" rows="8" maxlength="50000">${isEdit ? escapeHtml(course.description || '') : ''}</textarea>
-                    <p class="text-xs text-discord-text mt-1">Здесь пишите длинный текст курса — поддерживается Markdown, до 50 000 символов.</p>
+                <div class="v1-field">
+                    <label class="v1-label" for="course-description">Полное описание (Markdown)</label>
+                    <textarea id="course-description" class="v1-input" rows="8" maxlength="50000">${isEdit ? escapeHtml(course.description || '') : ''}</textarea>
+                    <p class="v1-muted">Здесь пишите длинный текст курса — поддерживается Markdown, до 50 000 символов.</p>
                 </div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="label" for="course-price">Цена (₽)</label>
-                        <input id="course-price" type="number" class="input" min="0" step="1" value="${isEdit ? Number(course.price || 0) : 0}">
+                <div class="v1-form-row">
+                    <div class="v1-field">
+                        <label class="v1-label" for="course-price">Цена (₽)</label>
+                        <input id="course-price" type="number" class="v1-input" min="0" step="1" value="${isEdit ? Number(course.price || 0) : 0}">
                     </div>
-                    <div>
-                        <label class="label" for="course-cover-url">URL обложки</label>
-                        <input id="course-cover-url" type="text" class="input" maxlength="512" value="${isEdit ? escapeHtml(course.cover_url || '') : ''}" placeholder="https://...">
-                        <div id="cover-preview-wrap" class="mt-2 hidden">
+                    <div class="v1-field">
+                        <label class="v1-label" for="course-cover-url">URL обложки</label>
+                        <input id="course-cover-url" type="text" class="v1-input" maxlength="512" value="${isEdit ? escapeHtml(course.cover_url || '') : ''}" placeholder="https://...">
+                        <div id="cover-preview-wrap" class="hidden">
                             <img id="cover-preview-img" alt="Предпросмотр обложки" referrerpolicy="no-referrer" class="course-card-cover-image" style="max-height:120px;width:auto;border-radius:8px;border:1px solid rgba(64,66,73,0.8);">
-                            <p id="cover-preview-error" class="text-xs text-discord-red mt-1 hidden">Не удалось загрузить изображение по этому URL (проверьте ссылку или защиту хостинга от hotlink).</p>
+                            <p id="cover-preview-error" class="v1-msg error hidden">Не удалось загрузить изображение по этому URL (проверьте ссылку или защиту хостинга от hotlink).</p>
                         </div>
                     </div>
                 </div>
-                <label class="flex items-center gap-2 text-discord-text">
+                <label class="v1-check-row">
                     <input id="course-is-published" type="checkbox" ${isEdit && course.is_published ? 'checked' : ''}>
                     Опубликован
                 </label>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" id="cancel-course-btn">Отмена</button>
-            <button class="btn btn-primary" id="save-course-btn">
+            <button class="v1-btn" id="cancel-course-btn">Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="save-course-btn">
                 <i class="fas fa-save"></i>
                 Сохранить
             </button>
@@ -330,7 +326,7 @@ async function saveCourse(courseId = null) {
     };
 
     saveBtn.disabled = true;
-    saveBtn.innerHTML = '<div class="spinner"></div>';
+    saveBtn.textContent = 'Сохранение…';
 
     try {
         if (courseId) {

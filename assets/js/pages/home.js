@@ -3,18 +3,18 @@ import { router } from '../router.js';
 import { projectsApi, servicesApi } from '../api.js';
 import { t } from '../i18n.js';
 
-let scrollObserver = null;
-
 const STACK = [
-    'WebSockets', 'JWT', 'REST API', 'JavaScript', 'Vanilla JS', 'Tailwind CSS',
+    'WebSockets', 'JWT', 'REST API', 'JavaScript', 'Vanilla JS', 'CSS',
     'Docker', 'Python', 'FastAPI', 'discord.py', 'SQLAlchemy', 'PostgreSQL',
 ];
 
-const SKILLS = [
-    { key: 'skill_python', pct: 85 },
-    { key: 'skill_discord', pct: 80 },
-    { key: 'skill_js', pct: 65 },
-    { key: 'skill_fastapi', pct: 70 },
+// Вместо самооценки в процентах — проверяемые факты: что именно сделано на
+// этом стеке и куда посмотреть. `href` необязателен.
+const STACK_FACTS = [
+    { key: 'skill_python', fact: 'stack_python_fact' },
+    { key: 'skill_discord', fact: 'stack_discord_fact', href: '/bot' },
+    { key: 'skill_js', fact: 'stack_js_fact' },
+    { key: 'skill_fastapi', fact: 'stack_fastapi_fact', href: '/services' },
 ];
 
 const CHIPS = ['Python', 'FastAPI', 'discord.py', 'SQLAlchemy', 'JavaScript', 'PostgreSQL'];
@@ -24,14 +24,12 @@ export function render() {
         .map(s => `<span><i>·</i>${esc(s)}</span>`)
         .join('');
 
-    const skillsHtml = SKILLS.map(s => `
-        <div class="v1-skill">
-            <div class="v1-skill-h">
-                <span>${esc(t(s.key))}</span>
-                <span class="v1-skill-pct">${s.pct}%</span>
-            </div>
-            <div class="v1-skill-bar"><i data-pct="${s.pct}" style="width:0"></i></div>
-        </div>
+    const stackHtml2 = STACK_FACTS.map(s => `
+        <li class="v1-stack-item">
+            <span class="v1-stack-name">${esc(t(s.key))}</span>
+            <span class="v1-stack-fact">${esc(t(s.fact))}</span>
+            ${s.href ? `<a class="v1-stack-link" href="${s.href}">${esc(t('stack_view'))} →</a>` : ''}
+        </li>
     `).join('');
 
     const chipsHtml = CHIPS.map(c => `<span class="v1-chip">${esc(c)}</span>`).join('');
@@ -72,22 +70,23 @@ export function render() {
                     </div>
                     <div class="v1-avatar-box">
                         <div class="v1-avatar-inner">
-                            <img src="/assets/images/blue_avatar.png" alt="avatar"
-                                 onerror="this.outerHTML='<span style=&quot;font:800 42px/1 JetBrains Mono, monospace;color:#7dd3fc&quot;>R</span>'"/>
+                            <picture>
+                                <source srcset="/assets/images/blue_avatar.webp" type="image/webp" />
+                                <img id="v1-avatar-img" src="/assets/images/blue_avatar.png"
+                                     alt="" width="240" height="240" decoding="async" />
+                            </picture>
                         </div>
                     </div>
                     <div class="v1-stats">
-                        <div class="v1-stat">
-                            <div class="v1-stat-n" id="stat-projects-n">12+</div>
-                            <div class="v1-stat-l">${esc(t('projects_done'))}</div>
-                        </div>
+                        ${isAuthenticated() ? `
+                            <div class="v1-stat">
+                                <div class="v1-stat-n" id="stat-projects-n">—</div>
+                                <div class="v1-stat-l">${esc(t('projects_done'))}</div>
+                            </div>
+                        ` : ''}
                         <div class="v1-stat">
                             <div class="v1-stat-n">2+</div>
                             <div class="v1-stat-l">${esc(t('years_exp'))}</div>
-                        </div>
-                        <div class="v1-stat">
-                            <div class="v1-stat-n">24/7</div>
-                            <div class="v1-stat-l">${esc(t('online'))}</div>
                         </div>
                     </div>
                 </div>
@@ -108,8 +107,9 @@ export function render() {
                         <p>${esc(t('about_p2'))}</p>
                         <div class="v1-chips">${chipsHtml}</div>
                     </div>
-                    <div class="v1-skills" id="v1-skills-block">
-                        ${skillsHtml}
+                    <div class="v1-stack-block">
+                        <div class="v1-stack-h">${esc(t('stack_h'))}</div>
+                        <ul class="v1-stack">${stackHtml2}</ul>
                     </div>
                 </div>
             </section>
@@ -163,7 +163,7 @@ export function render() {
 }
 
 export async function mount() {
-    animateSkills();
+    bindAvatarFallback();
     await loadServices();
     if (isAuthenticated()) {
         await loadProjects();
@@ -171,33 +171,22 @@ export async function mount() {
     }
 }
 
-export function unmount() {
-    if (scrollObserver) {
-        scrollObserver.disconnect();
-        scrollObserver = null;
-    }
-}
+// Фолбэк аватара — обработчиком, а не HTML-строкой внутри inline-onerror.
+function bindAvatarFallback() {
+    const img = document.getElementById('v1-avatar-img');
+    if (!img) return;
 
-function animateSkills() {
-    const block = document.getElementById('v1-skills-block');
-    if (!block) return;
+    const showInitial = () => {
+        const box = img.closest('.v1-avatar-inner');
+        if (!box) return;
+        const initial = document.createElement('span');
+        initial.className = 'v1-avatar-initial';
+        initial.textContent = 'R';
+        box.replaceChildren(initial);
+    };
 
-    const io = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                block.querySelectorAll('.v1-skill-bar i').forEach(bar => {
-                    const pct = bar.dataset.pct || '0';
-                    requestAnimationFrame(() => {
-                        bar.style.width = pct + '%';
-                    });
-                });
-                io.unobserve(block);
-            }
-        });
-    }, { threshold: 0.15 });
-
-    io.observe(block);
-    scrollObserver = io;
+    img.addEventListener('error', showInitial, { once: true });
+    if (img.complete && img.naturalWidth === 0) showInitial();
 }
 
 async function loadProjectCount() {
@@ -219,13 +208,12 @@ async function loadServices() {
             return;
         }
 
+        // Код-хедер — одна строка-подпись: путь модуля. Данные (name, price)
+        // не дублируются, они ниже в теле карточки.
         grid.innerHTML = services.slice(0, 6).map((s, i) => `
             <div class="v1-svc">
                 <div class="v1-svc-head">
-                    <div class="v1-svc-line"><span class="v1-ln">${pad(i * 6 + 1)}</span><span style="color:#c084fc">export const</span> <span style="color:#7dd3fc">svc_${i + 1}</span> = <span style="color:#94a3b8">{</span></div>
-                    <div class="v1-svc-line"><span class="v1-ln">${pad(i * 6 + 2)}</span>  <span style="color:#fda4af">name</span><span style="color:#94a3b8">:</span> <span style="color:#86efac">"${esc(s.name)}"</span><span style="color:#94a3b8">,</span></div>
-                    <div class="v1-svc-line"><span class="v1-ln">${pad(i * 6 + 3)}</span>  <span style="color:#fda4af">price</span><span style="color:#94a3b8">:</span> <span style="color:#86efac">"${esc(s.price || '')}"</span><span style="color:#94a3b8">,</span></div>
-                    <div class="v1-svc-line"><span class="v1-ln">${pad(i * 6 + 4)}</span><span style="color:#94a3b8">};</span></div>
+                    <div class="v1-svc-line"><span style="color:var(--v1-fg-dim)">//</span> <span style="color:#7dd3fc">services</span><span style="color:#94a3b8">/</span><span style="color:#c084fc">svc_${i + 1}</span><span style="color:#94a3b8">.js</span></div>
                 </div>
                 <div class="v1-svc-body">
                     <div class="v1-svc-title">${esc(s.name)}</div>
@@ -276,10 +264,6 @@ async function loadProjects() {
     } catch {
         grid.innerHTML = `<div class="v1-empty">${esc(t('projects_failed'))}</div>`;
     }
-}
-
-function pad(n) {
-    return String(n).padStart(2, '0');
 }
 
 function truncate(s, max) {

@@ -18,7 +18,7 @@ function formatPrice(amount) {
 function renderCover() {
     if (course?.cover_url) {
         return `
-            <div class="relative course-detail-cover-frame">
+            <div class="course-detail-cover-frame">
                 <img
                     src="${escapeHtml(resolveApiUrl(course?.cover_url))}"
                     alt="${escapeHtml(course.title)}"
@@ -27,7 +27,7 @@ function renderCover() {
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
                 <div class="course-detail-cover-fallback hidden">
-                    <i class="fas fa-graduation-cap text-5xl text-discord-text/80"></i>
+                    <i class="fas fa-graduation-cap" aria-hidden="true"></i>
                 </div>
             </div>
         `;
@@ -35,7 +35,7 @@ function renderCover() {
 
     return `
         <div class="course-detail-cover-frame course-detail-cover-fallback">
-            <i class="fas fa-graduation-cap text-5xl text-discord-text/80"></i>
+            <i class="fas fa-graduation-cap" aria-hidden="true"></i>
         </div>
     `;
 }
@@ -53,13 +53,13 @@ function renderCoursePurchaseBlock() {
 
     if (!purchase) {
         return `
-            <div class="bg-discord-light rounded-xl border border-discord-lighter/40 p-5 mb-6">
-                <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="v1-card v1-callout">
+                <div class="v1-actions v1-actions-between">
                     <div>
-                        <h3 class="text-white font-bold text-lg">Полный доступ к курсу</h3>
-                        <p class="text-discord-text text-sm mt-1">Оплатите курс, чтобы открыть все разделы</p>
+                        <h3 class="v1-card-h">Полный доступ к курсу</h3>
+                        <p class="v1-muted">Оплатите курс, чтобы открыть все разделы</p>
                     </div>
-                    <button class="btn btn-success" id="purchase-course-btn">
+                    <button class="v1-btn v1-btn-primary" id="purchase-course-btn">
                         Купить курс за ${formatPrice(course.price)}
                     </button>
                 </div>
@@ -71,15 +71,15 @@ function renderCoursePurchaseBlock() {
         const amountText = formatPrice(purchase.amount);
         const comment = escapeHtml(purchase.sbp_comment || '');
         return `
-            <div class="bg-discord-light rounded-xl border border-discord-yellow/40 p-5 mb-6">
-                <div class="flex items-start justify-between gap-4">
+            <div class="v1-card v1-callout warning">
+                <div class="v1-actions v1-actions-between v1-actions-start">
                     <div>
-                        <span class="tag tag-warning mb-3">Ожидает подтверждения</span>
-                        <p class="text-discord-text text-sm leading-relaxed">
-                            Ожидает подтверждения. Переведите ${amountText} на ${escapeHtml(SBP_PHONE_FALLBACK)} (${escapeHtml(SBP_BANK_FALLBACK)}) с комментарием <span class="text-white font-semibold">${comment}</span>
+                        <span class="v1-badge v1-badge-warn">Ожидает подтверждения</span>
+                        <p class="v1-muted v1-leading">
+                            Ожидает подтверждения. Переведите ${amountText} на ${escapeHtml(SBP_PHONE_FALLBACK)} (${escapeHtml(SBP_BANK_FALLBACK)}) с комментарием <strong>${comment}</strong>
                         </p>
                     </div>
-                    <button class="btn btn-secondary btn-sm" id="copy-course-comment-btn" data-comment="${comment}">
+                    <button class="v1-btn v1-btn-sm" id="copy-course-comment-btn" data-comment="${comment}">
                         Скопировать комментарий
                     </button>
                 </div>
@@ -89,20 +89,20 @@ function renderCoursePurchaseBlock() {
 
     if (purchase.status === 'completed') {
         return `
-            <div class="bg-discord-light rounded-xl border border-discord-green/40 p-5 mb-6">
-                <span class="tag tag-success">Полный доступ открыт ✓</span>
+            <div class="v1-card v1-callout success">
+                <span class="v1-badge v1-badge-success">Полный доступ открыт ✓</span>
             </div>
         `;
     }
 
     return `
-        <div class="bg-discord-light rounded-xl border border-discord-red/40 p-5 mb-6">
-            <div class="flex items-center justify-between gap-3">
+        <div class="v1-card v1-callout danger">
+            <div class="v1-actions v1-actions-between">
                 <div>
-                    <span class="tag tag-danger mb-2">Оплата отклонена</span>
-                    <p class="text-discord-text text-sm">Попробуйте создать оплату повторно</p>
+                    <span class="v1-badge v1-badge-danger">Оплата отклонена</span>
+                    <p class="v1-muted">Попробуйте создать оплату повторно</p>
                 </div>
-                <button class="btn btn-success" id="purchase-course-retry-btn">
+                <button class="v1-btn v1-btn-primary" id="purchase-course-retry-btn">
                     Купить курс за ${formatPrice(course.price)}
                 </button>
             </div>
@@ -116,7 +116,7 @@ function renderPartAction(part) {
 
     if (canRead) {
         return `
-            <button class="btn btn-primary btn-sm read-part-btn" data-part-id="${escapeHtml(part.id)}">
+            <button class="v1-btn v1-btn-primary v1-btn-sm read-part-btn" data-part-id="${escapeHtml(part.id)}">
                 Читать →
             </button>
         `;
@@ -124,14 +124,14 @@ function renderPartAction(part) {
 
     if (partPrice > 0) {
         return `
-            <button class="btn btn-success btn-sm purchase-part-btn" data-part-id="${escapeHtml(part.id)}">
+            <button class="v1-btn v1-btn-primary v1-btn-sm purchase-part-btn" data-part-id="${escapeHtml(part.id)}">
                 Купить раздел за ${formatPrice(partPrice)}
             </button>
         `;
     }
 
     return `
-        <div class="text-discord-text text-sm flex items-center gap-2">
+        <div class="v1-muted v1-actions">
             <i class="fas fa-lock"></i>
             Требуется покупка курса
         </div>
@@ -147,9 +147,9 @@ function renderPartsList() {
 
     if (!parts.length) {
         return `
-            <div class="empty-state mt-6">
-                <i class="fas fa-book-open"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Разделов пока нет</h3>
+            <div class="v1-empty">
+                <i class="fas fa-book-open v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">Разделов пока нет</div>
             </div>
         `;
     }
@@ -177,45 +177,45 @@ function renderPartsList() {
     let globalIndex = 0;
 
     return `
-        <div class="space-y-6 mt-4">
+        <div class="v1-vstack-lg">
             ${groups.map((group) => `
                 ${group.title ? `
-                    <h3 class="text-white font-bold text-lg mt-4 mb-2 flex items-center gap-2">
-                        <span class="text-discord-accent">#</span>
+                    <h3 class="v1-section-title v1-module-title">
+                        <span class="v1-title-icon">#</span>
                         ${escapeHtml(group.title)}
                     </h3>
                 ` : ''}
-                <div class="space-y-4">
+                <div class="v1-vstack">
                     ${group.parts.map((part) => {
         globalIndex++;
         const partPrice = Number(part.price || 0);
         const showPartPrice = partPrice > 0 && !part.has_access;
 
         return `
-                            <div class="bg-discord-light rounded-xl border border-discord-lighter/40 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
+                            <article class="v1-card v1-part-card">
+                                <div class="v1-actions v1-actions-between v1-actions-start">
                                     <div>
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="text-discord-text text-sm">${globalIndex}.</span>
-                                            <h3 class="text-white font-bold text-lg">${escapeHtml(part.title)}</h3>
-                                            ${part.is_preview ? '<span class="tag tag-primary">Превью</span>' : ''}
+                                        <div class="v1-actions">
+                                            <span class="v1-soft">${globalIndex}.</span>
+                                            <h3 class="v1-card-h">${escapeHtml(part.title)}</h3>
+                                            ${part.is_preview ? '<span class="v1-badge v1-badge-info">Превью</span>' : ''}
                                         </div>
-                                        <p class="text-discord-text text-sm">${escapeHtml(part.description || 'Без описания')}</p>
-                                        ${showPartPrice ? `<p class="text-white text-sm mt-2">${formatPrice(partPrice)}</p>` : ''}
+                                        <p class="v1-muted">${escapeHtml(part.description || 'Без описания')}</p>
+                                        ${showPartPrice ? `<p class="v1-price-inline">${formatPrice(partPrice)}</p>` : ''}
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-2">
+                                    <div class="v1-actions">
                                         ${renderPartAction(part)}
                                         ${isAdmin() ? `
-                                            <button class="btn btn-secondary btn-sm edit-part-btn" data-part-id="${escapeHtml(part.id)}">
+                                            <button class="v1-btn v1-btn-sm edit-part-btn" data-part-id="${escapeHtml(part.id)}">
                                                 Редактировать
                                             </button>
-                                            <button class="btn btn-danger btn-sm delete-part-btn" data-part-id="${escapeHtml(part.id)}">
+                                            <button class="v1-btn v1-btn-danger v1-btn-sm delete-part-btn" data-part-id="${escapeHtml(part.id)}">
                                                 Удалить
                                             </button>
                                         ` : ''}
                                     </div>
                                 </div>
-                            </div>
+                            </article>
                         `;
     }).join('')}
                 </div>
@@ -232,24 +232,24 @@ function renderCourse() {
         <div class="fade-in">
             ${renderCover()}
 
-            <div class="text-discord-text text-sm mb-3">
-                <a href="/courses" class="hover:text-white transition">Курсы</a>
-                <span class="mx-2">→</span>
-                <span class="text-white">${escapeHtml(course.title)}</span>
+            <div class="v1-breadcrumb-inline">
+                <a href="/courses" class="v1-link">Курсы</a>
+                <span>→</span>
+                <span>${escapeHtml(course.title)}</span>
             </div>
 
-            <h1 class="text-3xl font-bold text-white mb-4">${escapeHtml(course.title)}</h1>
+            <h1 class="v1-page-title v1-detail-title">${escapeHtml(course.title)}</h1>
 
-            <div class="markdown-content bg-discord-light rounded-xl border border-discord-lighter/40 p-6 mb-6" id="course-description-markdown">
+            <div class="markdown-content v1-card v1-markdown-card" id="course-description-markdown">
                 ${renderMarkdown(course.description || '')}
             </div>
 
             ${renderCoursePurchaseBlock()}
 
-            <div class="flex justify-between items-center mt-8 mb-4">
-                <h2 class="text-2xl font-bold text-white">Разделы курса</h2>
+            <div class="v1-page-header v1-section-header">
+                <h2 class="v1-section-title">Разделы курса</h2>
                 ${isAdmin() ? `
-                    <button class="btn btn-primary" id="add-part-btn">
+                    <button class="v1-btn v1-btn-primary" id="add-part-btn">
                         <i class="fas fa-plus"></i>
                         Добавить раздел
                     </button>
@@ -351,10 +351,10 @@ function renderNotFound(message = 'Курс не найден') {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-exclamation-circle text-discord-red"></i>
-            <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(message)}</h3>
-            <button class="btn btn-primary mt-4" id="back-to-courses-btn">
+        <div class="v1-empty">
+            <i class="fas fa-exclamation-circle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+            <div class="v1-empty-h">${escapeHtml(message)}</div>
+            <button class="v1-btn v1-btn-primary" style="margin-top:var(--v1-space-4)" id="back-to-courses-btn">
                 ← Вернуться к курсам
             </button>
         </div>
@@ -418,17 +418,17 @@ function showSbpModal(sbp, onClosed) {
     showModal({
         title: 'Оплата через СБП',
         content: `
-            <div class="space-y-3">
-                <p class="text-discord-text">Переведите <span class="text-white font-semibold">${formatPrice(sbp.amount)}</span> на ${escapeHtml(sbp.phone)} (${escapeHtml(sbp.bank)}) с комментарием:</p>
-                <div class="bg-discord-darker rounded-lg p-3 border border-discord-lighter/40">
-                    <code class="text-white font-mono">${escapeHtml(sbp.comment)}</code>
+            <div class="v1-vstack">
+                <p class="v1-muted">Переведите <strong>${formatPrice(sbp.amount)}</strong> на ${escapeHtml(sbp.phone)} (${escapeHtml(sbp.bank)}) с комментарием:</p>
+                <div class="v1-code-box">
+                    <code>${escapeHtml(sbp.comment)}</code>
                 </div>
-                <p class="text-discord-text text-sm">Получатель: ${escapeHtml(sbp.recipient)}</p>
+                <p class="v1-muted">Получатель: ${escapeHtml(sbp.recipient)}</p>
             </div>
         `,
         footer: `
-            <button class="btn btn-secondary" id="close-sbp-modal-btn">Закрыть</button>
-            <button class="btn btn-primary" id="copy-sbp-comment-btn" data-comment="${escapeHtml(sbp.comment)}">
+            <button class="v1-btn" id="close-sbp-modal-btn">Закрыть</button>
+            <button class="v1-btn v1-btn-primary" id="copy-sbp-comment-btn" data-comment="${escapeHtml(sbp.comment)}">
                 Скопировать комментарий
             </button>
         `,
@@ -462,7 +462,7 @@ async function handlePurchaseCourse(button) {
     const initialText = button ? button.innerHTML : '';
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<div class="spinner"></div>';
+        button.textContent = 'Загрузка…';
     }
 
     try {
@@ -500,7 +500,7 @@ async function handlePurchasePart(partId, button) {
     const initialText = button ? button.innerHTML : '';
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<div class="spinner"></div>';
+        button.textContent = 'Загрузка…';
     }
 
     try {
@@ -535,44 +535,44 @@ function showPartModal(part = null) {
     showModal({
         title: isEdit ? 'Редактировать раздел' : 'Новый раздел',
         content: `
-            <form id="part-form" class="space-y-4">
-                <div>
-                    <label class="label" for="part-module">Модуль (необязательно)</label>
-                    <input id="part-module" type="text" class="input" maxlength="255" 
+            <form id="part-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label" for="part-module">Модуль (необязательно)</label>
+                    <input id="part-module" type="text" class="v1-input" maxlength="255" 
                            placeholder="Например: Модуль 1. Введение"
                            value="${isEdit ? escapeHtml(part.module_title || '') : ''}">
                 </div>
-                <div>
-                    <label class="label" for="part-title">Название</label>
-                    <input id="part-title" type="text" class="input" maxlength="255" value="${isEdit ? escapeHtml(part.title) : ''}" required>
+                <div class="v1-field">
+                    <label class="v1-label" for="part-title">Название</label>
+                    <input id="part-title" type="text" class="v1-input" maxlength="255" value="${isEdit ? escapeHtml(part.title) : ''}" required>
                 </div>
-                <div>
-                    <label class="label" for="part-description">Короткое описание</label>
-                    <input id="part-description" type="text" class="input" maxlength="512" value="${isEdit ? escapeHtml(part.description || '') : ''}">
+                <div class="v1-field">
+                    <label class="v1-label" for="part-description">Короткое описание</label>
+                    <input id="part-description" type="text" class="v1-input" maxlength="512" value="${isEdit ? escapeHtml(part.description || '') : ''}">
                 </div>
-                <div>
-                    <label class="label" for="part-content">Контент (Markdown)</label>
-                    <textarea id="part-content" class="input font-mono text-sm" rows="15">${isEdit ? escapeHtml(part.content || '') : ''}</textarea>
+                <div class="v1-field">
+                    <label class="v1-label" for="part-content">Контент (Markdown)</label>
+                    <textarea id="part-content" class="v1-input v1-code-input" rows="15">${isEdit ? escapeHtml(part.content || '') : ''}</textarea>
                 </div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="label" for="part-price">Цена (₽)</label>
-                        <input id="part-price" type="number" class="input" min="0" step="1" value="${isEdit ? Number(part.price || 0) : 0}">
+                <div class="v1-form-row">
+                    <div class="v1-field">
+                        <label class="v1-label" for="part-price">Цена (₽)</label>
+                        <input id="part-price" type="number" class="v1-input" min="0" step="1" value="${isEdit ? Number(part.price || 0) : 0}">
                     </div>
-                    <div>
-                        <label class="label" for="part-order">Порядок</label>
-                        <input id="part-order" type="number" class="input" min="0" step="1" value="${isEdit ? Number(part.order || 0) : 0}">
+                    <div class="v1-field">
+                        <label class="v1-label" for="part-order">Порядок</label>
+                        <input id="part-order" type="number" class="v1-input" min="0" step="1" value="${isEdit ? Number(part.order || 0) : 0}">
                     </div>
                 </div>
-                <label class="flex items-center gap-2 text-discord-text">
+                <label class="v1-check-row">
                     <input id="part-is-preview" type="checkbox" ${isEdit && part.is_preview ? 'checked' : ''}>
                     Превью-раздел
                 </label>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" id="cancel-part-btn">Отмена</button>
-            <button class="btn btn-primary" id="save-part-btn">
+            <button class="v1-btn" id="cancel-part-btn">Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="save-part-btn">
                 <i class="fas fa-save"></i>
                 Сохранить
             </button>
@@ -638,7 +638,7 @@ async function savePart(partId = null) {
     };
 
     saveBtn.disabled = true;
-    saveBtn.innerHTML = '<div class="spinner"></div>';
+    saveBtn.textContent = 'Сохранение…';
 
     try {
         if (partId) {
@@ -675,11 +675,9 @@ async function deletePart(partId) {
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="v1-doc">
             <div id="course-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">Загрузка…</div>
             </div>
         </div>
     `;

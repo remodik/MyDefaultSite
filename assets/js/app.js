@@ -76,22 +76,44 @@ async function registerOptionalAutomuteRoute() {
     }
 }
 
+// Статус-бар слушает это событие (см. navbar.js) — «Connected» больше
+// не нарисован в разметке намертво.
+function setBackendStatus(state) {
+    window.dispatchEvent(new CustomEvent('backend-status', {
+        detail: { state, source: 'health' },
+    }));
+}
+
 async function checkBackendAwake() {
     const banner = document.getElementById('wake-banner');
-    if (!banner || !API_URL || API_URL.includes('localhost') || API_URL.includes('127.0.0.1')) return;
+    if (!API_URL) {
+        setBackendStatus('offline');
+        return;
+    }
 
-    const showTimer = setTimeout(() => banner.classList.remove('hidden'), 2000);
+    setBackendStatus('connecting');
+
+    const isLocal = API_URL.includes('localhost') || API_URL.includes('127.0.0.1');
+    const showTimer = banner && !isLocal
+        ? setTimeout(() => banner.classList.remove('hidden'), 2000)
+        : null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
-        await fetch(`${API_URL}/api/health`, { method: 'HEAD', signal: controller.signal }).catch(() =>
-            fetch(`${API_URL}/`, { method: 'HEAD', signal: controller.signal })
-        );
+        const res = await fetch(`${API_URL}/api/health`, {
+            method: 'GET',
+            cache: 'no-store',
+            signal: controller.signal,
+        });
+        setBackendStatus(res && res.ok ? 'connected' : 'offline');
+    } catch {
+        setBackendStatus('offline');
+    } finally {
         clearTimeout(timeout);
-    } catch { } finally {
-        clearTimeout(showTimer);
-        banner.classList.add('hidden');
+        if (showTimer) clearTimeout(showTimer);
+        if (banner) banner.classList.add('hidden');
     }
 }
 

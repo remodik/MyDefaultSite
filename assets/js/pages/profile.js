@@ -33,19 +33,19 @@ function renderAvatar(data) {
 
 function renderTabs() {
     return `
-        <div class="flex gap-2 mb-6 border-b border-discord-darkest">
-            <button class="profile-tab-btn ${activeTab === 'profile' ? 'active' : ''}" data-tab="profile">
-                <i class="fas fa-user mr-1"></i> Профиль
+        <div class="v1-subtabs" role="tablist">
+            <button class="v1-subtab ${activeTab === 'profile' ? 'active' : ''}" data-tab="profile" role="tab" aria-selected="${activeTab === 'profile'}">
+                <i class="fas fa-user"></i> Профиль
             </button>
-            <button class="profile-tab-btn ${activeTab === 'automute' ? 'active' : ''}" data-tab="automute">
-                <i class="fas fa-volume-mute mr-1"></i> AutoMute
+            <button class="v1-subtab ${activeTab === 'automute' ? 'active' : ''}" data-tab="automute" role="tab" aria-selected="${activeTab === 'automute'}">
+                <i class="fas fa-volume-mute"></i> AutoMute
             </button>
         </div>
     `;
 }
 
 function renderProfileTab() {
-    if (!profile) return '<div class="flex justify-center py-12"><div class="spinner spinner-lg"></div></div>';
+    if (!profile) return '<div class="v1-loading">Загрузка…</div>';
 
     const displayName = profile.display_name || profile.username;
     const hasBio = Boolean(profile.bio?.trim());
@@ -54,7 +54,7 @@ function renderProfileTab() {
 
     return `
         <div class="profile-page-grid fade-in">
-            <section class="profile-main-card">
+            <section class="profile-main-card v1-card">
                 <div class="profile-avatar-wrap">
                     ${renderAvatar(profile)}
                 </div>
@@ -64,27 +64,27 @@ function renderProfileTab() {
                     <p class="profile-username">@${escapeHtml(profile.username)}</p>
 
                     <div class="profile-badges-row">
-                        <span class="tag tag-primary">
-                            <i class="fas fa-circle mr-1"></i>${escapeHtml(status)}
+                        <span class="v1-badge v1-badge-info">
+                            <i class="fas fa-circle"></i>${escapeHtml(status)}
                         </span>
-                        <span class="tag">
-                            <i class="fas fa-shield-halved mr-1"></i>Аккаунт активен
+                        <span class="v1-badge">
+                            <i class="fas fa-shield-halved"></i>Аккаунт активен
                         </span>
                     </div>
                 </div>
             </section>
 
-            <section class="profile-info-card">
+            <section class="profile-info-card v1-card">
                 <h2 class="profile-card-title">
-                    <i class="fas fa-user mr-2 text-discord-accent"></i>
+                    <i class="fas fa-user v1-title-icon"></i>
                     О себе
                 </h2>
                 <p class="profile-bio ${hasBio ? '' : 'is-placeholder'}">${escapeHtml(bio)}</p>
             </section>
 
-            <section class="profile-info-card">
+            <section class="profile-info-card v1-card">
                 <h2 class="profile-card-title">
-                    <i class="fas fa-gear mr-2 text-discord-accent"></i>
+                    <i class="fas fa-gear v1-title-icon"></i>
                     Настройки приватности
                 </h2>
                 <div class="profile-meta-row">
@@ -93,7 +93,7 @@ function renderProfileTab() {
                         ${profile.privacy_dm === 'none' ? 'Никто' : 'Все'}
                     </span>
                 </div>
-                <a href="/settings" class="btn btn-primary btn-sm mt-4">
+                <a href="/settings" class="v1-btn v1-btn-primary v1-btn-sm" style="margin-top:var(--v1-space-4)">
                     <i class="fas fa-pen"></i>
                     Редактировать профиль
                 </a>
@@ -104,15 +104,15 @@ function renderProfileTab() {
 
 function renderTariffCards() {
     return `
-        <div class="grid md:grid-cols-3 gap-4 mb-4">
+        <div class="v1-plan-grid">
             ${AUTOMUTE_PLANS.map((p) => `
-                <div class="card p-4 flex flex-col gap-3">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-lg font-bold text-white">${p.label}</h4>
-                        <span class="tag tag-primary">${p.badge}</span>
+                <div class="v1-card v1-plan-card">
+                    <div class="v1-actions v1-actions-between">
+                        <h4 class="v1-card-h">${p.label}</h4>
+                        <span class="v1-badge v1-badge-info">${p.badge}</span>
                     </div>
-                    <div class="text-3xl font-bold text-white">${p.price} <span class="text-sm text-discord-text">₽</span></div>
-                    <button class="btn btn-success btn-sm automute-buy-btn" data-plan="${p.id}">
+                    <div class="v1-price">${p.price} <span>₽</span></div>
+                    <button class="v1-btn v1-btn-primary v1-btn-sm automute-buy-btn" data-plan="${p.id}">
                         <i class="fas fa-shopping-cart"></i> Купить
                     </button>
                 </div>
@@ -124,12 +124,12 @@ function renderTariffCards() {
 function renderSubscriptionStatusCard() {
     if (!subscription) {
         return `
-            <div class="card p-4 mb-4">
-                <h3 class="text-lg font-bold text-white mb-2">
-                    <i class="fas fa-circle-info text-discord-accent mr-2"></i>
+            <div class="v1-card v1-callout">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-circle-info v1-title-icon"></i>
                     Купите подписку, чтобы пользоваться модом
                 </h3>
-                <p class="text-discord-text">
+                <p class="v1-muted">
                     После оплаты администратор подтвердит покупку — здесь появится ваш лицензионный ключ.
                 </p>
             </div>
@@ -142,22 +142,22 @@ function renderSubscriptionStatusCard() {
         const hours = subscription.seconds_left
             ? Math.floor((subscription.seconds_left % 86400) / 3600) : 0;
         return `
-            <div class="card p-4 mb-4 border-l-4 border-discord-green">
-                <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="v1-card v1-callout success">
+                <div class="v1-actions v1-actions-between">
                     <div>
-                        <h3 class="text-lg font-bold text-white">
-                            <i class="fas fa-circle-check text-discord-green mr-2"></i>
+                        <h3 class="v1-card-h">
+                            <i class="fas fa-circle-check" aria-hidden="true"></i>
                             Подписка активна
                         </h3>
-                        <p class="text-discord-text mt-1">
-                            Тариф: <span class="text-white font-semibold">${escapeHtml(subscription.plan || '?')}</span>
+                        <p class="v1-muted">
+                            Тариф: <strong>${escapeHtml(subscription.plan || '?')}</strong>
                             · истекает ${formatDateTime(subscription.expires_at)}
                             (осталось ${days}д ${hours}ч)
                         </p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-discord-text text-xs mb-1">Лицензионный ключ:</p>
-                        <code class="text-white font-mono select-all">${escapeHtml(subscription.license_key || '—')}</code>
+                    <div class="v1-key-block">
+                        <p class="v1-meta-l">Лицензионный ключ:</p>
+                        <code>${escapeHtml(subscription.license_key || '—')}</code>
                     </div>
                 </div>
             </div>
@@ -167,26 +167,26 @@ function renderSubscriptionStatusCard() {
     if (subscription.pending_purchase) {
         const p = subscription.pending_purchase;
         return `
-            <div class="card p-4 mb-4 border-l-4 border-discord-yellow">
-                <h3 class="text-lg font-bold text-white">
-                    <i class="fas fa-hourglass-half text-discord-yellow mr-2"></i>
+            <div class="v1-card v1-callout warning">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-hourglass-half" aria-hidden="true"></i>
                     Покупка ожидает подтверждения
                 </h3>
-                <p class="text-discord-text mt-1">
+                <p class="v1-muted">
                     Тариф ${escapeHtml(p.plan)} на ${p.amount} ₽,
-                    комментарий <code class="text-white">${escapeHtml(p.sbp_comment || '')}</code>
+                    комментарий <code>${escapeHtml(p.sbp_comment || '')}</code>
                 </p>
             </div>
         `;
     }
 
     return `
-        <div class="card p-4 mb-4 border-l-4 border-discord-red">
-            <h3 class="text-lg font-bold text-white">
-                <i class="fas fa-circle-exclamation text-discord-red mr-2"></i>
+        <div class="v1-card v1-callout danger">
+            <h3 class="v1-card-h">
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
                 Подписка истекла
             </h3>
-            <p class="text-discord-text mt-1">Выберите новый тариф, чтобы продлить.</p>
+            <p class="v1-muted">Выберите новый тариф, чтобы продлить.</p>
         </div>
         ${renderTariffCards()}
     `;
@@ -197,25 +197,25 @@ function showSbpModal(sbp) {
         title: 'Оплата через СБП',
         size: 'md',
         content: `
-            <div class="flex flex-col gap-3">
-                <p class="text-discord-text">
-                    Переведите <span class="text-white font-semibold">${sbp.amount} ₽</span>
-                    на <span class="text-white">${escapeHtml(sbp.phone)}</span>
+            <div class="v1-vstack">
+                <p class="v1-muted">
+                    Переведите <strong>${sbp.amount} ₽</strong>
+                    на <strong>${escapeHtml(sbp.phone)}</strong>
                     (${escapeHtml(sbp.bank)}) с комментарием:
                 </p>
-                <div class="bg-discord-darkest p-3 rounded">
-                    <code class="text-white font-mono text-lg select-all">${escapeHtml(sbp.comment)}</code>
+                <div class="v1-code-box">
+                    <code>${escapeHtml(sbp.comment)}</code>
                 </div>
-                <p class="text-discord-text text-sm">Получатель: ${escapeHtml(sbp.recipient)}</p>
-                <p class="text-discord-text text-sm">
+                <p class="v1-muted">Получатель: ${escapeHtml(sbp.recipient)}</p>
+                <p class="v1-muted">
                     После того как вы переведёте деньги — администратор подтвердит покупку,
                     и здесь появится лицензионный ключ для активации мода.
                 </p>
             </div>
         `,
         footer: `
-            <button class="btn btn-secondary" id="automute-close-sbp">Закрыть</button>
-            <button class="btn btn-primary" id="automute-copy-sbp" data-comment="${escapeHtml(sbp.comment)}">
+            <button class="v1-btn" id="automute-close-sbp">Закрыть</button>
+            <button class="v1-btn v1-btn-primary" id="automute-copy-sbp" data-comment="${escapeHtml(sbp.comment)}">
                 <i class="fas fa-copy"></i> Скопировать комментарий
             </button>
         `,
@@ -260,56 +260,54 @@ async function handleBuy(plan) {
 
 function renderLogsList() {
     if (!logs) {
-        return '<div class="flex justify-center py-6"><div class="spinner"></div></div>';
+        return '<div class="v1-loading">Загрузка…</div>';
     }
     if (!logs.items?.length) {
         return `
-            <div class="card p-6 text-center">
-                <i class="fas fa-list-alt text-3xl text-discord-text mb-2"></i>
-                <p class="text-discord-text">Логов пока нет — мод ничего не отправлял.</p>
+            <div class="v1-empty">
+                <i class="fas fa-list-alt v1-empty-icon" aria-hidden="true"></i>
+                <p>Логов пока нет — мод ничего не отправлял.</p>
             </div>
         `;
     }
 
     return `
-        <div class="card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-discord-darkest">
+        <div class="v1-table-wrap">
+                <table class="v1-table">
+                    <thead>
                         <tr>
-                            <th class="text-left px-3 py-2 text-discord-text">Время</th>
-                            <th class="text-left px-3 py-2 text-discord-text">Игрок</th>
-                            <th class="text-left px-3 py-2 text-discord-text">Категория</th>
-                            <th class="text-left px-3 py-2 text-discord-text">Слово</th>
-                            <th class="text-left px-3 py-2 text-discord-text">Сервер</th>
-                            <th class="text-left px-3 py-2 text-discord-text">Скрин</th>
+                            <th>Время</th>
+                            <th>Игрок</th>
+                            <th>Категория</th>
+                            <th>Слово</th>
+                            <th>Сервер</th>
+                            <th>Скрин</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${logs.items.map((log) => `
-                            <tr class="border-t border-discord-darkest">
-                                <td class="px-3 py-2 text-discord-text whitespace-nowrap">${formatDateTime(log.triggered_at)}</td>
-                                <td class="px-3 py-2 text-white font-mono">${escapeHtml(log.player_name)}</td>
-                                <td class="px-3 py-2 text-white">${escapeHtml(log.category_name)}</td>
-                                <td class="px-3 py-2 text-discord-text">${escapeHtml(log.word || '')}</td>
-                                <td class="px-3 py-2 text-discord-text">${escapeHtml(log.server_address || '—')}</td>
-                                <td class="px-3 py-2">
+                            <tr>
+                                <td>${formatDateTime(log.triggered_at)}</td>
+                                <td><code>${escapeHtml(log.player_name)}</code></td>
+                                <td>${escapeHtml(log.category_name)}</td>
+                                <td>${escapeHtml(log.word || '')}</td>
+                                <td>${escapeHtml(log.server_address || '—')}</td>
+                                <td>
                                     ${log.screenshot_url
-                                        ? `<a href="${escapeHtml(resolveApiUrl(log.screenshot_url))}" target="_blank" class="text-discord-accent">📷</a>`
-                                        : '<span class="text-discord-text">—</span>'}
+                                        ? `<a href="${escapeHtml(resolveApiUrl(log.screenshot_url))}" target="_blank" rel="noopener" class="v1-link">📷</a>`
+                                        : '—'}
                                 </td>
                             </tr>
                             ${log.triggered_message ? `
-                                <tr class="border-t border-discord-darkest bg-discord-darker">
-                                    <td colspan="6" class="px-3 py-1 text-xs text-discord-text">
-                                        <i class="fas fa-quote-right mr-1"></i>${escapeHtml(log.triggered_message)}
+                                <tr>
+                                    <td colspan="6" class="v1-table-note">
+                                        <i class="fas fa-quote-right"></i>${escapeHtml(log.triggered_message)}
                                     </td>
                                 </tr>
                             ` : ''}
                         `).join('')}
                     </tbody>
                 </table>
-            </div>
         </div>
     `;
 }
@@ -319,10 +317,10 @@ function renderAutomuteTab() {
         <div class="fade-in">
             ${renderSubscriptionStatusCard()}
 
-            <h2 class="text-xl font-bold text-white mb-3 mt-6">
-                <i class="fas fa-list-check text-discord-accent mr-2"></i>
+            <h2 class="v1-section-title">
+                <i class="fas fa-list-check v1-title-icon"></i>
                 Логи нарушений
-                <span class="text-sm font-normal text-discord-text ml-2">
+                <span>
                     (отправлены модом и хранятся на сервере)
                 </span>
             </h2>
@@ -342,7 +340,7 @@ function renderProfileContent() {
         </div>
     `;
 
-    container.querySelectorAll('.profile-tab-btn').forEach((btn) => {
+    container.querySelectorAll('.v1-subtab').forEach((btn) => {
         btn.addEventListener('click', async () => {
             activeTab = btn.dataset.tab;
             if (activeTab === 'automute' && (!subscription || !logs)) {
@@ -367,10 +365,10 @@ async function loadProfile() {
         renderProfileContent();
     } catch (error) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Не удалось загрузить профиль</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(error.message || 'Ошибка запроса')}</p>
+            <div class="v1-empty">
+                <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+                <div class="v1-empty-h">Не удалось загрузить профиль</div>
+                <p>${escapeHtml(error.message || 'Ошибка запроса')}</p>
             </div>
         `;
         showToast(error.message || 'Ошибка загрузки профиля', 'error');
@@ -392,25 +390,23 @@ async function loadAutomuteData() {
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-5xl">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-user-circle text-discord-accent mr-3"></i>
-                        Профиль
+        <div class="v1-doc v1-doc-narrow">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// profile.js</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-user-circle v1-page-title-icon" aria-hidden="true"></i>Профиль
                     </h1>
-                    <p class="text-discord-text mt-2">Публичная карточка вашего аккаунта</p>
+                    <p class="v1-page-sub">Публичная карточка вашего аккаунта</p>
                 </div>
-                <a href="/settings" class="btn btn-secondary btn-sm">
+                <a href="/settings" class="v1-btn v1-btn-sm">
                     <i class="fas fa-sliders"></i>
                     Настройки
                 </a>
             </div>
 
             <div id="profile-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">Загрузка…</div>
             </div>
         </div>
     `;

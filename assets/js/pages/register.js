@@ -7,113 +7,105 @@ import { renderGoogleButton } from '../google-auth.js';
 
 export function render() {
     return `
-        <div class="min-h-screen flex items-center justify-center px-4 py-8">
-            <div class="w-full max-w-md">
-                <div class="bg-discord-light rounded-lg shadow-xl p-8 fade-in">
-                    <div class="text-center mb-8">
-                        <i class="fas fa-user-plus text-6xl text-discord-accent mb-4"></i>
-                        <h1 class="text-2xl font-bold text-white ide-h">${escapeHtml(t('page_register_title'))}</h1>
-                        <p class="text-discord-text mt-2">${escapeHtml(t('page_register_sub'))}</p>
-                    </div>
-
-                    <form id="register-form" class="space-y-5">
-                        <div>
-                            <label class="label" for="username">${escapeHtml(t('field_username_req'))}</label>
-                            <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_username'))}"
-                                data-testid="register-username"
-                                required
-                                autocomplete="username"
-                            >
-                        </div>
-
-                        <div>
-                            <label class="label" for="email">${escapeHtml(t('field_email_opt'))}</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_email'))}"
-                                data-testid="register-email"
-                                autocomplete="email"
-                            >
-                            <p class="text-xs text-discord-text mt-1">${escapeHtml(t('email_hint'))}</p>
-                        </div>
-
-                        <div>
-                            <label class="label" for="password">${escapeHtml(t('field_password_req'))}</label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_password_register'))}"
-                                data-testid="register-password"
-                                required
-                                minlength="6"
-                                autocomplete="new-password"
-                            >
-                        </div>
-
-                        <div>
-                            <label class="label" for="password-confirm">${escapeHtml(t('field_password_confirm'))}</label>
-                            <input
-                                type="password"
-                                id="password-confirm"
-                                name="password-confirm"
-                                class="input"
-                                placeholder="${escapeHtml(t('ph_password_confirm'))}"
-                                data-testid="register-password-confirm"
-                                required
-                                autocomplete="new-password"
-                            >
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="privacy-consent"
-                                name="privacy-consent"
-                                class="mt-1 flex-shrink-0"
-                                required
-                            >
-                            <label for="privacy-consent" class="text-sm text-discord-text cursor-pointer">
-                                ${escapeHtml(t('consent_text_pre'))}
-                                <a href="/terms" class="text-discord-accent hover:underline">${escapeHtml(t('consent_terms'))}</a>
-                                ${escapeHtml(t('consent_and'))}
-                                <a href="/privacy" class="text-discord-accent hover:underline">${escapeHtml(t('consent_privacy'))}</a>,
-                                ${escapeHtml(t('consent_text_post'))}
-                            </label>
-                        </div>
-
-                        <div id="error-message" class="hidden text-discord-red text-sm"></div>
-
-                        <button type="submit" class="btn btn-primary w-full" data-testid="register-submit">
-                            <i class="fas fa-user-plus"></i>
-                            ${escapeHtml(t('btn_register'))}
-                        </button>
-                    </form>
-
-                    <div class="flex items-center gap-3 my-6">
-                        <div class="flex-1 h-px bg-white/10"></div>
-                        <span class="text-discord-text text-xs uppercase">или</span>
-                        <div class="flex-1 h-px bg-white/10"></div>
-                    </div>
-
-                    <div id="google-signin-button" class="flex justify-center"></div>
-
-                    <div class="mt-6 text-center">
-                        <p class="text-discord-text text-sm">
-                            ${escapeHtml(t('have_account'))}
-                            <a href="/login" class="text-discord-accent hover:underline">${escapeHtml(t('login_link'))}</a>
-                        </p>
-                    </div>
+        <div class="v1-auth">
+            <div class="v1-auth-card fade-in">
+                <div class="v1-auth-head">
+                    <i class="fas fa-user-plus v1-auth-icon" aria-hidden="true"></i>
+                    <h1 class="v1-auth-title">${escapeHtml(t('page_register_title'))}</h1>
+                    <p class="v1-auth-sub">${escapeHtml(t('page_register_sub'))}</p>
                 </div>
+
+                <form id="register-form" class="v1-form">
+                    <div class="v1-field">
+                        <label class="v1-label" for="username">${escapeHtml(t('field_username_req'))}</label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_username'))}"
+                            data-testid="register-username"
+                            required
+                            autocomplete="username"
+                        >
+                    </div>
+
+                    <div class="v1-field">
+                        <label class="v1-label" for="email">${escapeHtml(t('field_email_opt'))}</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_email'))}"
+                            data-testid="register-email"
+                            autocomplete="email"
+                        >
+                        <p class="v1-hint">${escapeHtml(t('email_hint'))}</p>
+                    </div>
+
+                    <div class="v1-field">
+                        <label class="v1-label" for="password">${escapeHtml(t('field_password_req'))}</label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_password_register'))}"
+                            data-testid="register-password"
+                            required
+                            minlength="6"
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <div class="v1-field">
+                        <label class="v1-label" for="password-confirm">${escapeHtml(t('field_password_confirm'))}</label>
+                        <input
+                            type="password"
+                            id="password-confirm"
+                            name="password-confirm"
+                            class="v1-input"
+                            placeholder="${escapeHtml(t('ph_password_confirm'))}"
+                            data-testid="register-password-confirm"
+                            required
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <div class="v1-consent">
+                        <input
+                            type="checkbox"
+                            id="privacy-consent"
+                            name="privacy-consent"
+                            class="v1-checkbox"
+                            required
+                        >
+                        <label for="privacy-consent">
+                            ${escapeHtml(t('consent_text_pre'))}
+                            <a href="/terms" class="v1-link">${escapeHtml(t('consent_terms'))}</a>
+                            ${escapeHtml(t('consent_and'))}
+                            <a href="/privacy" class="v1-link">${escapeHtml(t('consent_privacy'))}</a>,
+                            ${escapeHtml(t('consent_text_post'))}
+                        </label>
+                    </div>
+
+                    <div id="error-message" class="v1-msg error hidden"></div>
+
+                    <button type="submit" class="v1-btn v1-btn-primary v1-btn-block" data-testid="register-submit">
+                        <i class="fas fa-user-plus"></i>
+                        ${escapeHtml(t('btn_register'))}
+                    </button>
+                </form>
+
+                <div class="v1-divider">${escapeHtml(t('or'))}</div>
+
+                <div id="google-signin-button" class="v1-actions" style="justify-content:center"></div>
+
+                <p class="v1-muted v1-center" style="margin-top:var(--v1-space-5)">
+                    ${escapeHtml(t('have_account'))}
+                    <a href="/login" class="v1-link">${escapeHtml(t('login_link'))}</a>
+                </p>
             </div>
         </div>
     `;
@@ -152,7 +144,7 @@ export function mount() {
 
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+            submitBtn.textContent = t('loading');
             errorDiv.classList.add('hidden');
 
             try {

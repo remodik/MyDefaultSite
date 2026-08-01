@@ -33,17 +33,17 @@ function getPrevNext(partId) {
 
 function renderNavButtons(prev, next, containerClass = '') {
     return `
-        <div class="flex flex-wrap items-center justify-between gap-3 ${containerClass}">
+        <div class="v1-actions v1-actions-between ${containerClass}">
             <div>
                 ${prev ? `
-                    <button class="btn btn-secondary btn-sm reader-nav-btn" data-part-id="${escapeHtml(prev.id)}">
+                    <button class="v1-btn v1-btn-sm reader-nav-btn" data-part-id="${escapeHtml(prev.id)}">
                         ← ${escapeHtml(prev.title)}
                     </button>
                 ` : ''}
             </div>
             <div>
                 ${next ? `
-                    <button class="btn btn-secondary btn-sm reader-nav-btn" data-part-id="${escapeHtml(next.id)}">
+                    <button class="v1-btn v1-btn-sm reader-nav-btn" data-part-id="${escapeHtml(next.id)}">
                         ${escapeHtml(next.title)} →
                     </button>
                 ` : ''}
@@ -60,29 +60,29 @@ function renderReader() {
 
     container.innerHTML = `
         <div class="fade-in">
-            <div class="text-discord-text text-sm mb-4">
-                <a href="/courses" class="hover:text-white transition">Курсы</a>
-                <span class="mx-2">/</span>
-                <a href="/courses/${escapeHtml(course.id)}" class="hover:text-white transition">${escapeHtml(course.title)}</a>
-                <span class="mx-2">/</span>
-                <span class="text-white">${escapeHtml(part.title)}</span>
+            <div class="v1-breadcrumb-inline">
+                <a href="/courses" class="v1-link">Курсы</a>
+                <span>/</span>
+                <a href="/courses/${escapeHtml(course.id)}" class="v1-link">${escapeHtml(course.title)}</a>
+                <span>/</span>
+                <span>${escapeHtml(part.title)}</span>
             </div>
 
-            ${renderNavButtons(prev, next, 'mb-6')}
+            ${renderNavButtons(prev, next, 'v1-reader-nav')}
 
-            <div class="mb-6">
-                <div class="flex items-center gap-2 mb-2">
-                    <h1 class="text-3xl font-bold text-white">${escapeHtml(part.title)}</h1>
-                    ${part.is_preview ? '<span class="tag tag-primary">Превью</span>' : ''}
+            <div class="v1-reader-heading">
+                <div class="v1-actions">
+                    <h1 class="v1-page-title">${escapeHtml(part.title)}</h1>
+                    ${part.is_preview ? '<span class="v1-badge v1-badge-info">Превью</span>' : ''}
                 </div>
-                <p class="text-discord-text text-sm">${escapeHtml(part.description || '')}</p>
+                <p class="v1-page-sub">${escapeHtml(part.description || '')}</p>
             </div>
 
-            <div class="markdown-content bg-discord-light rounded-xl border border-discord-lighter/40 p-6" id="reader-markdown-content">
+            <div class="markdown-content v1-card v1-markdown-card" id="reader-markdown-content">
                 ${renderMarkdown(part.content || '')}
             </div>
 
-            ${renderNavButtons(prev, next, 'mt-8')}
+            ${renderNavButtons(prev, next, 'v1-reader-nav')}
         </div>
     `;
 
@@ -120,10 +120,10 @@ function renderNotFound(message = 'Раздел не найден') {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-exclamation-circle text-discord-red"></i>
-            <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(message)}</h3>
-            <button class="btn btn-primary mt-4" id="reader-back-course-btn">← Вернуться к курсу</button>
+        <div class="v1-empty">
+            <i class="fas fa-exclamation-circle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+            <div class="v1-empty-h">${escapeHtml(message)}</div>
+            <button class="v1-btn v1-btn-primary" style="margin-top:var(--v1-space-4)" id="reader-back-course-btn">← Вернуться к курсу</button>
         </div>
     `;
 
@@ -147,20 +147,20 @@ function renderNoAccessBlock() {
     const partPrice = Number(fallbackPart?.price || 0);
 
     container.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-lock text-discord-yellow"></i>
-            <h3 class="text-xl font-semibold text-white mt-4">Нет доступа</h3>
-            <p class="text-discord-text mt-2">Для просмотра этого раздела необходима покупка</p>
-            <div class="flex flex-wrap justify-center gap-3 mt-6">
+        <div class="v1-empty">
+            <i class="fas fa-lock v1-empty-icon" style="color:var(--v1-amber)" aria-hidden="true"></i>
+            <div class="v1-empty-h">Нет доступа</div>
+            <p>Для просмотра этого раздела необходима покупка</p>
+            <div class="v1-actions" style="justify-content:center;margin-top:var(--v1-space-5)">
                 ${partPrice > 0 ? `
-                    <button class="btn btn-success" id="reader-buy-part-btn">
+                    <button class="v1-btn v1-btn-primary" id="reader-buy-part-btn">
                         Купить раздел за ${formatPrice(partPrice)}
                     </button>
                 ` : ''}
-                <button class="btn btn-primary" id="reader-buy-course-btn">
+                <button class="v1-btn v1-btn-primary" id="reader-buy-course-btn">
                     Купить курс целиком за ${formatPrice(course.price)}
                 </button>
-                <button class="btn btn-secondary" id="reader-back-btn">
+                <button class="v1-btn" id="reader-back-btn">
                     ← Вернуться к курсу
                 </button>
             </div>
@@ -212,17 +212,17 @@ function showSbpModal(sbp, onClosed) {
     showModal({
         title: 'Оплата через СБП',
         content: `
-            <div class="space-y-3">
-                <p class="text-discord-text">Переведите <span class="text-white font-semibold">${formatPrice(sbp.amount)}</span> на ${escapeHtml(sbp.phone)} (${escapeHtml(sbp.bank)}) с комментарием:</p>
-                <div class="bg-discord-darker rounded-lg p-3 border border-discord-lighter/40">
-                    <code class="text-white font-mono">${escapeHtml(sbp.comment)}</code>
+            <div class="v1-vstack">
+                <p class="v1-muted">Переведите <strong>${formatPrice(sbp.amount)}</strong> на ${escapeHtml(sbp.phone)} (${escapeHtml(sbp.bank)}) с комментарием:</p>
+                <div class="v1-code-box">
+                    <code>${escapeHtml(sbp.comment)}</code>
                 </div>
-                <p class="text-discord-text text-sm">Получатель: ${escapeHtml(sbp.recipient)}</p>
+                <p class="v1-muted">Получатель: ${escapeHtml(sbp.recipient)}</p>
             </div>
         `,
         footer: `
-            <button class="btn btn-secondary" id="reader-close-sbp-btn">Закрыть</button>
-            <button class="btn btn-primary" id="reader-copy-sbp-btn" data-comment="${escapeHtml(sbp.comment)}">
+            <button class="v1-btn" id="reader-close-sbp-btn">Закрыть</button>
+            <button class="v1-btn v1-btn-primary" id="reader-copy-sbp-btn" data-comment="${escapeHtml(sbp.comment)}">
                 Скопировать комментарий
             </button>
         `,
@@ -298,7 +298,7 @@ async function handlePurchaseCourse(button) {
     const initialText = button ? button.innerHTML : '';
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<div class="spinner"></div>';
+        button.textContent = 'Загрузка…';
     }
 
     try {
@@ -334,7 +334,7 @@ async function handlePurchasePart(button) {
     const initialText = button ? button.innerHTML : '';
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<div class="spinner"></div>';
+        button.textContent = 'Загрузка…';
     }
 
     try {
@@ -363,11 +363,9 @@ async function handlePurchasePart(button) {
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="v1-doc">
             <div id="reader-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">Загрузка…</div>
             </div>
         </div>
     `;

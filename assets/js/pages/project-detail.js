@@ -24,11 +24,9 @@ let selectedFile = null;
 
 export function render(params) {
   return `
-        <div class="container mx-auto px-4 py-8">
+        <div class="v1-doc">
             <div id="project-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">Загрузка…</div>
             </div>
         </div>
     `;
@@ -39,30 +37,31 @@ function renderProject() {
   if (!container || !project) return;
 
   container.innerHTML = `
-        <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
-            <div class="flex items-center gap-4">
-                <a href="/projects" class="btn btn-secondary btn-sm">
+        <div class="v1-page-header">
+            <div class="v1-project-heading">
+                <a href="/projects" class="v1-icon-btn" aria-label="Назад к проектам">
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                <div>
-                    <h1 class="text-2xl font-bold text-white">${escapeHtml(project.name)}</h1>
-                    <p class="text-discord-text text-sm mt-1">${escapeHtml(project.description) || "Нет описания"}</p>
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// project.json</div>
+                    <h1 class="v1-page-title">${escapeHtml(project.name)}</h1>
+                    <p class="v1-page-sub">${escapeHtml(project.description) || "Нет описания"}</p>
                 </div>
             </div>
 
             ${
               isAdmin()
                 ? `
-                <div class="flex gap-2">
-                    <button class="btn btn-primary btn-sm" id="add-file-btn">
+                <div class="v1-actions">
+                    <button class="v1-btn v1-btn-primary v1-btn-sm" id="add-file-btn">
                         <i class="fas fa-file-plus"></i>
                         Новый файл
                     </button>
-                    <button class="btn btn-primary btn-sm" id="add-folder-btn">
+                    <button class="v1-btn v1-btn-primary v1-btn-sm" id="add-folder-btn">
                         <i class="fas fa-folder-plus"></i>
                         Новая папка
                     </button>
-                    <button class="btn btn-secondary btn-sm" id="upload-file-btn">
+                    <button class="v1-btn v1-btn-sm" id="upload-file-btn">
                         <i class="fas fa-upload"></i>
                         Загрузить
                     </button>
@@ -75,29 +74,28 @@ function renderProject() {
 
         <div id="dd-overlay" style="
             display:none; position:fixed; inset:0; z-index:998;
-            background:rgba(88,101,242,.15); backdrop-filter:blur(2px);
-            border:3px dashed #5865f2; pointer-events:none;
+            background:rgba(0,122,204,.15); backdrop-filter:blur(2px);
+            border:3px dashed var(--v1-accent); pointer-events:none;
             flex-direction:column; align-items:center; justify-content:center; gap:10px;
         ">
-            <i class="fas fa-cloud-upload-alt" style="font-size:52px;color:#5865f2;"></i>
-            <span id="dd-overlay-label" style="font-size:18px;font-weight:700;color:#f2f3f5;">Загрузить в корень</span>
-            <span style="font-size:12px;color:#b5bac1;">Наведите на папку чтобы загрузить в неё</span>
+            <i class="fas fa-cloud-upload-alt" style="font-size:52px;color:var(--v1-accent);"></i>
+            <span id="dd-overlay-label" style="font-size:18px;font-weight:700;color:var(--v1-fg);">Загрузить в корень</span>
+            <span style="font-size:12px;color:var(--v1-fg-dim);">Наведите на папку чтобы загрузить в неё</span>
         </div>
 
         <style>
             .dd-folder-highlight > .file-tree-item-content {
-                background: rgba(88,101,242,.25) !important;
-                outline: 2px dashed #5865f2;
+                background: rgba(0,122,204,.25) !important;
+                outline: 2px dashed var(--v1-accent);
                 outline-offset: -2px;
             }
         </style>
 
-        <div class="grid lg:grid-cols-4 gap-6">
-            <div class="lg:col-span-1">
-                <div class="bg-discord-light rounded-lg overflow-hidden">
-                    <div class="p-4 border-b border-discord-lighter">
-                        <h3 class="text-white font-semibold">
-                            <i class="fas fa-folder-tree mr-2"></i>
+        <div class="v1-project-layout">
+            <aside class="v1-card v1-project-tree">
+                    <div class="v1-card-h">
+                        <h2>
+                            <i class="fas fa-folder-tree" aria-hidden="true"></i>
                             ${(() => {
                               const files = project.files || [];
                               const folders = files.filter(
@@ -108,17 +106,16 @@ function renderProject() {
                                 ? `${regularFiles} ${regularFiles === 1 ? "файл" : "файлов"}, ${folders} ${folders === 1 ? "папка" : "папок"}`
                                 : "Пусто";
                             })()}
-                        </h3>
+                        </h2>
                     </div>
-                    <div class="p-2" id="file-list"></div>
-                </div>
-            </div>
+                    <div id="file-list"></div>
+            </aside>
 
-            <div class="lg:col-span-3">
-                <div id="file-viewer" class="bg-discord-light rounded-lg min-h-[400px]">
+            <section>
+                <div id="file-viewer" class="v1-file-viewer">
                     ${selectedFile ? renderFileViewer() : renderEmptyViewer()}
                 </div>
-            </div>
+            </section>
         </div>
     `;
 
@@ -127,9 +124,9 @@ function renderProject() {
 
 function renderEmptyViewer() {
   return `
-        <div class="flex items-center justify-center h-[400px] text-discord-text">
-            <div class="text-center">
-                <i class="fas fa-file-code text-5xl mb-4 opacity-50"></i>
+        <div class="v1-file-empty">
+            <div class="v1-center">
+                <i class="fas fa-file-code v1-empty-icon" aria-hidden="true"></i>
                 <p>Выберите файл для просмотра</p>
             </div>
         </div>
@@ -166,9 +163,9 @@ function renderFileViewer() {
 
   if (file.is_folder) {
     contentHtml = `
-            <div class="flex items-center justify-center p-8 text-discord-text">
-                <div class="text-center">
-                    <i class="fas fa-folder text-4xl mb-3 opacity-60"></i>
+            <div class="v1-file-empty v1-file-empty-compact">
+                <div class="v1-center">
+                    <i class="fas fa-folder v1-empty-icon" aria-hidden="true"></i>
                     <p>Это папка. Выберите файл для просмотра.</p>
                 </div>
             </div>
@@ -183,20 +180,20 @@ function renderFileViewer() {
         : `data:${mimeType},${encodeURIComponent(file.content)}`
       : null;
     contentHtml = `
-            <div class="flex items-center justify-center p-8 text-discord-text">
-                <div class="text-center max-w-md">
-                    <i class="fas fa-file-archive text-4xl mb-3 opacity-60"></i>
+            <div class="v1-file-empty v1-file-empty-compact">
+                <div class="v1-center v1-narrow">
+                    <i class="fas fa-file-archive v1-empty-icon" aria-hidden="true"></i>
                     <p>Предпросмотр для этого типа файла недоступен.</p>
                     ${
                       downloadLink
                         ? `
-                        <a class="btn btn-secondary btn-sm mt-4 inline-flex items-center gap-2"
+                        <a class="v1-btn v1-btn-sm" style="margin-top:var(--v1-space-4)"
                            href="${downloadLink}" download="${escapeHtml(file.name)}">
                             <i class="fas fa-download"></i>
                             Скачать файл
                         </a>
                     `
-                        : '<p class="text-sm mt-2">Файл пустой или не содержит данных для скачивания.</p>'
+                        : '<p class="v1-muted" style="margin-top:var(--v1-space-2)">Файл пустой или не содержит данных для скачивания.</p>'
                     }
                 </div>
             </div>
@@ -206,9 +203,9 @@ function renderFileViewer() {
       ? `data:image/${file.file_type};base64,${file.content}`
       : file.content;
     contentHtml = `
-            <div class="flex items-center justify-center p-8">
+            <div class="v1-file-media">
                 <img src="${src}" alt="${escapeHtml(file.name)}"
-                     class="max-w-full max-h-[600px] rounded-lg shadow-lg">
+                     class="v1-file-media-item">
             </div>
         `;
   } else if (isVideo) {
@@ -216,8 +213,8 @@ function renderFileViewer() {
       ? `data:video/${file.file_type};base64,${file.content}`
       : file.content;
     contentHtml = `
-            <div class="flex items-center justify-center p-8">
-                <video controls class="max-w-full max-h-[600px] rounded-lg shadow-lg">
+            <div class="v1-file-media">
+                <video controls class="v1-file-media-item">
                     <source src="${src}" type="video/${file.file_type}">
                     Ваш браузер не поддерживает видео.
                 </video>
@@ -225,7 +222,7 @@ function renderFileViewer() {
         `;
   } else if (isMarkdown) {
     contentHtml = `
-            <div class="markdown-content p-6">
+            <div class="markdown-content v1-file-markdown">
                 ${renderMarkdown(file.content)}
             </div>
         `;
@@ -237,26 +234,26 @@ function renderFileViewer() {
   }
 
   return `
-        <div class="file-header">
-            <div class="file-name">
+        <div class="v1-file-header">
+            <div class="v1-file-namebar">
                 <i class="${getFileIcon(file.file_type)}"></i>
                 <span>${escapeHtml(file.name)}</span>
             </div>
             ${
               isAdmin()
                 ? `
-                <div class="flex gap-2">
+                <div class="v1-actions">
                     ${
                       !isImage && !isVideo && !isUnsupported
                         ? `
-                        <button class="btn btn-secondary btn-sm" id="edit-file-btn">
+                        <button class="v1-btn v1-btn-sm" id="edit-file-btn">
                             <i class="fas fa-edit"></i>
                             Редактировать
                         </button>
                     `
                         : ""
                     }
-                    <button class="btn btn-danger btn-sm" id="delete-current-file-btn">
+                    <button class="v1-icon-btn danger" id="delete-current-file-btn" aria-label="Удалить файл">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -264,7 +261,7 @@ function renderFileViewer() {
                 : ""
             }
         </div>
-        <div class="file-content">
+        <div class="v1-file-content">
             ${contentHtml}
         </div>
     `;
@@ -662,7 +659,7 @@ function renderUploadQueue() {
 
   const icon = {
     pending: '<i class="fas fa-clock" style="color:#949ba4;"></i>',
-    uploading: '<div class="spinner" style="width:14px;height:14px;"></div>',
+    uploading: '<i class="fas fa-circle-notch spin" style="color:var(--v1-accent);"></i>',
     done: '<i class="fas fa-check-circle" style="color:#23a559;"></i>',
     error: '<i class="fas fa-exclamation-circle" style="color:#f23f43;"></i>',
     cancelled: '<i class="fas fa-ban" style="color:#f0b232;"></i>',
@@ -679,28 +676,23 @@ function renderUploadQueue() {
     document.getElementById("upload-queue-list")?.scrollTop || 0;
 
   panel.innerHTML = `
-    <div style="
-        position:fixed; right:20px; bottom:20px; z-index:1000; width:340px;
-        max-width:calc(100vw - 40px); background:#2b2d31; color:#f2f3f5;
-        border:1px solid #1e1f22; border-radius:10px;
-        box-shadow:0 10px 30px rgba(0,0,0,.45); overflow:hidden;
-        font-size:13px;">
+    <div class="v1-upload-panel">
       <div style="display:flex; align-items:center; gap:8px; padding:10px 12px;
-                  border-bottom:1px solid #404249;">
-        <i class="fas fa-cloud-upload-alt" style="color:#5865f2;"></i>
+                  border-bottom:1px solid var(--v1-border);">
+        <i class="fas fa-cloud-upload-alt" style="color:var(--v1-accent);"></i>
         <span style="font-weight:600; flex:1;">${headerText}</span>
         ${
           state.active
-            ? `<button id="upload-cancel-btn" class="btn btn-danger btn-sm">
+            ? `<button id="upload-cancel-btn" class="v1-btn v1-btn-danger v1-btn-sm">
                  <i class="fas fa-stop"></i> Отменить всё
                </button>`
-            : `<button id="upload-close-btn" class="btn btn-secondary btn-sm">
+            : `<button id="upload-close-btn" class="v1-btn v1-btn-sm">
                  Закрыть
                </button>`
         }
       </div>
-      <div style="height:4px; background:#1e1f22;">
-        <div style="height:100%; width:${pct}%; background:#5865f2;
+      <div style="height:4px; background:var(--v1-bg);">
+        <div style="height:100%; width:${pct}%; background:var(--v1-accent);
                     transition:width .2s;"></div>
       </div>
       <div id="upload-queue-list" style="max-height:240px; overflow:auto; padding:6px;">
@@ -765,24 +757,24 @@ function showFileModal(file = null) {
   showModal({
     title: isEdit ? "Редактировать файл" : "Новый файл",
     content: `
-            <form id="file-form" class="space-y-4">
-               <div>
-                    <label class="label" for="file-name">Имя файла</label>
-                    <input type="text" id="file-name" class="input"
+            <form id="file-form" class="v1-form">
+               <div class="v1-field">
+                    <label class="v1-label" for="file-name">Имя файла</label>
+                    <input type="text" id="file-name" class="v1-input"
                            value="${isEdit ? escapeHtml(file.name) : ""}"
                            ${isEdit ? "readonly" : ""} required>
-                    ${!isEdit ? '<p class="text-discord-text text-xs mt-2">Тип определяется автоматически по расширению (например, README.md).</p>' : ""}
+                    ${!isEdit ? '<p class="v1-muted">Тип определяется автоматически по расширению (например, README.md).</p>' : ""}
                 </div>
-                <div>
-                    <label class="label" for="file-content">Содержимое</label>
-                    <textarea id="file-content" class="input font-mono text-sm"
+                <div class="v1-field">
+                    <label class="v1-label" for="file-content">Содержимое</label>
+                    <textarea id="file-content" class="v1-input v1-code-input"
                               rows="15" style="tab-size:4;">${isEdit ? escapeHtml(file.content) : ""}</textarea>
                 </div>
             </form>
         `,
     footer: `
-            <button class="btn btn-secondary" data-close>Отмена</button>
-            <button class="btn btn-primary" id="save-file-btn">
+            <button class="v1-btn" data-close>Отмена</button>
+            <button class="v1-btn v1-btn-primary" id="save-file-btn">
                 <i class="fas fa-save"></i>
                 ${isEdit ? "Сохранить" : "Создать"}
             </button>
@@ -832,7 +824,7 @@ async function saveFile(id = null) {
   const saveBtn = document.getElementById("save-file-btn");
   if (saveBtn) {
     saveBtn.disabled = true;
-    saveBtn.innerHTML = '<div class="spinner"></div>';
+    saveBtn.textContent = "Сохранение…";
   }
 
   try {
@@ -891,11 +883,11 @@ async function loadProject(projectId) {
     const container = document.getElementById("project-content");
     if (container) {
       container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">Проект не найден</h3>
-                    <p class="text-discord-text mt-2">${error.message}</p>
-                    <a href="/projects" class="btn btn-primary mt-4">
+                <div class="v1-empty">
+                    <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+                    <div class="v1-empty-h">Проект не найден</div>
+                    <p>${escapeHtml(error.message)}</p>
+                    <a href="/projects" class="v1-btn v1-btn-primary" style="margin-top:var(--v1-space-4)">
                         <i class="fas fa-arrow-left"></i>
                         Назад к проектам
                     </a>

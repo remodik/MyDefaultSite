@@ -1,7 +1,9 @@
+import { t, tf, getLang } from "./i18n.js";
+
 export function formatDate(dateStr) {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  return date.toLocaleDateString("ru-RU", {
+  return date.toLocaleDateString(getLang(), {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -11,7 +13,7 @@ export function formatDate(dateStr) {
 export function formatTime(dateStr) {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  return date.toLocaleTimeString("ru-RU", {
+  return date.toLocaleTimeString(getLang(), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -33,22 +35,24 @@ export function formatRelativeTime(dateStr) {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (seconds < 60) return "только что";
-  if (minutes < 60) return `${minutes} мин. назад`;
-  if (hours < 24) return `${hours} ч. назад`;
-  if (days < 7) return `${days} дн. назад`;
+  if (seconds < 60) return t("time_now");
+  if (minutes < 60) return tf("time_min", { n: minutes });
+  if (hours < 24) return tf("time_hour", { n: hours });
+  if (days < 7) return tf("time_day", { n: days });
 
   return formatDate(dateStr);
 }
+
+const TOAST_TIMEOUT = 4000;
 
 export function showToast(message, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
 
   const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
+  toast.className = `v1-toast v1-toast-${type}`;
 
-  const icon =
+  const iconName =
     {
       success: "fa-check-circle",
       error: "fa-exclamation-circle",
@@ -56,18 +60,45 @@ export function showToast(message, type = "info") {
       info: "fa-info-circle",
     }[type] || "fa-info-circle";
 
-  toast.innerHTML = `
-        <i class="fas ${icon}"></i>
-        <span>${message}</span>
-    `;
+  const icon = document.createElement("i");
+  icon.className = `fas ${iconName}`;
+  icon.setAttribute("aria-hidden", "true");
 
+  // message нередко приходит из error.message с сервера — вставляем текстом,
+  // а не через innerHTML.
+  const text = document.createElement("span");
+  text.className = "v1-toast-text";
+  text.textContent = message == null ? "" : String(message);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "v1-toast-close";
+  close.setAttribute("aria-label", t("toast_close"));
+  close.textContent = "×";
+
+  toast.append(icon, text, close);
   container.appendChild(toast);
 
-  setTimeout(() => {
+  let removeTimer = null;
+  const dismiss = () => {
+    if (removeTimer) clearTimeout(removeTimer);
     toast.style.opacity = "0";
     toast.style.transform = "translateX(100%)";
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
+    removeTimer = setTimeout(() => toast.remove(), 300);
+  };
+
+  close.addEventListener("click", dismiss);
+  removeTimer = setTimeout(dismiss, TOAST_TIMEOUT);
+}
+
+export function clearToasts() {
+  const container = document.getElementById("toast-container");
+  if (container) container.replaceChildren();
+}
+
+// Тост про предыдущую страницу на следующей уже не к месту.
+if (typeof window !== "undefined") {
+  window.addEventListener("route-changed", clearToasts);
 }
 
 export function escapeHtml(text) {

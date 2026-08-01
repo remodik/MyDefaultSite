@@ -1,6 +1,6 @@
 import { adminPurchasesApi, adminApi, adminAutomuteApi, adminDonationsApi, API_URL } from "../api.js";
 import { showToast, escapeHtml, formatDate, formatDateTime } from "../utils.js";
-import { confirmModal } from "../components/modal.js";
+import { closeModal, confirmModal, showModal } from "../components/modal.js";
 
 let users = [];
 let purchases = [];
@@ -15,42 +15,42 @@ let licenses = [];
 
 export function render() {
   return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-white">
-                    <i class="fas fa-shield-alt text-discord-accent mr-3"></i>
-                    Админ панель
-                </h1>
-                <p class="text-discord-text mt-2">Управление пользователями и запросами</p>
+        <div class="v1-doc">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// admin.js</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-shield-alt v1-page-title-icon" aria-hidden="true"></i>Админ панель
+                    </h1>
+                    <p class="v1-page-sub">Управление пользователями и запросами</p>
+                </div>
             </div>
 
-            <div class="flex gap-2 mb-6">
-                <button class="btn ${activeTab === "users" ? "btn-primary" : "btn-secondary"}" id="tab-users">
+            <div class="v1-subtabs v1-subtabs-wrap" role="tablist">
+                <button class="v1-subtab ${activeTab === "users" ? "active" : ""}" id="tab-users" role="tab">
                     <i class="fas fa-users"></i>
                     Пользователи
                 </button>
-                <button class="btn ${activeTab === "licenses" ? "btn-primary" : "btn-secondary"}" id="tab-licenses">
+                <button class="v1-subtab ${activeTab === "licenses" ? "active" : ""}" id="tab-licenses" role="tab">
                     <i class="fas fa-key"></i>
                     Лицензии
                 </button>
-                <button class="btn ${activeTab === "purchases" ? "btn-primary" : "btn-secondary"}" id="tab-purchases">
+                <button class="v1-subtab ${activeTab === "purchases" ? "active" : ""}" id="tab-purchases" role="tab">
                     <i class="fas fa-shopping-cart"></i>
                     Покупки курсов
                 </button>
-                <button class="btn ${activeTab === "automute" ? "btn-primary" : "btn-secondary"}" id="tab-automute">
+                <button class="v1-subtab ${activeTab === "automute" ? "active" : ""}" id="tab-automute" role="tab">
                     <i class="fas fa-volume-mute"></i>
                     AutoMute
                 </button>
-                <button class="btn ${activeTab === "donations" ? "btn-primary" : "btn-secondary"}" id="tab-donations">
+                <button class="v1-subtab ${activeTab === "donations" ? "active" : ""}" id="tab-donations" role="tab">
                     <i class="fas fa-heart"></i>
                     Донаты
                 </button>
             </div>
 
             <div id="admin-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">Загрузка…</div>
             </div>
         </div>
     `;
@@ -62,17 +62,17 @@ function renderUsers() {
 
   if (users.length === 0) {
     container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-users"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Пользователей нет</h3>
+            <div class="v1-empty">
+                <i class="fas fa-users v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">Пользователей нет</div>
             </div>
         `;
     return;
   }
 
   container.innerHTML = `
-        <div class="bg-discord-light rounded-lg overflow-hidden">
-            <table class="admin-table">
+        <div class="v1-table-wrap">
+            <table class="v1-table">
                 <thead>
                     <tr>
                         <th>Пользователь</th>
@@ -88,31 +88,29 @@ function renderUsers() {
                         (user) => `
                         <tr>
                             <td>
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-discord-accent/20 flex items-center justify-center">
-                                        <span class="text-discord-accent font-bold">${user.username.charAt(0).toUpperCase()}</span>
-                                    </div>
-                                    <span class="text-white font-medium">${escapeHtml(user.username)}</span>
+                                <div class="v1-user-cell">
+                                    <div class="v1-user-initial">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
+                                    <strong>${escapeHtml(user.username)}</strong>
                                 </div>
                             </td>
-                            <td class="text-discord-text">
-                                ${user.email ? escapeHtml(user.email) : '<span class="text-discord-text/50">Не указан</span>'}
+                            <td>
+                                ${user.email ? escapeHtml(user.email) : '<span class="v1-soft">Не указан</span>'}
                             </td>
                             <td>
-                                <span class="tag ${user.role === "admin" ? "tag-primary" : "bg-discord-lighter text-white"}">
+                                <span class="v1-badge ${user.role === "admin" ? "v1-badge-info" : ""}">
                                     ${user.role === "admin" ? "Админ" : "Пользователь"}
                                 </span>
                             </td>
-                            <td class="text-discord-text text-sm">
+                            <td>
                                 ${formatDate(user.created_at)}
                             </td>
                             <td>
-                                <div class="flex gap-2">
-                                    <button class="btn btn-secondary btn-sm toggle-role" data-id="${user.id}" data-role="${user.role}">
+                                <div class="v1-actions">
+                                    <button class="v1-btn v1-btn-sm toggle-role" data-id="${user.id}" data-role="${user.role}">
                                         <i class="fas fa-exchange-alt"></i>
                                         ${user.role === "admin" ? "Сделать пользователем" : "Сделать админом"}
                                     </button>
-                                    <button class="btn btn-warning btn-sm reset-password" data-id="${user.id}" data-username="${escapeHtml(user.username)}">
+                                    <button class="v1-btn v1-btn-sm reset-password" data-id="${user.id}" data-username="${escapeHtml(user.username)}">
                                         <i class="fas fa-key"></i>
                                         Сброс пароля
                                     </button>
@@ -179,7 +177,7 @@ async function generateLicenseKey() {
   const initial = btn?.innerHTML;
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div>';
+    btn.textContent = "Генерация…";
   }
 
   try {
@@ -214,40 +212,40 @@ function renderLicenses() {
   if (!container) return;
 
   container.innerHTML = `
-        <div class="space-y-6">
-            <div class="bg-discord-light rounded-lg p-6 border border-discord-lighter/40">
-                <h3 class="text-white font-bold text-lg mb-4">
-                    <i class="fas fa-plus-circle text-discord-accent mr-2"></i>
+        <div class="v1-vstack-lg">
+            <div class="v1-card">
+                <h3 class="v1-card-h">
+                    <i class="fas fa-plus-circle v1-title-icon" aria-hidden="true"></i>
                     Создать ключ
                 </h3>
-                <div class="flex flex-wrap gap-3 items-end">
-                    <div class="flex-1 min-w-60">
-                        <label class="label">Admin Secret</label>
+                <div class="v1-form-row v1-form-row-actions">
+                    <div class="v1-field">
+                        <label class="v1-label">Admin Secret</label>
                         <input
                             id="license-secret-input"
                             type="password"
-                            class="input"
+                            class="v1-input"
                             placeholder="LICENSE_ADMIN_SECRET"
                             value="${escapeHtml(licenseAdminSecret)}"
                         >
                     </div>
-                    <button id="gen-key-btn" class="btn btn-primary">
+                    <button id="gen-key-btn" class="v1-btn v1-btn-primary">
                         <i class="fas fa-key"></i>
                         Сгенерировать ключ
                     </button>
-                    <button id="load-keys-btn" class="btn btn-secondary">
+                    <button id="load-keys-btn" class="v1-btn">
                         <i class="fas fa-sync"></i>
                         Загрузить список
                     </button>
                 </div>
-                <div id="generated-key-wrapper" class="hidden mt-5">
-                    <p class="text-discord-text text-sm mb-2">Новый ключ:</p>
-                    <div class="flex items-center gap-3">
+                <div id="generated-key-wrapper" class="hidden v1-generated-key">
+                    <p class="v1-meta-l">Новый ключ:</p>
+                    <div class="v1-actions">
                         <code
                             id="generated-key-display"
-                            class="text-2xl font-mono font-bold text-white tracking-widest bg-discord-darker px-4 py-3 rounded-lg select-all border border-discord-lighter/40"
+                            class="v1-license-key"
                         ></code>
-                        <button id="copy-key-btn" class="btn btn-outline btn-sm">
+                        <button id="copy-key-btn" class="v1-btn v1-btn-sm">
                             <i class="fas fa-copy"></i>
                             Копировать
                         </button>
@@ -255,19 +253,19 @@ function renderLicenses() {
                 </div>
             </div>
 
-            <div class="flex gap-2">
-                <button class="btn btn-sm ${licenseFilter === null ? "btn-primary" : "btn-secondary"}" data-filter="all">Все</button>
-                <button class="btn btn-sm ${licenseFilter === false ? "btn-primary" : "btn-secondary"}" data-filter="free">Свободные</button>
-                <button class="btn btn-sm ${licenseFilter === true ? "btn-primary" : "btn-secondary"}" data-filter="used">Использованные</button>
+            <div class="v1-filters">
+                <button class="v1-filter ${licenseFilter === null ? "active" : ""}" data-filter="all">Все</button>
+                <button class="v1-filter ${licenseFilter === false ? "active" : ""}" data-filter="free">Свободные</button>
+                <button class="v1-filter ${licenseFilter === true ? "active" : ""}" data-filter="used">Использованные</button>
             </div>
 
-            <div class="bg-discord-light rounded-lg overflow-hidden">
+            <div class="v1-table-wrap">
                 ${
                   licenses.length === 0
                     ? `
-                    <div class="empty-state">
-                        <i class="fas fa-key"></i>
-                        <p class="mt-3 text-discord-text">
+                    <div class="v1-empty">
+                        <i class="fas fa-key v1-empty-icon" aria-hidden="true"></i>
+                        <p>
                             ${
                               licenseAdminSecret
                                 ? "Ключей нет или не загружены"
@@ -277,7 +275,7 @@ function renderLicenses() {
                     </div>
                 `
                     : `
-                    <table class="admin-table">
+                    <table class="v1-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -293,22 +291,22 @@ function renderLicenses() {
                               .map(
                                 (lic) => `
                                 <tr>
-                                    <td class="text-discord-text text-sm">${lic.id}</td>
+                                    <td>${lic.id}</td>
                                     <td>
-                                        <code class="text-white font-mono tracking-wider select-all">${escapeHtml(lic.key)}</code>
+                                        <code>${escapeHtml(lic.key)}</code>
                                     </td>
                                     <td>
-                                        <span class="tag ${lic.used ? "tag-danger" : "tag-success"}">
+                                        <span class="v1-badge ${lic.used ? "v1-badge-danger" : "v1-badge-success"}">
                                             ${lic.used ? "Использован" : "Свободен"}
                                         </span>
                                     </td>
-                                    <td class="text-discord-text text-xs font-mono max-w-xs truncate">
+                                    <td class="v1-table-truncate">
                                         ${lic.hwid ? escapeHtml(lic.hwid.slice(0, 20) + "...") : "—"}
                                     </td>
-                                    <td class="text-discord-text text-sm">
+                                    <td>
                                         ${lic.activated_at ? formatDate(lic.activated_at) : "—"}
                                     </td>
-                                    <td class="text-discord-text text-sm">
+                                    <td>
                                         ${lic.expires_at ? formatDate(lic.expires_at) : "—"}
                                     </td>
                                 </tr>
@@ -317,7 +315,7 @@ function renderLicenses() {
                               .join("")}
                         </tbody>
                     </table>
-                    <p class="text-discord-text text-xs text-right p-3">Всего: ${licenses.length}</p>
+                    <p class="v1-table-summary">Всего: ${licenses.length}</p>
                 `
                 }
             </div>
@@ -371,10 +369,10 @@ function renderLicenses() {
 }
 
 function getPurchaseStatusClass(status) {
-  if (status === "pending") return "tag-warning";
-  if (status === "completed") return "tag-success";
-  if (status === "cancelled") return "tag-danger";
-  return "tag";
+  if (status === "pending") return "v1-badge-warn";
+  if (status === "completed") return "v1-badge-success";
+  if (status === "cancelled") return "v1-badge-danger";
+  return "";
 }
 
 function getPurchaseStatusLabel(status) {
@@ -403,19 +401,19 @@ function renderPurchases() {
 
   if (purchases.length === 0) {
     container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-shopping-cart"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Покупок пока нет</h3>
-                <p class="text-discord-text mt-2">Здесь будут отображаться оплаты курсов и разделов</p>
+            <div class="v1-empty">
+                <i class="fas fa-shopping-cart v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">Покупок пока нет</div>
+                <p>Здесь будут отображаться оплаты курсов и разделов</p>
             </div>
         `;
     return;
   }
 
   container.innerHTML = `
-        <div class="space-y-4">
-            <div class="flex justify-end">
-                <select id="purchases-status-filter" class="input max-w-xs">
+        <div class="v1-vstack">
+            <div class="v1-actions v1-actions-end">
+                <select id="purchases-status-filter" class="v1-input v1-select-compact">
                     <option value="" ${purchasesFilter === "" ? "selected" : ""}>Все статусы</option>
                     <option value="pending" ${purchasesFilter === "pending" ? "selected" : ""}>pending</option>
                     <option value="completed" ${purchasesFilter === "completed" ? "selected" : ""}>completed</option>
@@ -423,8 +421,8 @@ function renderPurchases() {
                 </select>
             </div>
 
-            <div class="bg-discord-light rounded-lg overflow-hidden">
-                <table class="admin-table">
+            <div class="v1-table-wrap">
+                <table class="v1-table">
                     <thead>
                         <tr>
                             <th>Пользователь</th>
@@ -444,9 +442,9 @@ function renderPurchases() {
                                 <td>${escapeHtml(purchase.username)}</td>
                                 <td>${escapeHtml(getPurchaseTargetLabel(purchase))}</td>
                                 <td>${Number(purchase.amount || 0).toLocaleString("ru-RU")} ₽</td>
-                                <td>${purchase.sbp_comment ? escapeHtml(purchase.sbp_comment) : '<span class="text-discord-text/60">—</span>'}</td>
+                                <td>${purchase.sbp_comment ? escapeHtml(purchase.sbp_comment) : '<span class="v1-soft">—</span>'}</td>
                                 <td>
-                                    <span class="tag ${getPurchaseStatusClass(purchase.status)}">
+                                    <span class="v1-badge ${getPurchaseStatusClass(purchase.status)}">
                                         ${escapeHtml(getPurchaseStatusLabel(purchase.status))}
                                     </span>
                                 </td>
@@ -455,16 +453,16 @@ function renderPurchases() {
                                     ${
                                       purchase.status === "pending"
                                         ? `
-                                        <div class="flex gap-2">
-                                            <button class="btn btn-success btn-sm purchase-complete-btn" data-id="${escapeHtml(purchase.id)}">
+                                        <div class="v1-actions">
+                                            <button class="v1-btn v1-btn-primary v1-btn-sm purchase-complete-btn" data-id="${escapeHtml(purchase.id)}">
                                                 ✓ Подтвердить
                                             </button>
-                                            <button class="btn btn-danger btn-sm purchase-cancel-btn" data-id="${escapeHtml(purchase.id)}">
+                                            <button class="v1-btn v1-btn-danger v1-btn-sm purchase-cancel-btn" data-id="${escapeHtml(purchase.id)}">
                                                 ✗ Отклонить
                                             </button>
                                         </div>
                                     `
-                                        : '<span class="text-discord-text/60">—</span>'
+                                        : '<span class="v1-soft">—</span>'
                                     }
                                 </td>
                             </tr>
@@ -511,10 +509,10 @@ function renderDonations() {
 
   if (donations.length === 0) {
     container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-heart"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">Донатов пока нет</h3>
-                <p class="text-discord-text mt-2">Здесь появятся пожертвования через ЮKassa</p>
+            <div class="v1-empty">
+                <i class="fas fa-heart v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">Донатов пока нет</div>
+                <p>Здесь появятся пожертвования через ЮKassa</p>
             </div>
         `;
     return;
@@ -524,14 +522,14 @@ function renderDonations() {
   const total = completed.reduce((sum, d) => sum + Number(d.amount || 0), 0);
 
   container.innerHTML = `
-        <div class="space-y-4">
-            <div class="flex justify-between items-center flex-wrap gap-3">
-                <div class="text-discord-text">
+        <div class="v1-vstack">
+            <div class="v1-actions v1-actions-between">
+                <div class="v1-muted">
                     Собрано:
-                    <span class="text-discord-green font-bold text-lg">${total.toLocaleString("ru-RU")} ₽</span>
-                    <span class="text-discord-text/60 text-sm">· ${completed.length} шт.</span>
+                    <strong class="v1-success-text">${total.toLocaleString("ru-RU")} ₽</strong>
+                    <span class="v1-soft">· ${completed.length} шт.</span>
                 </div>
-                <select id="donations-status-filter" class="input max-w-xs">
+                <select id="donations-status-filter" class="v1-input v1-select-compact">
                     <option value="" ${donationsFilter === "" ? "selected" : ""}>Все статусы</option>
                     <option value="pending" ${donationsFilter === "pending" ? "selected" : ""}>pending</option>
                     <option value="completed" ${donationsFilter === "completed" ? "selected" : ""}>completed</option>
@@ -539,8 +537,8 @@ function renderDonations() {
                 </select>
             </div>
 
-            <div class="bg-discord-light rounded-lg overflow-hidden">
-                <table class="admin-table">
+            <div class="v1-table-wrap">
+                <table class="v1-table">
                     <thead>
                         <tr>
                             <th>Сумма</th>
@@ -555,15 +553,15 @@ function renderDonations() {
                           .map(
                             (d) => `
                             <tr>
-                                <td class="font-bold text-white">${Number(d.amount || 0).toLocaleString("ru-RU")} ₽</td>
-                                <td>${d.message ? escapeHtml(d.message) : '<span class="text-discord-text/60">—</span>'}</td>
+                                <td><strong>${Number(d.amount || 0).toLocaleString("ru-RU")} ₽</strong></td>
+                                <td>${d.message ? escapeHtml(d.message) : '<span class="v1-soft">—</span>'}</td>
                                 <td>
-                                    <span class="tag ${getPurchaseStatusClass(d.status)}">
+                                    <span class="v1-badge ${getPurchaseStatusClass(d.status)}">
                                         ${escapeHtml(getPurchaseStatusLabel(d.status))}
                                     </span>
                                 </td>
-                                <td class="text-discord-text text-sm">${formatDateTime(d.created_at)}</td>
-                                <td class="text-discord-text text-sm">${d.completed_at ? formatDateTime(d.completed_at) : '<span class="text-discord-text/60">—</span>'}</td>
+                                <td>${formatDateTime(d.created_at)}</td>
+                                <td>${d.completed_at ? formatDateTime(d.completed_at) : '<span class="v1-soft">—</span>'}</td>
                             </tr>
                         `,
                           )
@@ -593,15 +591,15 @@ function switchTab(tab) {
   const tabDonations = document.getElementById("tab-donations");
 
   if (tabUsers)
-    tabUsers.className = `btn ${tab === "users" ? "btn-primary" : "btn-secondary"}`;
+    tabUsers.className = `v1-subtab ${tab === "users" ? "active" : ""}`;
   if (tablicenses)
-    tablicenses.className = `btn ${tab === "licenses" ? "btn-primary" : "btn-secondary"}`;
+    tablicenses.className = `v1-subtab ${tab === "licenses" ? "active" : ""}`;
   if (tabPurchases)
-    tabPurchases.className = `btn ${tab === "purchases" ? "btn-primary" : "btn-secondary"}`;
+    tabPurchases.className = `v1-subtab ${tab === "purchases" ? "active" : ""}`;
   if (tabAutomute)
-    tabAutomute.className = `btn ${tab === "automute" ? "btn-primary" : "btn-secondary"}`;
+    tabAutomute.className = `v1-subtab ${tab === "automute" ? "active" : ""}`;
   if (tabDonations)
-    tabDonations.className = `btn ${tab === "donations" ? "btn-primary" : "btn-secondary"}`;
+    tabDonations.className = `v1-subtab ${tab === "donations" ? "active" : ""}`;
 
   if (tab === "users") {
     renderUsers();
@@ -622,17 +620,17 @@ function renderAutomute() {
 
   if (!automutePurchases.length) {
     container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-volume-mute"></i>
-        <h3 class="text-xl font-semibold text-white mt-4">Нет покупок AutoMute</h3>
+      <div class="v1-empty">
+        <i class="fas fa-volume-mute v1-empty-icon" aria-hidden="true"></i>
+        <div class="v1-empty-h">Нет покупок AutoMute</div>
       </div>
     `;
     return;
   }
 
   container.innerHTML = `
-    <div class="bg-discord-light rounded-lg overflow-hidden">
-      <table class="admin-table">
+    <div class="v1-table-wrap">
+      <table class="v1-table">
         <thead>
           <tr>
             <th>Пользователь</th>
@@ -650,27 +648,27 @@ function renderAutomute() {
             <tr>
               <td>
                 <div>
-                  <div class="text-white">${escapeHtml(p.username || "—")}</div>
-                  <div class="text-xs text-discord-text">${escapeHtml(p.email || "")}</div>
+                  <strong>${escapeHtml(p.username || "—")}</strong>
+                  <div class="v1-muted">${escapeHtml(p.email || "")}</div>
                 </div>
               </td>
-              <td><span class="tag tag-primary">${escapeHtml(p.plan)}</span></td>
+              <td><span class="v1-badge v1-badge-info">${escapeHtml(p.plan)}</span></td>
               <td>${p.amount} ₽</td>
-              <td><code class="text-discord-text">${escapeHtml(p.sbp_comment || "")}</code></td>
+              <td><code>${escapeHtml(p.sbp_comment || "")}</code></td>
               <td>
-                ${p.status === "pending" ? '<span class="tag tag-warning">Ожидает</span>'
-                  : p.status === "completed" ? '<span class="tag tag-success">Подтверждена</span>'
-                  : '<span class="tag tag-danger">Отменена</span>'}
+                ${p.status === "pending" ? '<span class="v1-badge v1-badge-warn">Ожидает</span>'
+                  : p.status === "completed" ? '<span class="v1-badge v1-badge-success">Подтверждена</span>'
+                  : '<span class="v1-badge v1-badge-danger">Отменена</span>'}
               </td>
               <td>${formatDateTime(p.created_at)}</td>
-              <td>${p.license_key ? `<code class="text-white select-all">${escapeHtml(p.license_key)}</code>` : "—"}</td>
+              <td>${p.license_key ? `<code>${escapeHtml(p.license_key)}</code>` : "—"}</td>
               <td>
                 ${p.status === "pending" ? `
-                  <div class="flex gap-1">
-                    <button class="btn btn-success btn-sm am-confirm-btn" data-id="${escapeHtml(p.id)}">
+                  <div class="v1-actions">
+                    <button class="v1-icon-btn am-confirm-btn" data-id="${escapeHtml(p.id)}" aria-label="Подтвердить">
                       <i class="fas fa-check"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm am-cancel-btn" data-id="${escapeHtml(p.id)}">
+                    <button class="v1-icon-btn danger am-cancel-btn" data-id="${escapeHtml(p.id)}" aria-label="Отклонить">
                       <i class="fas fa-times"></i>
                     </button>
                   </div>
@@ -736,66 +734,33 @@ async function toggleUserRole(userId, newRole) {
 }
 
 function showNewPasswordModal(username, password) {
-  const message = `
-        <div class="text-center">
-            <p class="mb-2">Новый пароль для пользователя <b>${username}</b>:</p>
-            <div class="bg-discord-darker p-3 rounded text-xl font-mono select-all tracking-wider mb-2">
-                ${password}
-            </div>
-            <p class="text-sm text-discord-text">Скопируйте его и передайте пользователю.</p>
-        </div>
-    `;
+  showModal({
+    title: "Новый пароль",
+    content: `
+      <div class="v1-center v1-vstack">
+        <p class="v1-muted">Новый пароль для пользователя <strong>${escapeHtml(username)}</strong>:</p>
+        <div class="v1-code-box"><code id="new-password-value">${escapeHtml(password)}</code></div>
+        <p class="v1-muted">Скопируйте его и передайте пользователю.</p>
+      </div>
+    `,
+    footer: `
+      <button class="v1-btn" id="close-password-modal">Закрыть</button>
+      <button class="v1-btn v1-btn-primary" id="copy-password-btn">📋 Скопировать</button>
+    `,
+  });
 
-  const modalOverlay = document.createElement("div");
-  modalOverlay.className = "modal-overlay";
-  modalOverlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); z-index: 9999;
-        display: flex; align-items: center; justify-content: center;
-    `;
-
-  const modalContent = document.createElement("div");
-  modalContent.style.cssText = `
-        background: #36393f; color: white; padding: 24px;
-        border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    `;
-
-  modalContent.innerHTML = `
-        <div class="text-center">${message}</div>
-        <div style="margin-top: 16px; text-align: center; gap: 8px; display: flex; justify-content: center;">
-            <button id="copyBtn" style="background: #43b581; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">📋 Скопировать</button>
-            <button id="closeBtn" style="background: #4f545c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">✕ Закрыть</button>
-        </div>
-    `;
-
-  modalOverlay.appendChild(modalContent);
-  document.body.appendChild(modalOverlay);
-
-  modalOverlay.onclick = (e) => {
-    if (e.target === modalOverlay) modalOverlay.remove();
-  };
-
-  document.getElementById("closeBtn").onclick = () => modalOverlay.remove();
-
-  document.getElementById("copyBtn").onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(password);
-      document.getElementById("copyBtn").textContent = "✅ Скопировано!";
-      setTimeout(() => modalOverlay.remove(), 1500);
-    } catch (err) {
-      console.error("Копирование не удалось:", err);
-      fallbackCopyTextToClipboard(password);
-    }
-  };
-
-  const escHandler = (e) => {
-    if (e.key === "Escape") {
-      modalOverlay.remove();
-      document.removeEventListener("keydown", escHandler);
-    }
-  };
-  document.addEventListener("keydown", escHandler);
+  setTimeout(() => {
+    document.getElementById("close-password-modal")?.addEventListener("click", closeModal);
+    document.getElementById("copy-password-btn")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(password);
+        showToast("Пароль скопирован", "success");
+        closeModal();
+      } catch {
+        fallbackCopyTextToClipboard(password);
+      }
+    });
+  }, 0);
 }
 
 function fallbackCopyTextToClipboard(text) {
@@ -813,8 +778,8 @@ function fallbackCopyTextToClipboard(text) {
   try {
     const successful = document.execCommand("copy");
     if (successful) {
-      document.getElementById("copyBtn").textContent = "✅ Скопировано!";
-      setTimeout(() => modalOverlay.remove(), 1500);
+      showToast("Пароль скопирован", "success");
+      closeModal();
     } else {
       throw new Error("Fallback тоже не сработал");
     }
@@ -847,7 +812,7 @@ async function updatePurchaseStatus(purchaseId, status, button = null) {
   const initialText = button ? button.innerHTML : "";
   if (button) {
     button.disabled = true;
-    button.innerHTML = '<div class="spinner"></div>';
+    button.textContent = "Обновление…";
   }
 
   try {

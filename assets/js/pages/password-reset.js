@@ -7,26 +7,22 @@ let tokenValid = false;
 
 export function render() {
     return `
-        <div class="min-h-screen flex items-center justify-center px-4 py-8">
-            <div class="w-full max-w-md">
-                <div class="bg-discord-light rounded-lg shadow-xl p-8 fade-in">
-                    <div class="text-center mb-8">
-                        <i class="fas fa-key text-6xl text-discord-accent mb-4"></i>
-                        <h1 class="text-2xl font-bold text-white">Восстановление пароля</h1>
-                    </div>
-                    
-                    <div id="step-content">
-                        <div class="flex justify-center py-8">
-                            <div class="spinner spinner-lg"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 text-center">
-                        <a href="/login" class="text-discord-accent hover:underline text-sm">
-                            <i class="fas fa-arrow-left mr-1"></i>
-                            Вернуться к входу
-                        </a>
-                    </div>
+        <div class="v1-auth">
+            <div class="v1-auth-card fade-in">
+                <div class="v1-auth-head">
+                    <i class="fas fa-key v1-auth-icon" aria-hidden="true"></i>
+                    <h1 class="v1-auth-title">Восстановление пароля</h1>
+                </div>
+
+                <div id="step-content">
+                    <div class="v1-loading">Загрузка…</div>
+                </div>
+
+                <div class="v1-center" style="margin-top:var(--v1-space-5)">
+                    <a href="/login" class="v1-link">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                        Вернуться к входу
+                    </a>
                 </div>
             </div>
         </div>
@@ -38,23 +34,23 @@ function renderRequestForm() {
     if (!container) return;
 
     container.innerHTML = `
-        <p class="text-discord-text mb-6 text-center">
+        <p class="v1-muted v1-center" style="margin-bottom:var(--v1-space-5)">
             Введите email, привязанный к вашему аккаунту
         </p>
-        <form id="request-form" class="space-y-6">
-            <div>
-                <label class="label" for="email">Email</label>
+        <form id="request-form" class="v1-form">
+            <div class="v1-field">
+                <label class="v1-label" for="email">Email</label>
                 <input 
                     type="email" 
                     id="email" 
-                    class="input" 
+                    class="v1-input" 
                     placeholder="your@email.com"
                     required
                 >
             </div>
-            <div id="error-message" class="hidden text-discord-red text-sm"></div>
-            <div id="success-message" class="hidden text-discord-green text-sm"></div>
-            <button type="submit" class="btn btn-primary w-full">
+            <div id="error-message" class="v1-msg error hidden"></div>
+            <div id="success-message" class="v1-msg success hidden"></div>
+            <button type="submit" class="v1-btn v1-btn-primary v1-btn-block">
                 <i class="fas fa-paper-plane"></i>
                 Отправить ссылку
             </button>
@@ -70,39 +66,37 @@ function renderNewPasswordForm() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-discord-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-check text-discord-green text-2xl"></i>
-            </div>
-            <p class="text-discord-text">
+        <div class="v1-state-head success">
+            <i class="fas fa-check" aria-hidden="true"></i>
+            <p class="v1-muted">
                 Введите новый пароль для вашего аккаунта
             </p>
         </div>
-        <form id="reset-form" class="space-y-5">
-            <div>
-                <label class="label" for="new-password">Новый пароль</label>
+        <form id="reset-form" class="v1-form">
+            <div class="v1-field">
+                <label class="v1-label" for="new-password">Новый пароль</label>
                 <input 
                     type="password" 
                     id="new-password" 
-                    class="input" 
+                    class="v1-input" 
                     placeholder="Минимум 6 символов"
                     minlength="6"
                     required
                 >
             </div>
-            <div>
-                <label class="label" for="confirm-password">Подтвердите пароль</label>
+            <div class="v1-field">
+                <label class="v1-label" for="confirm-password">Подтвердите пароль</label>
                 <input 
                     type="password" 
                     id="confirm-password" 
-                    class="input" 
+                    class="v1-input" 
                     placeholder="Повторите пароль"
                     minlength="6"
                     required
                 >
             </div>
-            <div id="error-message" class="hidden text-discord-red text-sm"></div>
-            <button type="submit" class="btn btn-primary w-full">
+            <div id="error-message" class="v1-msg error hidden"></div>
+            <button type="submit" class="v1-btn v1-btn-primary v1-btn-block">
                 <i class="fas fa-check"></i>
                 Сохранить новый пароль
             </button>
@@ -118,15 +112,15 @@ function renderInvalidToken() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="text-center">
-            <div class="w-16 h-16 bg-discord-red/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-times text-discord-red text-2xl"></i>
+        <div class="v1-center">
+            <div class="v1-state-head danger">
+                <i class="fas fa-times" aria-hidden="true"></i>
             </div>
-            <h3 class="text-white font-semibold mb-2">Ссылка недействительна</h3>
-            <p class="text-discord-text mb-6">
+            <h3 class="v1-empty-h">Ссылка недействительна</h3>
+            <p class="v1-muted" style="margin-bottom:var(--v1-space-5)">
                 Срок действия ссылки истёк или она уже была использована.
             </p>
-            <a href="/password-reset" class="btn btn-primary">
+            <a href="/password-reset" class="v1-btn v1-btn-primary">
                 <i class="fas fa-redo"></i>
                 Запросить новую ссылку
             </a>
@@ -152,19 +146,18 @@ async function handleRequestSubmit(e) {
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+    submitBtn.textContent = 'Отправка…';
     errorDiv.classList.add('hidden');
     successDiv.classList.add('hidden');
 
     try {
         const response = await authApi.requestPasswordReset(email);
 
-        successDiv.innerHTML = `
-            <div class="flex items-center gap-2">
-                <i class="fas fa-check-circle"></i>
-                <span>${response.message || 'Если этот email зарегистрирован, на него будет отправлена ссылка'}</span>
-            </div>
-        `;
+        successDiv.replaceChildren();
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-check-circle';
+        icon.setAttribute('aria-hidden', 'true');
+        successDiv.append(icon, document.createTextNode(response.message || 'Если этот email зарегистрирован, на него будет отправлена ссылка'));
         successDiv.classList.remove('hidden');
 
         emailInput.value = '';
@@ -206,7 +199,7 @@ async function handleResetSubmit(e) {
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+    submitBtn.textContent = 'Сохранение…';
     errorDiv.classList.add('hidden');
 
     try {

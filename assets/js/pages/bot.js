@@ -58,11 +58,11 @@ function setPageMeta() {
 
 export function render() {
     return `
-        <div class="bot-page relative overflow-hidden">
+        <div class="bot-page">
             <div class="bot-glow bot-glow-left"></div>
             <div class="bot-glow bot-glow-right"></div>
 
-            <div class="container mx-auto px-4 py-10 max-w-6xl relative z-10">
+            <div class="v1-doc bot-doc">
                 <section class="bot-hero fade-in">
                     <div class="bot-hero-content">
                         <h1 class="bot-title">${escapeHtml(t('bot_title_full'))}</h1>

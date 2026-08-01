@@ -431,26 +431,44 @@ export function createChatWebSocket(token, onMessage, onOpen, onClose, onError) 
     }
     
     const ws = new WebSocket(`${wsUrl}/api/ws/chat?token=${token}`);
-    
+
+    // Пока чат открыт, живое состояние сокета — самый точный сигнал для
+    // индикатора связи в статус-баре (слушатель в navbar.js).
+    emitBackendStatus('connecting');
+
     ws.onopen = () => {
+        emitBackendStatus('connected');
         if (onOpen) onOpen();
     };
-    
+
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (onMessage) onMessage(data);
     };
-    
+
     ws.onclose = (event) => {
+        emitBackendStatus('offline');
         if (onClose) onClose(event);
     };
-    
+
     ws.onerror = (error) => {
         console.error('WebSocket error', error);
+        emitBackendStatus('offline');
         if (onError) onError(error);
     };
-    
+
     return ws;
+}
+
+function emitBackendStatus(state) {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('backend-status', {
+        detail: { state, source: 'websocket' },
+    }));
+}
+
+export function clearChatWebSocketStatus() {
+    emitBackendStatus('inactive');
 }
 
 export { API_URL, getToken };

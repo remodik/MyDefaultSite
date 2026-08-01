@@ -1,21 +1,24 @@
 import { isAuthenticated, isAdmin, getUser, logout } from '../auth.js';
 import { router } from '../router.js';
-import { t, getLang, setLang, applyDom, LANGS } from '../i18n.js';
+import { t, tf, getLang, setLang, applyDom, LANGS } from '../i18n.js';
 
 const TABS_KEY = 'ide_open_tabs';
 
+// `icon` — настоящее расширение виртуального файла из i18n (file_*), поэтому
+// оно же годится для индикатора типа в статус-баре. `dir` — это папка, у неё
+// типа файла нет и статус-бар её не показывает.
 const FILES = [
-    { id: 'home', path: '/', icon: 'tsx', iconColor: '#38bdf8', file_key: 'file_home', label_key: 'nav_home', public: true },
-    { id: 'services', path: '/services', icon: 'ts', iconColor: '#0ea5e9', file_key: 'file_services', label_key: 'nav_services', public: true },
+    { id: 'home', path: '/', icon: 'js', iconColor: '#38bdf8', file_key: 'file_home', label_key: 'nav_home', public: true },
+    { id: 'services', path: '/services', icon: 'js', iconColor: '#0ea5e9', file_key: 'file_services', label_key: 'nav_services', public: true },
     { id: 'works', path: '/works', icon: 'dir', iconColor: '#94a3b8', file_key: 'file_works', label_key: 'nav_works', public: true },
     { id: 'bot', path: '/bot', icon: 'py', iconColor: '#facc15', file_key: 'file_bot', label_key: 'nav_bot', public: true },
     { id: 'courses', path: '/courses', icon: 'md', iconColor: '#a78bfa', file_key: 'file_courses', label_key: 'nav_courses', public: true },
     { id: 'projects', path: '/projects', icon: 'json', iconColor: '#f59e0b', file_key: 'file_projects', label_key: 'nav_projects', requireAuth: true },
-    { id: 'chat', path: '/chat', icon: 'sock', iconColor: '#ec4899', file_key: 'file_chat', label_key: 'nav_chat', requireAuth: true },
-    { id: 'contact', path: '/contact', icon: 'yml', iconColor: '#22d3ee', file_key: 'file_contact', label_key: 'nav_contacts', public: true },
+    { id: 'chat', path: '/chat', icon: 'js', iconColor: '#f472b6', file_key: 'file_chat', label_key: 'nav_chat', requireAuth: true },
+    { id: 'contact', path: '/contact', icon: 'yaml', iconColor: '#22d3ee', file_key: 'file_contact', label_key: 'nav_contacts', public: true },
     { id: 'donate', path: '/donate', icon: 'yml', iconColor: '#f472b6', file_key: 'file_donate', label_key: 'nav_donate', public: true },
-    { id: 'profile', path: '/profile', icon: 'usr', iconColor: '#86efac', file_key: 'file_profile', label_key: 'nav_profile', requireAuth: true },
-    { id: 'admin', path: '/admin', icon: 'lck', iconColor: '#f87171', file_key: 'file_admin', label_key: 'nav_admin', requireAdmin: true },
+    { id: 'profile', path: '/profile', icon: 'js', iconColor: '#86efac', file_key: 'file_profile', label_key: 'nav_profile', requireAuth: true },
+    { id: 'admin', path: '/admin', icon: 'js', iconColor: '#f87171', file_key: 'file_admin', label_key: 'nav_admin', requireAdmin: true },
 ];
 
 function loadTabs() {
@@ -63,7 +66,7 @@ function fileIconEl(file) {
 }
 
 function fileNameHtml(file) {
-    return `<span class="v1-file-name">${t(file.file_key)}</span>`;
+    return `<span class="v1-file-name">${escapeHtml(t(file.file_key))}</span>`;
 }
 
 function renderSidebar() {
@@ -75,13 +78,16 @@ function renderSidebar() {
     const admin = isAdmin();
 
     const files = visibleFiles();
-    const items = files.map(f => `
-        <a href="${f.path}" class="v1-file ${activeId === f.id ? 'active' : ''}" data-file-id="${f.id}" title="${t(f.label_key)}">
+    const items = files.map(f => {
+        const isActive = activeId === f.id;
+        return `
+        <a href="${f.path}" class="v1-file ${isActive ? 'active' : ''}" data-file-id="${f.id}" title="${escapeHtml(t(f.label_key))}"${isActive ? ' aria-current="page"' : ''}>
             ${fileIconEl(f)}
             ${fileNameHtml(f)}
             ${f.requireAdmin ? '<span class="v1-file-badge">ADMIN</span>' : ''}
         </a>
-    `).join('');
+    `;
+    }).join('');
 
     const userInitial = (user?.username || 'G').charAt(0).toUpperCase();
     const userBlock = auth ? `
@@ -136,24 +142,26 @@ function renderTabs() {
     const el = document.getElementById('ide-tabs');
     if (!el) return;
 
+    // Вкладка — контейнер с двумя соседями: ссылкой и кнопкой закрытия.
+    // Раньше <button> лежал внутри <a>: невалидный HTML, ломающий клавиатуру
+    // и скринридеры.
     const tabsHtml = openTabs.map(id => {
         const f = FILES.find(x => x.id === id);
         if (!f) return '';
         const isActive = activeId === id;
+        const name = t(f.file_key);
         return `
-            <a href="${f.path}" class="v1-tab ${isActive ? 'active' : ''}" data-file-id="${f.id}">
-                ${fileIconEl(f)}
-                <span>${t(f.file_key)}</span>
-                <button class="v1-tab-x" data-close="${f.id}" aria-label="Close">×</button>
-            </a>
+            <div class="v1-tab ${isActive ? 'active' : ''}" role="presentation">
+                <a href="${f.path}" class="v1-tab-link" data-file-id="${f.id}"${isActive ? ' aria-current="page"' : ''}>
+                    ${fileIconEl(f)}
+                    <span>${escapeHtml(name)}</span>
+                </a>
+                <button class="v1-tab-x" data-close="${f.id}" aria-label="${escapeHtml(tf('tab_close', { name }))}">×</button>
+            </div>
         `;
     }).join('');
 
-    el.innerHTML = tabsHtml + `
-        <div class="v1-tab-controls">
-            <span title="Split">⫶</span>
-        </div>
-    `;
+    el.innerHTML = tabsHtml;
 
     el.querySelectorAll('.v1-tab-x').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -184,22 +192,28 @@ function renderBreadcrumb() {
     if (!el) return;
     const f = FILES.find(x => x.id === activeId);
     el.innerHTML = `
-        <span style="color: #64748b">${t('sidebar_root')}</span>
-        <span style="color: #475569"> ›</span>
+        <span style="color: var(--v1-fg-dim)">${t('sidebar_root')}</span>
+        <span style="color: var(--v1-fg-dim)"> ›</span>
         <span style="color: #7dd3fc">${escapeHtml(t(f?.file_key || 'file_home'))}</span>
     `;
 }
 
 function renderTitle() {
+    const f = FILES.find(x => x.id === activeId);
+
     const titleEl = document.getElementById('ide-title');
     if (titleEl) {
-        const f = FILES.find(x => x.id === activeId);
         titleEl.textContent = `remod3 — ${t(f?.file_key || 'file_home')}`;
     }
+
+    // Тип файла показываем, только если он у страницы вообще есть:
+    // `works/` — папка, расширения у неё нет.
     const ftEl = document.getElementById('st-filetype');
     if (ftEl) {
-        const f = FILES.find(x => x.id === activeId);
-        ftEl.textContent = (f?.icon || 'tsx').toUpperCase();
+        const ext = f?.icon;
+        const hasType = Boolean(ext) && ext !== 'dir';
+        ftEl.textContent = hasType ? ext.toUpperCase() : '';
+        ftEl.hidden = !hasType;
     }
 }
 
@@ -248,11 +262,6 @@ function renderLangPicker() {
     });
 }
 
-function closeSidebarOnMobile() {
-    const sb = document.getElementById('ide-sidebar');
-    if (sb) sb.classList.remove('open');
-}
-
 function renderFooter() {
     const r = document.getElementById('footer-rights');
     const p = document.getElementById('footer-privacy');
@@ -264,11 +273,50 @@ function renderFooter() {
     const wakeText = document.getElementById('wake-banner-text');
     if (wakeText) wakeText.textContent = t('wake_msg');
 
-    const stOnline = document.getElementById('st-online');
-    if (stOnline) stOnline.textContent = t('st_online');
-    const stBranch = document.getElementById('st-branch');
-    if (stBranch) stBranch.textContent = t('st_branch');
+    renderBackendStatus();
 }
+
+/* ---------------------------------------------------------------------------
+   Статус-бар: настоящее состояние бэкенда, а не хардкод «Connected».
+   Источники — health-пинг в app.js и WebSocket чата в api.js, оба шлют
+   событие `backend-status`.
+   --------------------------------------------------------------------------- */
+
+const STATUS_STYLE = {
+    connected: { key: 'st_online', color: '#86efac' },
+    connecting: { key: 'st_connecting', color: '#f59e0b' },
+    offline: { key: 'st_offline', color: '#f87171' },
+};
+
+let healthState = 'connecting';
+let socketState = null;
+
+function getBackendState() {
+    return socketState || healthState;
+}
+
+function renderBackendStatus() {
+    const textEl = document.getElementById('st-online');
+    const dotEl = document.getElementById('st-online-dot');
+    const style = STATUS_STYLE[getBackendState()] || STATUS_STYLE.connecting;
+    if (textEl) textEl.textContent = t(style.key);
+    if (dotEl) dotEl.style.color = style.color;
+}
+
+window.addEventListener('backend-status', (e) => {
+    const next = e?.detail?.state;
+    const source = e?.detail?.source || 'health';
+    if (source === 'websocket' && next === 'inactive') {
+        socketState = null;
+    } else if (source === 'websocket' && STATUS_STYLE[next]) {
+        socketState = next;
+    } else if (STATUS_STYLE[next]) {
+        healthState = next;
+    } else {
+        return;
+    }
+    renderBackendStatus();
+});
 
 function escapeHtml(s) {
     const d = document.createElement('div');
@@ -286,15 +334,89 @@ export function renderNavbar() {
     bindSidebarToggle();
 }
 
+/* ---------------------------------------------------------------------------
+   Мобильный сайдбар: затемнение, закрытие по клику вне и по Escape,
+   возврат фокуса на гамбургер.
+   --------------------------------------------------------------------------- */
+
+// На десктопе сайдбар по умолчанию раскрыт, на мобильном — свёрнут за экран.
+const MOBILE_MQ = window.matchMedia('(max-width: 900px)');
+let sidebarOpen = !MOBILE_MQ.matches;
+
+function isSidebarOpen() {
+    return sidebarOpen;
+}
+
+function applySidebarState() {
+    const sb = document.getElementById('ide-sidebar');
+    const body = document.querySelector('.v1-body');
+    const toggle = document.getElementById('ide-sidebar-toggle');
+    const explorer = document.getElementById('ide-act-explorer');
+    if (!sb) return;
+
+    // .open — выезд поверх контента на мобильном;
+    // .sidebar-collapsed на .v1-body — скрытие колонки на десктопе;
+    // .sidebar-open — затемнение, оно нужно только на мобильном.
+    sb.classList.toggle('open', sidebarOpen);
+    if (body) {
+        body.classList.toggle('sidebar-collapsed', !sidebarOpen);
+        body.classList.toggle('sidebar-open', sidebarOpen && MOBILE_MQ.matches);
+    }
+    if (toggle) toggle.setAttribute('aria-expanded', String(sidebarOpen));
+    if (explorer) {
+        explorer.setAttribute('aria-expanded', String(sidebarOpen));
+        explorer.classList.toggle('active', sidebarOpen);
+    }
+}
+
+function setSidebarOpen(open, { restoreFocus = false } = {}) {
+    sidebarOpen = Boolean(open);
+    applySidebarState();
+    if (!sidebarOpen && restoreFocus) {
+        const toggle = document.getElementById('ide-sidebar-toggle');
+        const explorer = document.getElementById('ide-act-explorer');
+        const target = MOBILE_MQ.matches ? toggle : explorer;
+        target?.focus();
+    }
+}
+
+function closeSidebarOnMobile() {
+    if (MOBILE_MQ.matches && sidebarOpen) {
+        setSidebarOpen(false, { restoreFocus: true });
+    }
+}
+
+MOBILE_MQ.addEventListener('change', () => {
+    setSidebarOpen(!MOBILE_MQ.matches);
+});
+
 function bindSidebarToggle() {
     const toggle = document.getElementById('ide-sidebar-toggle');
     const sb = document.getElementById('ide-sidebar');
     if (!toggle || !sb || toggle.dataset.bound) return;
     toggle.dataset.bound = '1';
+
     toggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        sb.classList.toggle('open');
+        setSidebarOpen(!sidebarOpen);
     });
+
+    // Затемнение — псевдоэлемент на .v1-body, поэтому ловим клик по самому
+    // .v1-body мимо сайдбара и activity bar.
+    const body = document.querySelector('.v1-body');
+    body?.addEventListener('click', (e) => {
+        if (!sidebarOpen || !MOBILE_MQ.matches) return;
+        if (e.target.closest('#ide-sidebar') || e.target.closest('.v1-activity')) return;
+        setSidebarOpen(false, { restoreFocus: true });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebarOpen && MOBILE_MQ.matches) {
+            setSidebarOpen(false, { restoreFocus: true });
+        }
+    });
+
+    applySidebarState();
 }
 
 document.addEventListener('click', (e) => {
@@ -306,6 +428,9 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+    if (e.target.closest('#ide-act-explorer')) {
+        setSidebarOpen(!isSidebarOpen());
+    }
     if (e.target.closest('#ide-act-account')) {
         router.navigate(isAuthenticated() ? '/profile' : '/login');
     }

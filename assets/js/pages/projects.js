@@ -8,17 +8,17 @@ let projects = [];
 
 export function render() {
     return `
-        <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-folder text-discord-accent mr-3"></i>
-                        ${escapeHtml(t('page_projects_title'))}
+        <div class="v1-doc">
+            <div class="v1-page-header">
+                <div class="v1-page-header-main">
+                    <div class="v1-sec-kicker">// projects.json</div>
+                    <h1 class="v1-page-title">
+                        <i class="fas fa-folder v1-page-title-icon" aria-hidden="true"></i>${escapeHtml(t('page_projects_title'))}
                     </h1>
-                    <p class="text-discord-text mt-2">${escapeHtml(t('page_projects_sub'))}</p>
+                    <p class="v1-page-sub">${escapeHtml(t('page_projects_sub'))}</p>
                 </div>
                 ${isAdmin() ? `
-                    <button class="btn btn-primary" id="add-project-btn" data-testid="add-project-btn">
+                    <button class="v1-btn v1-btn-primary" id="add-project-btn" data-testid="add-project-btn">
                         <i class="fas fa-plus"></i>
                         ${escapeHtml(t('page_projects_add'))}
                     </button>
@@ -26,9 +26,7 @@ export function render() {
             </div>
             
             <div id="projects-content">
-                <div class="flex justify-center py-12">
-                    <div class="spinner spinner-lg"></div>
-                </div>
+                <div class="v1-loading">${escapeHtml(t('loading'))}</div>
             </div>
         </div>
     `;
@@ -40,53 +38,41 @@ function renderProjects() {
     
     if (projects.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-folder-open"></i>
-                <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('page_projects_empty_h'))}</h3>
-                <p class="text-discord-text mt-2">${escapeHtml(t('page_projects_empty_d'))}</p>
+            <div class="v1-empty">
+                <i class="fas fa-folder-open v1-empty-icon" aria-hidden="true"></i>
+                <div class="v1-empty-h">${escapeHtml(t('page_projects_empty_h'))}</div>
+                <p>${escapeHtml(t('page_projects_empty_d'))}</p>
             </div>
         `;
         return;
     }
     
     container.innerHTML = `
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="v1-card-grid">
             ${projects.map(project => `
-                <div class="project-card fade-in" data-project-id="${project.id}">
-                    <div class="p-6">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-discord-accent/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-code text-discord-accent text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-bold text-white truncate">${escapeHtml(project.name)}</h3>
-                                <p class="text-discord-text text-sm">${formatDate(project.created_at)}</p>
-                            </div>
-                        </div>
-                        
-                        <p class="text-discord-text text-sm line-clamp-2 mb-4">
-                            ${escapeHtml(project.description) || escapeHtml(t('prj_no_desc'))}
-                        </p>
-
-                        <div class="flex justify-between items-center">
-                            <a href="/projects/${project.id}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i>
-                                ${escapeHtml(t('open'))}
-                            </a>
-                            
-                            ${isAdmin() ? `
-                                <div class="flex gap-2">
-                                    <button class="btn btn-secondary btn-sm edit-project" data-id="${project.id}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm delete-project" data-id="${project.id}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            ` : ''}
-                        </div>
+                <article class="v1-prj fade-in" data-project-id="${project.id}">
+                    <div class="v1-prj-head">
+                        <span class="v1-prj-tag"><i class="fas fa-code" aria-hidden="true"></i> JSON</span>
+                        <span class="v1-prj-hash">${escapeHtml(formatDate(project.created_at))}</span>
                     </div>
-                </div>
+                    <h3 class="v1-prj-title">${escapeHtml(project.name)}</h3>
+                    <p class="v1-prj-desc">${escapeHtml(project.description) || escapeHtml(t('prj_no_desc'))}</p>
+                    <div class="v1-card-actions">
+                        <a href="/projects/${project.id}" class="v1-btn v1-btn-primary v1-btn-sm">
+                            <i class="fas fa-eye"></i>${escapeHtml(t('open'))}
+                        </a>
+                        ${isAdmin() ? `
+                            <div class="v1-actions">
+                                <button class="v1-icon-btn edit-project" data-id="${project.id}" title="${escapeHtml(t('common_edit') || 'Edit')}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="v1-icon-btn danger delete-project" data-id="${project.id}" title="${escapeHtml(t('common_delete') || 'Delete')}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </article>
             `).join('')}
         </div>
     `;
@@ -117,20 +103,20 @@ function showProjectModal(project = null) {
     showModal({
         title: isEdit ? t('prj_modal_edit') : t('prj_modal_new'),
         content: `
-            <form id="project-form" class="space-y-4">
-                <div>
-                    <label class="label" for="project-name">${escapeHtml(t('svc_name'))}</label>
-                    <input type="text" id="project-name" class="input" value="${isEdit ? escapeHtml(project.name) : ''}" required>
+            <form id="project-form" class="v1-form">
+                <div class="v1-field">
+                    <label class="v1-label" for="project-name">${escapeHtml(t('svc_name'))}</label>
+                    <input type="text" id="project-name" class="v1-input" value="${isEdit ? escapeHtml(project.name) : ''}" required>
                 </div>
-                <div>
-                    <label class="label" for="project-description">${escapeHtml(t('svc_desc'))}</label>
-                    <textarea id="project-description" class="input" rows="4">${isEdit ? escapeHtml(project.description) : ''}</textarea>
+                <div class="v1-field">
+                    <label class="v1-label" for="project-description">${escapeHtml(t('svc_desc'))}</label>
+                    <textarea id="project-description" class="v1-input" rows="4">${isEdit ? escapeHtml(project.description) : ''}</textarea>
                 </div>
             </form>
         `,
         footer: `
-            <button class="btn btn-secondary" data-close>${escapeHtml(t('common_cancel'))}</button>
-            <button class="btn btn-primary" id="save-project-btn">
+            <button class="v1-btn" data-close>${escapeHtml(t('common_cancel'))}</button>
+            <button class="v1-btn v1-btn-primary" id="save-project-btn">
                 <i class="fas fa-save"></i>
                 ${isEdit ? escapeHtml(t('common_save')) : escapeHtml(t('common_create'))}
             </button>
@@ -190,10 +176,10 @@ async function loadProjects() {
         const container = document.getElementById('projects-content');
         if (container) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle text-discord-red"></i>
-                    <h3 class="text-xl font-semibold text-white mt-4">${escapeHtml(t('common_load_error'))}</h3>
-                    <p class="text-discord-text mt-2">${error.message}</p>
+                <div class="v1-empty">
+                    <i class="fas fa-exclamation-triangle v1-empty-icon" style="color:var(--v1-red)" aria-hidden="true"></i>
+                    <div class="v1-empty-h">${escapeHtml(t('common_load_error'))}</div>
+                    <p>${escapeHtml(error.message)}</p>
                 </div>
             `;
         }

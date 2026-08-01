@@ -134,19 +134,18 @@ export function mount() {
 
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="spinner mx-auto"></div>';
+            submitBtn.textContent = t('loading');
             errorDiv.classList.add('hidden');
             successDiv.classList.add('hidden');
 
             try {
                 await contactApi.send({ name, email, phone, subject, message });
 
-                successDiv.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i>
-                        ${escapeHtml(t('contact_success'))}
-                    </div>
-                `;
+                successDiv.replaceChildren();
+                const successIcon = document.createElement('i');
+                successIcon.className = 'fas fa-check-circle';
+                successIcon.setAttribute('aria-hidden', 'true');
+                successDiv.append(successIcon, document.createTextNode(t('contact_success')));
                 successDiv.classList.remove('hidden');
                 showToast(t('contact_sent_toast'), 'success');
 

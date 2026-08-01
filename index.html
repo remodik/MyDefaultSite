@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>remod3</title>
-        <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,28 +13,6 @@
             rel="stylesheet"
         />
 
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        colors: {
-                            discord: {
-                                dark: "#252526",
-                                darker: "#1e1e1e",
-                                light: "#252526",
-                                lighter: "#3e3e42",
-                                text: "#cccccc",
-                                accent: "#007acc",
-                                green: "#4ade80",
-                                red: "#f87171",
-                                yellow: "#f59e0b",
-                            },
-                        },
-                    },
-                },
-            };
-        </script>
         <link rel="stylesheet" href="/assets/css/ide.css" />
         <link rel="stylesheet" href="/assets/css/app.css" />
         <link
@@ -53,23 +31,22 @@
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         />
+        <link rel="stylesheet" href="/assets/css/design-fixes.css" />
     </head>
-    <body class="ide-host bg-discord-darker text-discord-text">
+    <body class="ide-host">
         <div class="v1-root" id="ide-root">
             <div class="v1-titlebar">
-                <div class="v1-traffic" aria-hidden="true">
-                    <i style="background: #ff5f57"></i>
-                    <i style="background: #febc2e"></i>
-                    <i style="background: #28c840"></i>
-                </div>
                 <button
                     class="v1-sidebar-toggle"
                     id="ide-sidebar-toggle"
-                    aria-label="Toggle sidebar"
+                    aria-controls="ide-sidebar"
+                    aria-expanded="false"
+                    data-i18n-aria-label="sidebar_toggle"
+                    aria-label="Показать или скрыть боковую панель"
                 >
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="v1-title" id="ide-title">remod3 — index.tsx</div>
+                <div class="v1-title" id="ide-title">remod3 — index.js</div>
                 <div class="v1-title-right">
                     <div class="v1-lang" id="ide-lang"></div>
                 </div>
@@ -77,26 +54,37 @@
 
             <div class="v1-body">
                 <div class="v1-activity">
-                    <button class="v1-act-btn active" title="Explorer">
+                    <button
+                        class="v1-act-btn active"
+                        id="ide-act-explorer"
+                        aria-controls="ide-sidebar"
+                        aria-expanded="true"
+                        title="Проводник"
+                        data-i18n-title="act_explorer"
+                        data-i18n-aria-label="act_explorer"
+                        aria-label="Проводник"
+                    >
                         <i class="fas fa-folder"></i>
                     </button>
-                    <button class="v1-act-btn" title="Search">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <button class="v1-act-btn" title="Git">
-                        <i class="fas fa-code-branch"></i>
-                    </button>
-                    <button class="v1-act-btn" title="Debug">
-                        <i class="fas fa-play"></i>
-                    </button>
-                    <button class="v1-act-btn" title="Extensions">
-                        <i class="fas fa-puzzle-piece"></i>
-                    </button>
                     <div style="flex: 1"></div>
-                    <button class="v1-act-btn" title="Account" id="ide-act-account">
+                    <button
+                        class="v1-act-btn"
+                        id="ide-act-account"
+                        title="Аккаунт"
+                        data-i18n-title="act_account"
+                        data-i18n-aria-label="act_account"
+                        aria-label="Аккаунт"
+                    >
                         <i class="fas fa-user"></i>
                     </button>
-                    <button class="v1-act-btn" title="Settings" id="ide-act-settings">
+                    <button
+                        class="v1-act-btn"
+                        id="ide-act-settings"
+                        title="Настройки"
+                        data-i18n-title="act_settings"
+                        data-i18n-aria-label="act_settings"
+                        aria-label="Настройки"
+                    >
                         <i class="fas fa-cog"></i>
                     </button>
                 </div>
@@ -130,15 +118,15 @@
                                 d="M4 12a8 8 0 018-8v8z"
                             ></path>
                         </svg>
-                        <span id="wake-banner-text">Сервер просыпается, подождите немного…</span>
+                        <span id="wake-banner-text" data-i18n="wake_msg"></span>
                     </div>
                     <div class="v1-page" id="ide-page">
                         <div class="v1-page-content">
                             <main id="app"></main>
                             <footer class="v1-page-footer">
-                                <span id="footer-rights">© 2026 Головкин И. М. · ИНН 526110332609</span>
-                                <a href="/privacy" id="footer-privacy">Политика конфиденциальности</a>
-                                <a href="/terms" id="footer-terms">Пользовательское соглашение</a>
+                                <span id="footer-rights" data-i18n="footer_rights"></span>
+                                <a href="/privacy" id="footer-privacy" data-i18n="footer_privacy"></a>
+                                <a href="/terms" id="footer-terms" data-i18n="footer_terms"></a>
                             </footer>
                         </div>
                     </div>
@@ -146,23 +134,21 @@
             </div>
 
             <div class="v1-status">
-                <span class="v1-st-item"><i class="fas fa-code-branch"></i> <span id="st-branch">main</span></span>
-                <span class="v1-st-item"><i class="fas fa-check"></i> 0</span>
-                <span class="v1-st-item"><i class="fas fa-times"></i> 0</span>
+                <span class="v1-st-item"
+                    ><i class="fas fa-code-branch" aria-hidden="true"></i> master</span
+                >
                 <span class="v1-st-spacer"></span>
                 <span class="v1-st-item">UTF-8</span>
-                <span class="v1-st-item">LF</span>
-                <span class="v1-st-item" id="st-filetype">TSX</span>
-                <span class="v1-st-item">Python 3.11</span>
-                <span class="v1-st-item v1-st-online"><span style="color:#86efac">●</span> <span id="st-online">Connected</span></span>
+                <span class="v1-st-item" id="st-filetype" hidden></span>
+                <span class="v1-st-item v1-st-online">
+                    <span class="v1-st-dot" id="st-online-dot" aria-hidden="true">●</span>
+                    <span id="st-online" data-i18n="st_connecting"></span>
+                </span>
             </div>
         </div>
 
         <div id="modal-container"></div>
-        <div
-            id="toast-container"
-            class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
-        ></div>
+        <div id="toast-container" role="status" aria-live="polite"></div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
@@ -170,7 +156,6 @@
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>

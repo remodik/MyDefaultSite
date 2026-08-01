@@ -1,4 +1,4 @@
-import { conversationsApi, createChatWebSocket, getToken, meApi, resolveApiUrl, usersApi } from '../api.js';
+import { clearChatWebSocketStatus, conversationsApi, createChatWebSocket, getToken, meApi, resolveApiUrl, usersApi } from '../api.js';
 import { getUser } from '../auth.js';
 import { hideUserPopup, showUserPopup } from '../components/user-popup.js';
 import { debounce, escapeHtml, formatRelativeTime, formatTime, renderMarkdown, showToast } from '../utils.js';
@@ -821,8 +821,11 @@ export function unmount() {
         popupWriteHandler = null;
     }
     if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
         ws.close();
         ws = null;
+        clearChatWebSocketStatus();
     }
     globalMessages = [];
     dmMessages = [];
