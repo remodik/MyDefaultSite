@@ -15,7 +15,7 @@ const FILES = [
     { id: 'courses', path: '/courses', icon: 'md', iconColor: '#a78bfa', file_key: 'file_courses', label_key: 'nav_courses', public: true },
     { id: 'projects', path: '/projects', icon: 'json', iconColor: '#f59e0b', file_key: 'file_projects', label_key: 'nav_projects', requireAuth: true },
     { id: 'chat', path: '/chat', icon: 'js', iconColor: '#f472b6', file_key: 'file_chat', label_key: 'nav_chat', requireAuth: true },
-    { id: 'contact', path: '/contact', icon: 'yaml', iconColor: '#22d3ee', file_key: 'file_contact', label_key: 'nav_contacts', public: true },
+    { id: 'contact', path: '/contact', icon: 'yml', iconColor: '#22d3ee', file_key: 'file_contact', label_key: 'nav_contacts', public: true },
     { id: 'donate', path: '/donate', icon: 'yml', iconColor: '#f472b6', file_key: 'file_donate', label_key: 'nav_donate', public: true },
     { id: 'profile', path: '/profile', icon: 'js', iconColor: '#86efac', file_key: 'file_profile', label_key: 'nav_profile', requireAuth: true },
     { id: 'admin', path: '/admin', icon: 'js', iconColor: '#f87171', file_key: 'file_admin', label_key: 'nav_admin', requireAdmin: true },

@@ -1,4 +1,5 @@
 import { generateId } from '../utils.js';
+import { t } from '../i18n.js';
 
 let activeModal = null;
 
@@ -31,7 +32,7 @@ export function showModal(options) {
             <div class="v1-modal ${sizeClass}" role="dialog" aria-modal="true" aria-labelledby="modal-title-${id}">
                 <div class="v1-modal-header">
                     <h3 class="v1-modal-title" id="modal-title-${id}">${title}</h3>
-                    <button class="v1-modal-close" data-close-modal aria-label="Закрыть">
+                    <button class="v1-modal-close" data-close-modal aria-label="${t('common_close')}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -84,11 +85,11 @@ function handleEscape(e) {
 
 export function confirmModal(message, onConfirm, onCancel) {
     const id = showModal({
-        title: 'Подтверждение',
+        title: t('confirm_title'),
         content: `<p class="v1-muted">${message}</p>`,
         footer: `
-        <button class="v1-btn" data-cancel>Отмена</button>
-        <button class="v1-btn v1-btn-danger" data-confirm>Подтвердить</button>
+        <button class="v1-btn" data-cancel>${t('common_cancel')}</button>
+        <button class="v1-btn v1-btn-danger" data-confirm>${t('confirm_ok')}</button>
     `,
         onClose: onCancel,
     });
