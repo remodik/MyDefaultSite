@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import logging
 import os
 import ssl
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator
@@ -29,11 +31,19 @@ ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
+log = logging.getLogger(__name__)
+
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
+    # Проверка живости перед выдачей из пула: провайдер закрывает
+    # простаивающие соединения, а пул об этом не узнаёт.
     pool_pre_ping=True,
+    # pre_ping ловит мёртвое соединение в момент выдачи, но не мешает пулу
+    # копить те, что вот-вот закроются на той стороне. Порог держим заметно
+    # ниже провайдерского idle-таймаута.
+    pool_recycle=300,
     connect_args={"ssl": "require"} if "postgresql" in DATABASE_URL else {}
 )
 async_session_factory = async_sessionmaker(
@@ -356,5 +366,34 @@ async def init_models() -> None:
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
-    async with async_session_factory() as session:
+    """Сессия на запрос.
+
+    Уборка обёрнута намеренно. Если соединение к моменту выхода уже мертво
+    (Render закрыл простаивающее, клиент отвалился и asyncpg снял запрос),
+    то `rollback()` и `close()` сами падают с InterfaceError — и он встаёт
+    на место исходного исключения. В логе тогда виден трейсбек про
+    «cannot call Transaction.rollback(): the underlying connection is
+    closed», а настоящая причина отказа запроса теряется.
+
+    Второе: мёртвое соединение выбрасывается из пула через `invalidate()`.
+    Иначе оно возвращается в пул как исправное и достаётся следующему
+    запросу — та же ошибка повторяется, пока пул не пересоберётся.
+    """
+    session = async_session_factory()
+    try:
         yield session
+    except Exception:
+        try:
+            await session.rollback()
+        except Exception:
+            log.warning("откат не удался: соединение закрыто", exc_info=True)
+            with suppress(Exception):
+                await session.invalidate()
+        raise  # исходное исключение важнее ошибки уборки
+    finally:
+        try:
+            await session.close()
+        except Exception:
+            log.warning("закрытие сессии не удалось: соединение закрыто", exc_info=True)
+            with suppress(Exception):
+                await session.invalidate()

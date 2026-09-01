@@ -8,7 +8,7 @@ Render Free усыпляет сервис после ~15 минут без вх�
 Скрипт раз в N секунд дёргает лёгкий /api/health (без обращения к БД).
 
 Запуск:
-    python scripts/keep_alive.py https://ваш-сервис.onrender.com
+    python scripts/keep_alive.py https://licensing.remod3.ru/
     python scripts/keep_alive.py --once            # разовая проверка
     KEEP_ALIVE_URL=https://... python scripts/keep_alive.py
 
