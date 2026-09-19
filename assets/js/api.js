@@ -64,19 +64,23 @@ async function apiRequest(endpoint, options = {}) {
     };
     
     const response = await fetch(`${API_URL}${endpoint}`, config);
-    
-    if (response.status === 401) {
+
+    // 401 значит "сессия истекла/невалидна" только если запрос вообще шёл с
+    // токеном. Без токена (например, сам /api/auth/login с неверным паролем)
+    // это обычная ошибка запроса — её текст от сервера ("Incorrect username
+    // or password" и т.п.) нельзя подменять дежурным "нужно авторизоваться".
+    if (response.status === 401 && token) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.dispatchEvent(new CustomEvent('auth-changed'));
         throw new Error('Для выполнения этого действия нужно авторизоваться на сайте.');
     }
-    
+
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
         throw new Error(error.detail || 'Request failed');
     }
-    
+
     return response.json();
 }
 
@@ -96,7 +100,7 @@ async function formDataRequest(endpoint, formData, options = {}) {
         body: formData,
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 && token) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.dispatchEvent(new CustomEvent('auth-changed'));
