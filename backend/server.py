@@ -3087,6 +3087,10 @@ async def yookassa_webhook(
     kind = metadata.get("kind")
     purchase_id = metadata.get("purchase_id")
 
+    # ЮKassa шлёт webhook и когда платёж отменён (пользователь передумал на
+    # странице оплаты, истёк таймаут, банк отклонил и т.п.) — раньше такие
+    # уведомления просто игнорировались, и покупка/донат навсегда зависали
+    # в статусе "pending", хотя оплата уже точно не пройдёт.
     if payment["status"] == "canceled":
         if kind in ("course", "course_part") and purchase_id:
             purchase = await session.get(Purchase, purchase_id)
