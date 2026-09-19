@@ -3083,12 +3083,40 @@ async def yookassa_webhook(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Не удалось проверить платёж: {exc}")
 
-    if payment["status"] != "succeeded" or not payment["paid"]:
-        return {"ok": True, "ignored": True, "status": payment["status"], "event": event}
-
     metadata = payment.get("metadata") or {}
     kind = metadata.get("kind")
     purchase_id = metadata.get("purchase_id")
+
+    if payment["status"] == "canceled":
+        if kind in ("course", "course_part") and purchase_id:
+            purchase = await session.get(Purchase, purchase_id)
+            if purchase and purchase.yookassa_payment_id == payment_id and purchase.status == "pending":
+                purchase.status = "cancelled"
+                await session.commit()
+            return {"ok": True, "kind": kind, "purchase_id": purchase_id, "cancelled": True}
+
+        if kind == "automute" and purchase_id:
+            from automute.models import AutoMutePurchase
+
+            purchase = await session.get(AutoMutePurchase, purchase_id)
+            if purchase and purchase.yookassa_payment_id == payment_id and purchase.status == "pending":
+                purchase.status = "cancelled"
+                await session.commit()
+            return {"ok": True, "kind": kind, "purchase_id": purchase_id, "cancelled": True}
+
+        if kind == "donation":
+            donation_id = metadata.get("donation_id")
+            if donation_id:
+                donation = await session.get(Donation, donation_id)
+                if donation and donation.yookassa_payment_id == payment_id and donation.status == "pending":
+                    donation.status = "cancelled"
+                    await session.commit()
+            return {"ok": True, "kind": "donation", "cancelled": True}
+
+        return {"ok": True, "unmatched": True, "cancelled": True}
+
+    if payment["status"] != "succeeded" or not payment["paid"]:
+        return {"ok": True, "ignored": True, "status": payment["status"], "event": event}
 
     if kind in ("course", "course_part") and purchase_id:
         purchase = await session.get(Purchase, purchase_id)
