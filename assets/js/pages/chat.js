@@ -26,6 +26,8 @@ let conversations = [];
 let searchResults = [];
 let shouldStickToBottom = true;
 let isSending = false;
+let dmHasMoreHistory = true;
+let isLoadingOlderDm = false;
 
 let messagesEl = null;
 let messagesInnerEl = null;
@@ -98,8 +100,8 @@ function renderConnectionStatus() {
     syncChannelDot();
     if (!connectionStatusEl) return;
 
-    // Для личных диалогов справа показываем присутствие собеседника, если бэкенд
-    // его отдаёт (partner.online). Пока такого поля нет — область пустая.
+    // Для личных диалогов справа показываем присутствие собеседника (partner.online),
+    // основанное на его подключении к вебсокету общего чата.
     if (mode === 'dm') {
         const partner = currentConversation()?.partner || null;
         if (partner && typeof partner.online === 'boolean') {
@@ -431,12 +433,51 @@ async function loadDmMessages(forceBottom = false, silent = false) {
     if (!activeConversationId) return;
     try {
         const items = await conversationsApi.getMessages(activeConversationId, { limit: 50 });
-        dmMessages = (items || []).map(normalizeMessage);
+        const fresh = (items || []).map(normalizeMessage);
+        dmHasMoreHistory = fresh.length >= 50;
+        if (silent) {
+            // Poll-обновление: не затираем историю, подгруженную через "load more" вверх,
+            // а только добавляем новые сообщения, которых ещё нет в списке.
+            const knownIds = new Set(dmMessages.map((item) => item.id));
+            const newOnes = fresh.filter((item) => !knownIds.has(item.id));
+            if (newOnes.length) dmMessages = [...dmMessages, ...newOnes];
+        } else {
+            dmMessages = fresh;
+        }
         if (mode === 'dm') renderMessages(forceBottom);
         setDmConnectionState('connected');
     } catch (error) {
         setDmConnectionState('disconnected');
         if (!silent) showToast(error.message || 'Не удалось загрузить DM сообщения', 'error');
+    }
+}
+
+async function loadOlderDmMessages() {
+    if (!activeConversationId || !dmHasMoreHistory || isLoadingOlderDm) return;
+    const oldest = dmMessages.find((item) => item.type !== 'system');
+    if (!oldest) return;
+
+    isLoadingOlderDm = true;
+    try {
+        const items = await conversationsApi.getMessages(activeConversationId, { limit: 50, before: oldest.timestamp });
+        const older = (items || []).map(normalizeMessage);
+        dmHasMoreHistory = older.length >= 50;
+        if (older.length) {
+            const knownIds = new Set(dmMessages.map((item) => item.id));
+            const toPrepend = older.filter((item) => !knownIds.has(item.id));
+            if (toPrepend.length && messagesEl) {
+                const beforeHeight = messagesEl.scrollHeight;
+                dmMessages = [...toPrepend, ...dmMessages];
+                if (mode === 'dm') {
+                    renderMessages(false);
+                    messagesEl.scrollTop += messagesEl.scrollHeight - beforeHeight;
+                }
+            }
+        }
+    } catch (error) {
+        showToast(error.message || 'Не удалось загрузить историю диалога', 'error');
+    } finally {
+        isLoadingOlderDm = false;
     }
 }
 
@@ -471,6 +512,8 @@ async function activateConversation(conversation, updateUrl = true) {
     mode = 'dm';
     activeConversationId = conversation.id;
     activeDmUserId = conversation.partner?.id || null;
+    dmHasMoreHistory = true;
+    isLoadingOlderDm = false;
     if (updateUrl) setDmInUrl(activeDmUserId);
     setDmConnectionState('connecting');
     updateHeader();
@@ -737,6 +780,9 @@ export async function mount() {
     messagesEl?.addEventListener('scroll', () => {
         shouldStickToBottom = isNearBottom(messagesEl);
         updateScrollButton();
+        if (mode === 'dm' && messagesEl.scrollTop <= SCROLL_BOTTOM_THRESHOLD) {
+            loadOlderDmMessages();
+        }
     }, { passive: true });
 
     messagesEl?.addEventListener('click', (event) => {

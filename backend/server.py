@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from sqlalchemy import and_, delete, or_, select, text, update
+from sqlalchemy import and_, delete, func, or_, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ from database import (
     AdminResetRequest,
     ChatMessage,
     Conversation,
+    ConversationRead,
     Course,
     CoursePart,
     DirectMessage,
@@ -127,6 +128,9 @@ CONTACT_RATE_WINDOW = 3600
 VALID_DM_PRIVACY_VALUES = {"all", "none"}
 DEFAULT_DM_PRIVACY = "all"
 MAX_DM_MESSAGE_LENGTH = 1000
+MAX_CHAT_MESSAGE_LENGTH = 1000
+CHAT_WS_RATE_LIMIT_COUNT = 10
+CHAT_WS_RATE_LIMIT_WINDOW_SECONDS = 10
 MAX_AVATAR_FILE_SIZE_BYTES = 5 * 1024 * 1024
 AVATAR_IMAGE_SIZE = (256, 256)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -145,7 +149,8 @@ class ConnectionManager:
         self.active_connections.append({
             "websocket": websocket,
             "user_id": user_id,
-            "username": username
+            "username": username,
+            "message_times": [],
         })
 
     def disconnect(self, websocket: WebSocket) -> str | None:
@@ -167,6 +172,25 @@ class ConnectionManager:
 
         for ws in disconnected:
             self.disconnect(ws)
+
+    def online_user_ids(self) -> set[str]:
+        return {conn["user_id"] for conn in self.active_connections}
+
+    def check_and_record_rate_limit(self, websocket: WebSocket) -> bool:
+        """Простой sliding-window лимитер на соединение. True — сообщение разрешено."""
+        now = datetime.now()
+        for conn in self.active_connections:
+            if conn["websocket"] != websocket:
+                continue
+            window_start = now - timedelta(seconds=CHAT_WS_RATE_LIMIT_WINDOW_SECONDS)
+            recent = [ts for ts in conn["message_times"] if ts > window_start]
+            if len(recent) >= CHAT_WS_RATE_LIMIT_COUNT:
+                conn["message_times"] = recent
+                return False
+            recent.append(now)
+            conn["message_times"] = recent
+            return True
+        return True
 
 
 manager = ConnectionManager()
@@ -239,6 +263,16 @@ class FileMove(BaseModel):
 
 class ChatMessagePayload(BaseModel):
     message: str
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("Message cannot be empty")
+        if len(clean) > MAX_CHAT_MESSAGE_LENGTH:
+            raise ValueError(f"Message too long (max {MAX_CHAT_MESSAGE_LENGTH} chars)")
+        return clean
 
 
 class ProfileUpdatePayload(BaseModel):
@@ -749,43 +783,104 @@ async def ensure_user_accepts_dm(session: AsyncSession, target_user: User) -> Us
     return target_profile
 
 
-async def build_conversation_summary(
+async def build_conversation_summaries_bulk(
     session: AsyncSession,
-    conversation: Conversation,
+    conversations: list[Conversation],
     current_user_id: str,
-) -> dict[str, Any]:
-    partner_id = get_partner_id(conversation, current_user_id)
-    partner_user = await session.get(User, partner_id)
-    if not partner_user:
-        raise HTTPException(status_code=404, detail="Conversation participant not found")
+) -> list[dict[str, Any]]:
+    """Строит сводки диалогов пачкой — без N+1 запросов на каждый диалог."""
+    if not conversations:
+        return []
 
-    partner_profile_result = await session.execute(select(UserProfile).where(UserProfile.user_id == partner_id))
-    partner_profile = partner_profile_result.scalar_one_or_none()
+    conversation_ids = [c.id for c in conversations]
+    partner_ids = {get_partner_id(c, current_user_id) for c in conversations}
 
-    last_message_result = await session.execute(
-        select(DirectMessage)
-        .where(DirectMessage.conversation_id == conversation.id)
-        .order_by(DirectMessage.created_at.desc())
-        .limit(1)
+    users_result = await session.execute(select(User).where(User.id.in_(partner_ids)))
+    users_map = {u.id: u for u in users_result.scalars().all()}
+
+    profiles_result = await session.execute(select(UserProfile).where(UserProfile.user_id.in_(partner_ids)))
+    profiles_map = {p.user_id: p for p in profiles_result.scalars().all()}
+
+    # Последнее сообщение на диалог одним запросом (row_number по conversation_id).
+    ranked = (
+        select(
+            DirectMessage,
+            func.row_number()
+            .over(partition_by=DirectMessage.conversation_id, order_by=DirectMessage.created_at.desc())
+            .label("rn"),
+        )
+        .where(DirectMessage.conversation_id.in_(conversation_ids))
+        .subquery()
     )
-    last_message = last_message_result.scalar_one_or_none()
+    last_messages_result = await session.execute(
+        select(ranked).where(ranked.c.rn == 1)
+    )
+    last_message_map: dict[str, Any] = {row.conversation_id: row for row in last_messages_result.all()}
 
-    partner_display_name = _normalize_display_name(partner_profile.display_name if partner_profile else None, partner_user.username)
-    return {
-        "id": conversation.id,
-        "user_a": conversation.user_a,
-        "user_b": conversation.user_b,
-        "created_at": _to_iso(conversation.created_at),
-        "partner": {
-            "id": partner_user.id,
-            "username": partner_user.username,
-            "display_name": partner_display_name,
-            "avatar_url": partner_profile.avatar_url if partner_profile else None,
-        },
-        "last_message": last_message.text if last_message else "",
-        "last_message_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
-        "updated_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
-    }
+    read_result = await session.execute(
+        select(ConversationRead).where(
+            ConversationRead.conversation_id.in_(conversation_ids),
+            ConversationRead.user_id == current_user_id,
+        )
+    )
+    read_map = {r.conversation_id: r.last_read_at for r in read_result.scalars().all()}
+
+    unread_counts: dict[str, int] = {}
+    if conversation_ids:
+        unread_conditions = [DirectMessage.conversation_id.in_(conversation_ids), DirectMessage.sender_id != current_user_id]
+        unread_result = await session.execute(
+            select(DirectMessage.conversation_id, func.count(DirectMessage.id))
+            .where(*unread_conditions)
+            .group_by(DirectMessage.conversation_id)
+        )
+        total_others: dict[str, int] = {cid: count for cid, count in unread_result.all()}
+
+        for conversation in conversations:
+            last_read_at = read_map.get(conversation.id)
+            if last_read_at is None:
+                unread_counts[conversation.id] = total_others.get(conversation.id, 0)
+                continue
+            after_read_result = await session.execute(
+                select(func.count(DirectMessage.id)).where(
+                    DirectMessage.conversation_id == conversation.id,
+                    DirectMessage.sender_id != current_user_id,
+                    DirectMessage.created_at > last_read_at,
+                )
+            )
+            unread_counts[conversation.id] = after_read_result.scalar_one() or 0
+
+    online_ids = manager.online_user_ids()
+
+    summaries: list[dict[str, Any]] = []
+    for conversation in conversations:
+        partner_id = get_partner_id(conversation, current_user_id)
+        partner_user = users_map.get(partner_id)
+        if not partner_user:
+            continue
+        partner_profile = profiles_map.get(partner_id)
+        last_message = last_message_map.get(conversation.id)
+        partner_display_name = _normalize_display_name(
+            partner_profile.display_name if partner_profile else None, partner_user.username
+        )
+        summaries.append({
+            "id": conversation.id,
+            "user_a": conversation.user_a,
+            "user_b": conversation.user_b,
+            "created_at": _to_iso(conversation.created_at),
+            "partner": {
+                "id": partner_user.id,
+                "username": partner_user.username,
+                "display_name": partner_display_name,
+                "avatar_url": partner_profile.avatar_url if partner_profile else None,
+                "online": partner_id in online_ids,
+            },
+            "last_message": last_message.text if last_message else "",
+            "last_message_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
+            "updated_at": _to_iso(last_message.created_at if last_message else conversation.created_at),
+            "unread": unread_counts.get(conversation.id, 0),
+        })
+
+    return summaries
 
 
 async def get_current_user_model(
@@ -1463,7 +1558,10 @@ async def create_or_get_conversation(
         await session.commit()
         await session.refresh(conversation)
 
-    return await build_conversation_summary(session, conversation, current_user.id)
+    summaries = await build_conversation_summaries_bulk(session, [conversation], current_user.id)
+    if not summaries:
+        raise HTTPException(status_code=404, detail="Conversation participant not found")
+    return summaries[0]
 
 
 @app.get(path="/api/me/conversations")
@@ -1480,17 +1578,9 @@ async def get_my_conversations(
             )
         )
     )
-    conversations = conversations_result.scalars().all()
+    conversations = list(conversations_result.scalars().all())
 
-    summaries: list[dict[str, Any]] = []
-    for conversation in conversations:
-        try:
-            summaries.append(await build_conversation_summary(session, conversation, current_user.id))
-        except HTTPException as exc:
-            if exc.status_code == 404:
-                continue
-            raise
-
+    summaries = await build_conversation_summaries_bulk(session, conversations, current_user.id)
     summaries.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
     return summaries
 
@@ -1551,11 +1641,33 @@ async def get_conversation_messages(
             continue
         payload.append(direct_message_to_dict(message, sender, profiles_map.get(message.sender_id)))
 
+    # Просмотр истории диалога отмечает её прочитанной для unread-бейджа в сайдбаре.
+    read_result = await session.execute(
+        select(ConversationRead).where(
+            ConversationRead.conversation_id == conversation_id,
+            ConversationRead.user_id == current_user.id,
+        )
+    )
+    read_row = read_result.scalar_one_or_none()
+    now = datetime.now()
+    if read_row:
+        read_row.last_read_at = now
+    else:
+        session.add(ConversationRead(
+            id=str(uuid.uuid4()),
+            conversation_id=conversation_id,
+            user_id=current_user.id,
+            last_read_at=now,
+        ))
+    await session.commit()
+
     return payload
 
 
 @app.post(path="/api/conversations/{conversation_id}/messages")
+@limiter.limit("20/minute")
 async def send_conversation_message(
+    request: Request,
     conversation_id: str,
     payload: DirectMessageCreatePayload,
     current_user: User = Depends(get_current_user_model),
@@ -2220,13 +2332,29 @@ async def websocket_chat(websocket: WebSocket, token: str) -> None:
         while True:
             data = await websocket.receive_json()
 
+            if not manager.check_and_record_rate_limit(websocket):
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Слишком много сообщений, подождите немного",
+                })
+                continue
+
+            try:
+                payload = ChatMessagePayload(message=data.get("message", ""))
+            except Exception:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Некорректное сообщение (пусто или длиннее {MAX_CHAT_MESSAGE_LENGTH} символов)",
+                })
+                continue
+
             async with async_session_factory() as session:
                 message_id = str(uuid.uuid4())
                 chat_message = ChatMessage(
                     id=message_id,
                     user_id=user_id,
                     username=user.username,
-                    message=data.get("message", ""),
+                    message=payload.message,
                     timestamp=datetime.now(),
                 )
                 session.add(chat_message)
