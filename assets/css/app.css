@@ -406,9 +406,9 @@ code[class*="language-"] {
 }
 
 .chat-topbar {
-    position: sticky;
-    top: 64px;
+    position: relative;
     z-index: 5;
+    flex: 0 0 auto;
     border-bottom: 1px solid #3e3e42;
     background: rgba(30, 31, 34, 0.9);
     backdrop-filter: blur(10px);

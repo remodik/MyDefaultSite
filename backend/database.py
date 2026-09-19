@@ -119,9 +119,12 @@ class AdminResetRequest(Base):
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index("ix_chat_messages_timestamp", "timestamp"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
@@ -144,6 +147,8 @@ class Conversation(Base):
     __tablename__ = "conversations"
     __table_args__ = (
         UniqueConstraint("user_a", "user_b", name="uq_conversations_pair"),
+        Index("ix_conversations_user_a", "user_a"),
+        Index("ix_conversations_user_b", "user_b"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -154,14 +159,34 @@ class Conversation(Base):
 
 class DirectMessage(Base):
     __tablename__ = "direct_messages"
+    __table_args__ = (
+        Index("ix_direct_messages_conversation_created", "conversation_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     conversation_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
     )
-    sender_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sender_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class ConversationRead(Base):
+    """Отметка «прочитано до» для каждого участника диалога — основа unread-бейджа."""
+
+    __tablename__ = "conversation_reads"
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id", name="uq_conversation_reads_pair"),
+        Index("ix_conversation_reads_user", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    last_read_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
 class Service(Base):
@@ -363,6 +388,36 @@ async def init_models() -> None:
             )
         except Exception as exc:  # noqa: BLE001
             print(f"WARNING: lic_licenses billing schema upgrade skipped: {exc}")
+
+        # Индексы для чата/диалогов добавлены к моделям позже самих таблиц —
+        # create_all() их не подтянет на уже существующей БД. "IF NOT EXISTS"
+        # работает одинаково в SQLite и Postgres, так что это можно делать
+        # без ветвления по драйверу.
+        try:
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_chat_messages_timestamp ON chat_messages (timestamp)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_chat_messages_user_id ON chat_messages (user_id)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_conversations_user_a ON conversations (user_a)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_conversations_user_b ON conversations (user_b)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_direct_messages_conversation_created "
+                "ON direct_messages (conversation_id, created_at)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_direct_messages_sender_id ON direct_messages (sender_id)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_conversation_reads_user ON conversation_reads (user_id)"
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARNING: chat/conversation index upgrade skipped: {exc}")
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

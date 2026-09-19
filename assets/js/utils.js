@@ -223,6 +223,14 @@ export function renderMarkdown(content) {
 
   let html = marked.parse(content);
 
+  if (window.DOMPurify) {
+    html = window.DOMPurify.sanitize(html, {
+      // marked не убирает javascript:/data: в href/src сам по себе — санитайзер
+      // режет любой протокол вне безопасного списка (в т.ч. атаки через markdown-ссылки).
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i,
+    });
+  }
+
   if (window.katex && window.renderMathInElement) {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = html;
