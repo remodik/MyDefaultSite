@@ -24,6 +24,7 @@ import * as termsPage from './pages/terms.js';
 import * as worksPage from './pages/works.js';
 import * as workDetailPage from './pages/work-detail.js';
 import * as donatePage from './pages/donate.js';
+import * as vaultPage from './pages/vault.js';
 
 window.APP_CONFIG = {
     ...window.APP_CONFIG,
@@ -46,6 +47,7 @@ router.addRoute('/admin', adminPanelPage, { requireAuth: true, requireAdmin: tru
 router.addRoute('/works', worksPage);
 router.addRoute('/works/:slug', workDetailPage);
 router.addRoute('/donate', donatePage);
+router.addRoute('/vault', vaultPage, { requireAuth: true, requireAdmin: true });
 
 router.addRoute('/privacy', privacyPage);
 router.addRoute('/terms', termsPage);

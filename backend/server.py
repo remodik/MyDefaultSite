@@ -63,6 +63,7 @@ from licensing.portal_routes import (
     portal_ui_router as licensing_portal_ui_router,
 )
 from payments import create_payment as yookassa_create_payment, fetch_payment as yookassa_fetch_payment
+from vault.runtime import vault_lifespan
 
 load_dotenv()
 
@@ -70,7 +71,9 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_models()
-    yield
+    # Vault: каталог заметок, git-репозиторий и фоновая сверка индекса.
+    async with vault_lifespan(app):
+        yield
 
 
 app = FastAPI(lifespan=lifespan)
@@ -3458,6 +3461,10 @@ async def delete_work(
 from automute.routers import attach_routes as _attach_automute_routes
 
 _attach_automute_routes(app)
+
+from vault.routers import attach_routes as _attach_vault_routes
+
+_attach_vault_routes(app, get_current_admin)
 
 
 if __name__ == "__main__":
