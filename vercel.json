@@ -8,6 +8,10 @@
       "destination": "https://licensing.remod3.ru/api/:path*"
     },
     {
+      "source": "/mcp",
+      "destination": "https://licensing.remod3.ru/mcp"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

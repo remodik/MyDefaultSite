@@ -1,45 +1,41 @@
+"""Create an admin with an interactively supplied password."""
+
+import argparse
 import asyncio
-import sys
 import uuid
-from datetime import datetime
+from getpass import getpass
 from pathlib import Path
+import sys
+
+import bcrypt
+from sqlalchemy import select
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from passlib.context import CryptContext
-from sqlalchemy import select
-
-from database import User, async_session_factory, init_models
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from server import User, async_session_factory, init_models
 
 
-async def create_admin():
+async def create_admin(username: str, password: str, email: str | None) -> None:
     await init_models()
-    
     async with async_session_factory() as session:
-        result = await session.execute(select(User).where(User.username == "remodik"))
-        existing = result.scalar_one_or_none()
-        
-        if existing:
-            print("Admin user 'remodik' already exists")
-            return
-
-        admin = User(
-            id=str(uuid.uuid4()),
-            username="remodik",
-            email="slenderzet@gmail.com",
-            password_hash=pwd_context.hash("domer123"),
-            role="admin",
-            created_at=datetime.now(),
-        )
-        session.add(admin)
+        if await session.scalar(select(User.id).where(User.username == username)):
+            raise SystemExit("Пользователь с таким именем уже существует")
+        session.add(User(id=str(uuid.uuid4()), username=username, email=email, role="admin",
+                         password_hash=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()))
         await session.commit()
-        print("Admin user 'remodik' created successfully!")
-        print("Username: remodik")
-        print("Password: domer123")
-        print("Email: slenderzet@gmail.com")
+    print(f"Администратор {username} создан")
 
 
 if __name__ == "__main__":
-    asyncio.run(create_admin())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("username")
+    parser.add_argument("--email")
+    args = parser.parse_args()
+    if not 1 <= len(args.username) <= 50:
+        parser.error("имя должно содержать от 1 до 50 символов")
+    password = getpass("Пароль: ")
+    if not password or len(password.encode()) > 72:
+        parser.error("пароль должен содержать от 1 до 72 байт")
+    if password != getpass("Повторите пароль: "):
+        parser.error("пароли не совпадают")
+    asyncio.run(create_admin(args.username, password, args.email))

@@ -16,5 +16,6 @@
 /licensed_loader/__pycache__
 /dist
 /backend/data
+/backend/projects.db*
 __pycache__/
 .pytest_cache/

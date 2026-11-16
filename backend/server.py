@@ -93,7 +93,7 @@ app.include_router(licensing_ui_router)
 app.include_router(licensing_portal_router)
 app.include_router(licensing_portal_ui_router)
 
-_allowed_origins_env = os.getenv("CORS_ORIGINS", "https://remod3.ru,http://localhost:3000,http://localhost:5173,https://www.remod3.ru")
+_allowed_origins_env = os.getenv("CORS_ORIGINS", "https://remod3.ru,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,https://www.remod3.ru")
 ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
@@ -107,7 +107,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
+# Local development can start without configuration. Production must set a
+# stable secret so already-issued sessions survive a restart.
+SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

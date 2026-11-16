@@ -8,4 +8,6 @@ RUN python -m pip install --upgrade pip \
 
 COPY backend backend
 
-CMD python -m uvicorn backend.server:app --host 0.0.0.0 --port $PORT
+WORKDIR /app/backend
+ENV PORT=8001
+CMD ["sh", "-c", "exec python -m uvicorn server:app --host 0.0.0.0 --port \"$PORT\""]

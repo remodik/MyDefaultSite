@@ -86,40 +86,67 @@
 
 ### Backend
 
+Из корня репозитория:
+
 ```bash
+cd backend
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 
-cd /app/backend
+# Для новой базы. Скрипт запросит пароль.
+python scripts/create_admin.py my-admin
 
-# Установка зависимостей
-pip install -r requirements.txt
-
-# Создание администратора
-python scripts/create_admin.py
-
-# Создание демо-данных
-python scripts/create_demo_services.py
-python scripts/create_demo_project.py
-
-# Запуск сервера
-uvicorn server:app --host 0.0.0.0 --port 8001
+python -m uvicorn server:app --host 127.0.0.1 --port 8001
 ```
 
 ### Frontend
 
-```bash
+Для локальной проверки отдавайте `index.html` и `assets/` статическим сервером с SPA fallback. Например, из корня репозитория:
 
-cd /app
-python -m http.server 3000
-# или
-npx serve . -l 3000 -s
+```bash
+preview_dir=$(mktemp -d)
+cp -R index.html assets "$preview_dir/"
+npx serve "$preview_dir" -l tcp://127.0.0.1:3000 -s
 ```
 
-## Учётные данные
+Откройте `http://127.0.0.1:3000/vault`. Установка frontend-зависимостей и сборка не требуются.
 
-### Администратор
-- **Username:** remodik
-- **Password:** domer123
-- **Email:** slenderzet@gmail.com
+## Vault
+
+Войдите как администратор и откройте `/vault`. Поиск использует SQLite FTS5. На телефоне список, редактор и связи открываются отдельными вкладками, а граф по умолчанию показывает соседей заметки. Кнопка с ключом открывает токены, ожидающие запросы и журнал Git.
+
+- Markdown-файлы и история Git лежат в `VAULT_DIR` (по умолчанию `backend/data/vault`). Относительные пути считаются от `backend/`. Для коммитов используется Dulwich, поэтому на хосте не нужен исполняемый файл `git`. Неизменившийся текст не создаёт коммит.
+- SQLite хранит индекс, токены и решения по запросам. Сохраняйте **оба** хранилища, каталог vault вместе с `.git` и файл БД. Для пересборки только индекса остановите backend и выполните из `backend/` команду `python scripts/reindex_vault.py --full` с тем же окружением. На старте таблицы создаются существующим `init_models()`, FTS5 и сверка индекса запускаются отдельно. Для установок с Alembic в репозитории есть две ревизии vault.
+- Изменения на диске подхватывает watchfiles. При сбое используется опрос каталога. SSE посылает heartbeat каждые 15 секунд. Используйте один процесс uvicorn, чтобы блокировки записи, лимиты и подписки на события обслуживались одним процессом.
+
+### MCP
+
+В настройках vault выпустите токен `read-write` для `agent/` и `inbox/` и скопируйте его при создании. Префиксы чувствительны к регистру и ограничивают чтение, поиск и запись. Префикс `/` даёт доступ ко всему vault. Для перемещения, корзины и записи за пределами разрешённых папок агент с правом записи получает ID запроса на одобрение. Администратор проверяет операцию и актуальную версию заметки. Токен можно отозвать в любой момент. Содержимое заметок передаётся как недоверенный текст и не управляет правами.
+
+Укажите Streamable HTTP URL `https://remod3.ru/mcp` (или напрямую `https://licensing.remod3.ru/mcp`) и заголовок `Authorization: Bearer <токен>` в клиенте, который поддерживает пользовательский bearer-токен. Например, конфигурация Codex читает значение из окружения:
+
+```toml
+[mcp_servers.vault]
+url = "https://remod3.ru/mcp"
+bearer_token_env_var = "VAULT_AGENT_TOKEN"
+```
+
+Проверка после подключения: вызовите `create_note` для `agent/first.md`. Заметка появится в открытой странице vault, а в журнале будет коммит `agent:<имя токена>`. Вызов для другой папки появится среди запросов и не создаст файл до одобрения. Для `update_note` передайте `expected_hash` из `read_note`.
+
+### Pterodactyl, Cloudflare Tunnel и Vercel
+
+1. Укажите в лаунчере `SITE_DIR` с путём к этому репозиторию, `SITE_PORT=8001` и `SITE_BIND_HOST=127.0.0.1`. Лаунчер установит `backend/requirements.txt` и запустит `server:app` из `backend/`. Настройте `backend/.env` по примеру. Задайте постоянный случайный `SECRET_KEY`, а для SQLite удалите строку с примером PostgreSQL `DATABASE_URL`, чтобы сохранить текущий `backend/projects.db`. При использовании прежнего опубликованного пароля смените его до выдачи токенов.
+2. Public Hostname для backend в Cloudflare Tunnel должен указывать на **`http://127.0.0.1:8001`**. Подставьте свой `SITE_PORT`. При использовании `localhost` cloudflared может обратиться к IPv6 `::1` и получить 502. Включайте `VAULT_TRUST_PROXY_HEADER=always` только при доступе к backend исключительно через доверенный Tunnel. Это позволяет учитывать `CF-Connecting-IP` в лимитах входа и MCP.
+3. Оставьте статический frontend на Vercel. `vercel.json` направляет `/vault` в SPA, а `/mcp` в действующий backend `licensing.remod3.ru`. Браузер обращается к backend напрямую, включая SSE. Для другого backend измените `window.APP_CONFIG.API_URL` в `index.html` и адреса rewrites в `vercel.json`. Укажите публичный origin фронтенда в `CORS_ORIGINS` и, для MCP-клиентов, которые отправляют `Origin`, добавьте разрешённые значения в `VAULT_MCP_ORIGINS`. На Cloudflare выключите кеширование `/api/vault/*` и `/mcp`.
+4. Держите `VAULT_DIR` и БД на постоянном томе. Для резервного Docker-запуска примонтируйте каталог в `/app/backend/data`, задайте `VAULT_DIR=/app/backend/data/vault` и `DATABASE_URL=sqlite+aiosqlite:////app/backend/data/projects.db`. Если cloudflared работает на хосте, опубликуйте порт контейнера через `-p 127.0.0.1:8001:8001`. Для существующей установки перенесите файл SQLite на примонтированный том до запуска контейнера.
+
+Локальный прогон из корня репозитория после установки backend-зависимостей:
+
+```bash
+backend/.venv/bin/python -m pip install pytest
+backend/.venv/bin/python -m pytest -q backend/tests
+```
 
 ## API Endpoints
 
