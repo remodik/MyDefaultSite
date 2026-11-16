@@ -49,7 +49,7 @@ async function request(endpoint, options = {}) {
 function query(params) {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params || {})) {
-        if (value !== undefined && value !== null && value !== '' && value !== false) {
+        if (value !== undefined && value !== null && value !== '') {
             search.set(key, String(value));
         }
     }
@@ -58,6 +58,33 @@ function query(params) {
 }
 
 export const vaultApi = {
+    backlinks: (path) => request(`/api/vault/backlinks/${encodePath(path)}`).then(r => r.backlinks),
+    graph: (filters) => request(`/api/vault/graph${query(filters)}`),
+    localGraph: (path, depth) => request(`/api/vault/graph/local/${encodePath(path)}${query({ depth })}`),
+    async events(signal, onEvent) {
+        const res = await fetch(`${API_URL}/api/vault/events`, { headers: authHeaders(), signal });
+        if (!res.ok) throw new VaultApiError('События недоступны', res.status);
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+        let pending = '';
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) return;
+                pending += value;
+                let end;
+                while ((end = pending.search(/\r?\n\r?\n/)) >= 0) {
+                    const frame = pending.slice(0, end);
+                    pending = pending.slice(end).replace(/^\r?\n\r?\n/, '');
+                    const data = frame.match(/^data: (.*)$/m);
+                    if (data) onEvent(JSON.parse(data[1]));
+                }
+                if (pending.length > 65536) throw new Error('Invalid SSE frame');
+            }
+        } finally {
+            await reader.cancel().catch(() => {});
+            reader.releaseLock();
+        }
+    },
     listNotes: (filters) => request(`/api/vault/notes${query(filters)}`).then((r) => r.notes),
     listTags: () => request('/api/vault/tags').then((r) => r.tags),
     readNote: (path) => request(`/api/vault/notes/${encodePath(path)}`),

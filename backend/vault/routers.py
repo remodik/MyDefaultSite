@@ -7,13 +7,18 @@ from typing import Any, Callable
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sse_starlette.sse import EventSourceResponse
 
 from vault.paths import VaultPathError
-from vault.service import VaultError, get_service
+from vault.service import VaultError, dumps, get_service
 
 # Жёсткий потолок тела запроса до разбора; точный лимит (VAULT_MAX_NOTE_BYTES)
 # проверяет сервис.
 MAX_BODY_CHARS = 8 * 1024 * 1024
+
+# Cloudflare рвёт соединение, по которому долго ничего не идёт: пинг-комментарий
+# каждые 15 секунд держит SSE-поток живым.
+SSE_PING_SECONDS = 15
 
 vault_router = APIRouter(prefix="/api/vault", tags=["vault"])
 
@@ -140,6 +145,57 @@ def attach_routes(app, get_current_admin: Callable[..., Any]) -> None:
                 "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
                 "Cache-Control": "private, max-age=300",
             },
+        )
+
+    @vault_router.get("/backlinks/{path:path}", summary="Заметки, ссылающиеся на эту")
+    async def _backlinks(path: str, _user: dict[str, Any] = admin) -> dict[str, Any]:
+        try:
+            return {"backlinks": await get_service().backlinks(path)}
+        except (VaultError, VaultPathError) as exc:
+            raise http_error(exc) from exc
+
+    @vault_router.get("/graph/local/{path:path}", summary="Окрестность заметки в графе")
+    async def _local_graph(
+        path: str,
+        depth: int = Query(default=1, ge=1, le=2),
+        _user: dict[str, Any] = admin,
+    ) -> dict[str, Any]:
+        try:
+            return await get_service().local_graph(path, depth)
+        except (VaultError, VaultPathError) as exc:
+            raise http_error(exc) from exc
+
+    @vault_router.get("/graph", summary="Граф связей всего vault")
+    async def _graph(
+        tag: str | None = Query(default=None, max_length=255),
+        folder: str | None = Query(default=None, max_length=1024),
+        unresolved: bool = False,
+        orphans: bool = True,
+        _user: dict[str, Any] = admin,
+    ) -> dict[str, Any]:
+        try:
+            return await get_service().graph(tag=tag, folder=folder, unresolved=unresolved, orphans=orphans)
+        except (VaultError, VaultPathError) as exc:
+            raise http_error(exc) from exc
+
+    @vault_router.get("/events", summary="Живые события vault (SSE)")
+    async def _events(_user: dict[str, Any] = admin) -> EventSourceResponse:
+        service = get_service()
+
+        async def stream():
+            queue = service.events.subscribe()
+            try:
+                yield {"event": "hello", "data": "{}"}
+                while True:
+                    event = await queue.get()
+                    yield {"event": event["type"], "data": dumps(event)}
+            finally:
+                service.events.unsubscribe(queue)
+
+        return EventSourceResponse(
+            stream(),
+            ping=SSE_PING_SECONDS,
+            headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
         )
 
     app.include_router(vault_router)

@@ -728,3 +728,14 @@ summary.callout-title {
         font-size: 16px;
     }
 }
+
+.vault-graph { min-height: 5rem; color: var(--v1-muted); font-size: .8rem; }
+.vault-graph svg { display: block; width: 100%; min-height: 145px; background: var(--v1-bg); }
+.vault-graph line { stroke: #687282; stroke-opacity: .55; }
+.vault-graph line.active { stroke: #b9a4ff; stroke-width: 2; stroke-opacity: 1; }
+.vault-graph circle { fill: #8696ad; }
+.vault-graph .active circle, .vault-graph g:focus circle { fill: #b9a4ff; }
+.vault-graph .unresolved circle { fill: none; stroke: #8696ad; stroke-dasharray: 2 2; }
+.vault-graph g[role="button"] { cursor: pointer; }
+.vault-graph text { fill: var(--v1-fg); font-size: 11px; pointer-events: none; }
+.vault-graph-controls { display: grid; gap: .4rem; }

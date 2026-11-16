@@ -184,3 +184,23 @@ def test_attachments_only_serve_images(client, admin):
 
 def test_existing_site_endpoints_still_work(client):
     assert client.get("/api/health").status_code == 200
+
+
+def test_graph_and_backlinks_endpoints(client, admin, plain_user):
+    client.post("/api/vault/notes", json={"path": "g/Hub", "content": "[[Spoke]] [[Nowhere]]"}, headers=admin)
+    client.post("/api/vault/notes", json={"path": "g/Spoke", "content": "[[Hub]]"}, headers=admin)
+
+    backlinks = client.get("/api/vault/backlinks/g/Spoke.md", headers=admin).json()["backlinks"]
+    local = client.get("/api/vault/graph/local/g/Hub.md", params={"depth": 2}, headers=admin).json()
+    graph = client.get("/api/vault/graph", params={"folder": "g", "unresolved": "true"}, headers=admin).json()
+
+    assert [b["path"] for b in backlinks] == ["g/Hub.md"]
+    assert local["center"] == "g/Hub.md"
+    assert {n["id"] for n in local["nodes"]} == {"g/Hub.md", "g/Spoke.md", "?nowhere"}
+    assert {n["id"] for n in graph["nodes"]} == {"g/Hub.md", "g/Spoke.md", "?nowhere"}
+    assert client.get("/api/vault/graph/local/g/Hub.md", params={"depth": 5}, headers=admin).status_code == 422
+    assert client.get("/api/vault/graph/local/g/None.md", headers=admin).status_code == 404
+    for url in ("/api/vault/graph", "/api/vault/backlinks/g/Hub.md", "/api/vault/graph/local/g/Hub.md",
+                "/api/vault/events"):
+        assert client.get(url).status_code == 401, url
+        assert client.get(url, headers=plain_user).status_code == 403, url

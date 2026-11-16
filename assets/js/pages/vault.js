@@ -1,3 +1,4 @@
+import { drawGraph } from '../components/vault-graph.js';
 import { vaultApi, VaultApiError } from '../components/vault-api.js';
 import { renderPreview, scrollToHeading } from '../components/vault-preview.js';
 import { createEditor } from '../components/vault-editor.js';
@@ -29,6 +30,11 @@ const state = {
 };
 
 let root = null;
+let stream;
+let graphStop;
+let graphSeq = 0;
+let refreshTimer;
+let listSeq = 0;
 const listeners = [];
 
 // ── вспомогательное ─────────────────────────────────────────────────────────
@@ -143,6 +149,23 @@ export function render() {
 
             <aside class="vault-side vault-right" aria-label="Связи заметки">
                 <section class="vault-panel">
+                    <h3 class="vault-panel-title">Граф</h3>
+                    <div class="vault-tools vault-graph-controls">
+                        <select class="vault-input" id="vault-graph-mode" aria-label="Область графа">
+                            <option value="1">Локальный · глубина 1</option>
+                            <option value="2">Локальный · глубина 2</option>
+                            <option value="all">Все заметки</option>
+                        </select>
+                        <input class="vault-input" id="vault-graph-folder" placeholder="Папка" aria-label="Фильтр графа по папке" hidden>
+                        <label id="vault-graph-options" hidden><input id="vault-graph-unresolved" type="checkbox"> Неразрешённые ссылки</label>
+                    </div>
+                    <div id="vault-graph" class="vault-graph"></div>
+                </section>
+                <section class="vault-panel">
+                    <h3 class="vault-panel-title">Обратные ссылки</h3>
+                    <ul class="vault-links" id="vault-backlinks"></ul>
+                </section>
+                <section class="vault-panel">
                     <h3 class="vault-panel-title">Исходящие ссылки</h3>
                     <ul class="vault-links" id="vault-outgoing"></ul>
                 </section>
@@ -229,18 +252,19 @@ function renderTagFilter() {
 }
 
 async function loadList() {
+    const seq = ++listSeq;
     try {
         const [notes, tags] = await Promise.all([
             vaultApi.listNotes({ q: state.filter.q, tag: state.filter.tag }),
             vaultApi.listTags(),
         ]);
-        if (!state.mounted) return;
+        if (!state.mounted || seq !== listSeq) return;
         state.notes = notes;
         state.tags = tags;
         renderTagFilter();
         renderList();
     } catch (error) {
-        const tree = $('#vault-tree');
+        const tree = seq === listSeq && $('#vault-tree');
         if (tree) tree.innerHTML = `<p class="vault-muted vault-pad">${escapeHtml(errorText(error))}</p>`;
     }
 }
@@ -285,6 +309,81 @@ function renderOutgoing() {
             : `<li><a class="vault-link is-unresolved" href="#" data-target="${escapeHtml(link.target)}">${escapeHtml(link.target)}</a></li>`);
     }
     list.innerHTML = items.length ? items.join('') : '<li class="vault-muted">Нет ссылок</li>';
+}
+
+async function refreshLinks() {
+    const host = $('#vault-graph');
+    if (!host) return;
+    const seq = ++graphSeq;
+    const path = state.current?.path;
+    const mode = $('#vault-graph-mode').value;
+    const all = mode === 'all';
+    $('#vault-graph-folder').hidden = !all;
+    $('#vault-graph-options').hidden = !all;
+    const backlinks = $('#vault-backlinks');
+    void (path ? vaultApi.backlinks(path) : Promise.resolve([])).then(rows => {
+        if (seq !== graphSeq) return;
+        backlinks.innerHTML = [...new Map(rows.map(row => [row.path, row])).values()].map(row =>
+            `<li><a class="vault-link" href="${escapeHtml(noteHref(row.path))}" data-note="${escapeHtml(row.path)}">${escapeHtml(row.title)}</a></li>`
+        ).join('') || '<li class="vault-muted">Нет ссылок</li>';
+    }).catch(error => { if (seq === graphSeq) backlinks.textContent = errorText(error); });
+    try {
+        const graph = all ? await vaultApi.graph({
+            tag: state.filter.tag, folder: $('#vault-graph-folder').value.trim(),
+            unresolved: $('#vault-graph-unresolved').checked,
+        }) : path ? await vaultApi.localGraph(path, mode) : null;
+        if (seq !== graphSeq) return;
+        graphStop?.();
+        if (!graph?.nodes.length) {
+            host.textContent = path || all ? 'Нет заметок для графа' : 'Выберите заметку';
+            return;
+        }
+        const staging = document.createElement('div');
+        const stop = await drawGraph(staging, graph, path, openNote);
+        if (seq !== graphSeq) { stop(); return; }
+        graphStop = stop;
+        host.replaceChildren(...staging.childNodes);
+    } catch (error) {
+        if (seq === graphSeq) host.textContent = errorText(error);
+    }
+}
+
+async function watchVault(signal) {
+    while (!signal.aborted) {
+        try {
+            await vaultApi.events(signal, () => {
+                clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(async () => {
+                    if (signal.aborted) return;
+                    void loadList();
+                    const old = state.current;
+                    if (old && !state.dirty && !state.saving) {
+                        const fresh = await vaultApi.readNote(old.path).catch(error => {
+                            if (error.status === 404 && old === state.current && !state.dirty && !signal.aborted) {
+                                state.current = null;
+                                renderBar();
+                                renderEmpty('Заметка была перемещена или удалена.');
+                                renderOutgoing();
+                            }
+                            return null;
+                        });
+                        if (fresh && !signal.aborted && old === state.current && !state.dirty && !state.saving) {
+                            state.current = fresh;
+                            renderOutgoing();
+                            if (state.mode === 'preview' || fresh.hash !== old.hash) {
+                                state.draft = null;
+                                void renderBody();
+                            }
+                        }
+                    }
+                    if (!signal.aborted) void refreshLinks();
+                }, 200);
+            });
+        } catch (error) {
+            if (error.status === 401 || error.status === 403) return;
+        }
+        if (!signal.aborted) await new Promise(resolve => setTimeout(resolve, 2500));
+    }
 }
 
 function renderBar() {
@@ -367,6 +466,7 @@ async function renderBody() {
 
 async function openNote(path, { push = true, heading = null } = {}) {
     await flushSave();
+    if (state.dirty) return;
     const seq = ++state.openSeq;
     let note;
     try {
@@ -390,6 +490,7 @@ async function openNote(path, { push = true, heading = null } = {}) {
     }
     renderBar();
     renderOutgoing();
+    void refreshLinks();
     await renderBody();
     setPane('note');
     if (heading && state.mode === 'preview') {
@@ -450,7 +551,7 @@ async function setMode(mode) {
     if (mode === 'preview') {
         // Предпросмотр рисует сервер: сохраняем правку и перечитываем HTML.
         await flushSave();
-        if (state.conflict) return;
+        if (state.dirty) return;
         state.mode = mode;
         try { localStorage.setItem(LS_MODE, mode); } catch { /* не критично */ }
         await reloadCurrent();
@@ -638,7 +739,15 @@ export async function mount() {
     on($('#vault-new'), 'click', () => newNoteDialog());
     on($('#vault-rename'), 'click', renameDialog);
     on($('#vault-trash'), 'click', trashCurrent);
-    on($('#vault-tag-filter'), 'change', (event) => setTagFilter(event.target.value));
+    on($('#vault-tag-filter'), 'change', (event) => {
+        setTagFilter(event.target.value);
+        void refreshLinks();
+    });
+    for (const id of ['#vault-graph-mode', '#vault-graph-folder', '#vault-graph-unresolved']) {
+        on($(id), 'change', refreshLinks);
+    }
+    stream = new AbortController();
+    void watchVault(stream.signal);
     on($('#vault-search'), 'input', debounce((event) => {
         state.filter.q = event.target.value.trim();
         loadList();
@@ -659,6 +768,7 @@ export async function mount() {
 
     renderBar();
     renderOutgoing();
+    void refreshLinks();
     renderEmpty('Выберите заметку слева или создайте новую.');
     await loadList();
     if (!state.mounted) return;
@@ -677,6 +787,12 @@ export async function mount() {
 }
 
 export function unmount() {
+    stream?.abort();
+    clearTimeout(refreshTimer);
+    graphSeq++;
+    listSeq++;
+    graphStop?.();
+    graphStop = null;
     flushSave();
     state.mounted = false;
     state.openSeq += 1;

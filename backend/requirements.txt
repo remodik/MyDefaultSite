@@ -27,3 +27,4 @@ nh3>=0.2.17
 dulwich>=0.24.0
 watchfiles>=0.21.0
 mcp>=1.12.0
+sse-starlette>=2.1.0
