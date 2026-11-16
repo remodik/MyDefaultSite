@@ -1,3 +1,4 @@
+import { graphDialogMarkup, openGraphDialog } from '../components/vault-graph-dialog.js';
 import { openVaultSettings } from '../components/vault-settings.js';
 import { drawGraph } from '../components/vault-graph.js';
 import { vaultApi, VaultApiError } from '../components/vault-api.js';
@@ -140,6 +141,9 @@ export function render() {
                         <button type="button" data-mode="preview" role="tab">Просмотр</button>
                         <button type="button" data-mode="source" role="tab">Исходник</button>
                     </div>
+                    <button type="button" class="vault-btn vault-open-graph" id="vault-open-graph">
+                        <i class="fas fa-diagram-project" aria-hidden="true"></i> Граф
+                    </button>
                     <button type="button" class="vault-icon-btn" id="vault-settings" title="Доступ агентов"
                             aria-label="Доступ агентов"><i class="fas fa-key"></i></button>
                     <button type="button" class="vault-icon-btn" id="vault-rename" title="Переименовать или переместить"
@@ -153,7 +157,11 @@ export function render() {
 
             <aside class="vault-side vault-right" aria-label="Связи заметки">
                 <section class="vault-panel">
-                    <h3 class="vault-panel-title">Граф</h3>
+                    <div class="vault-graph-panel-head">
+                        <h3 class="vault-panel-title">Граф</h3>
+                        <button type="button" class="vault-icon-btn" id="vault-expand-graph"
+                                title="Развернуть граф" aria-label="Развернуть граф"><i class="fas fa-expand"></i></button>
+                    </div>
                     <div class="vault-tools vault-graph-controls">
                         <select class="vault-input" id="vault-graph-mode" aria-label="Область графа">
                             <option value="1">Локальный · глубина 1</option>
@@ -174,6 +182,7 @@ export function render() {
                     <ul class="vault-links" id="vault-outgoing"></ul>
                 </section>
             </aside>
+            ${graphDialogMarkup()}
         </div>
     `;
 }
@@ -740,6 +749,18 @@ export async function mount() {
     state.filter = { q: '', tag: params.get('tag') || '' };
 
     on(root, 'click', onRootClick);
+    const showGraph = mode => openGraphDialog($('#vault-graph-dialog'), {
+        mode,
+        path: state.current?.path,
+        filters: {
+            tag: mode === 'all' ? state.filter.tag : '',
+            folder: mode === 'all' ? $('#vault-graph-folder').value.trim() : '',
+            unresolved: mode === 'all' && $('#vault-graph-unresolved').checked,
+        },
+        open: openNote,
+    });
+    on($('#vault-open-graph'), 'click', () => showGraph('all'));
+    on($('#vault-expand-graph'), 'click', () => showGraph($('#vault-graph-mode').value));
     on($('#vault-settings'), 'click', () => { closeSettings = openVaultSettings(); });
     on($('#vault-new'), 'click', () => newNoteDialog());
     on($('#vault-rename'), 'click', renameDialog);
@@ -792,6 +813,7 @@ export async function mount() {
 }
 
 export function unmount() {
+    if ($('#vault-graph-dialog')?.open) $('#vault-graph-dialog').close();
     stream?.abort();
     closeSettings?.();
     closeSettings = null;

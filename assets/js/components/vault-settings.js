@@ -4,26 +4,39 @@ import { vaultApi } from './vault-api.js';
 export function openVaultSettings() {
     const id = showModal({
         title: 'Доступ агентов',
-        size: 'lg',
+        size: 'xl',
         content: `
+            <section class="vault-settings-section">
+            <h4>Новый токен</h4>
             <form class="vault-settings-form" id="vault-token-form">
                 <label>Имя агента <input class="vault-input" name="agentName" required pattern="[A-Za-z0-9_.\\-]{1,60}" placeholder="codex"></label>
                 <label>Права <select class="vault-input" name="scope"><option value="read-only">Чтение</option><option value="read-write">Чтение и запись</option></select></label>
-                <label>Папки через запятую (/ — весь vault)
+                <label class="vault-token-folders">Разрешённые папки <small>Через запятую. / даёт доступ ко всем папкам.</small>
                     <input class="vault-input" name="folders" required placeholder="agent/, inbox/">
                 </label>
-                <button class="v1-btn" type="submit">Создать токен</button>
+                <button class="vault-btn vault-settings-submit" type="submit">Создать токен</button>
             </form>
-            <p id="vault-issued" hidden>Скопируйте токен: после закрытия он больше не показывается.
+            <div id="vault-issued" hidden>Скопируйте токен: после закрытия он больше не показывается.
                 <input class="vault-input" readonly aria-label="Новый токен" autocomplete="off">
-            </p>
+            </div>
             <p id="vault-settings-error" role="alert"></p>
-            <h3>Токены</h3><div id="vault-token-list"></div>
-            <h3>Ожидают одобрения</h3><div id="vault-pending-list"></div>
-            <h3>Журнал изменений</h3><ul id="vault-activity-list"></ul>`,
+            </section>
+            <section class="vault-settings-section">
+                <h4>Токены</h4>
+                <div id="vault-token-list" class="vault-settings-list"></div>
+            </section>
+            <section class="vault-settings-section">
+                <h4>Ожидают одобрения</h4>
+                <div id="vault-pending-list" class="vault-settings-list"></div>
+            </section>
+            <section class="vault-settings-section">
+                <h4>Журнал изменений</h4>
+                <ul id="vault-activity-list" class="vault-settings-list"></ul>
+            </section>`,
     });
     const host = document.getElementById(`modal-${id}`);
     if (!host) return;
+    host.classList.add('vault-settings-overlay');
     const find = (selector) => host.querySelector(selector);
     const node = (tag, text, parent) => {
         const el = document.createElement(tag);
@@ -52,8 +65,13 @@ export function openVaultSettings() {
         const tokens = find('#vault-token-list');
         tokens.replaceChildren();
         for (const token of settings.tokens) {
-            const row = node('p', `${token.name} · ${token.scope} · ${token.prefixes.map(p => p || '/').join(', ')} · `, tokens);
-            if (token.revoked) row.append('отозван');
+            const row = node('div', '', tokens);
+            row.className = 'vault-token-row';
+            const info = node('div', '', row);
+            node('strong', token.name, info);
+            const access = token.scope === 'read-only' ? 'Чтение' : 'Чтение и запись';
+            node('small', `${access} · ${token.prefixes.map(p => p || '/').join(', ')}`, info);
+            if (token.revoked) node('small', 'Отозван', row);
             else button(row, 'Отозвать', async () => { await vaultApi.revokeToken(token.id); await load(); });
         }
         if (!settings.tokens.length) tokens.textContent = 'Токенов нет';
@@ -87,7 +105,10 @@ export function openVaultSettings() {
         log.replaceChildren();
         for (const entry of activity) {
             const stamp = new Date(Number(entry.time) * 1000).toLocaleString();
-            node('li', `${stamp} · ${entry.author} · ${entry.message} · ${entry.sha.slice(0, 12)}`, log);
+            const row = node('li', '', log);
+            node('div', entry.message, row);
+            const meta = node('small', `${entry.author} · ${stamp} · `, row);
+            node('code', entry.sha.slice(0, 8), meta).title = entry.sha;
         }
         if (!activity.length) node('li', 'Пока нет коммитов', log);
     }
