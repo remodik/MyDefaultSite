@@ -204,3 +204,88 @@ def test_graph_and_backlinks_endpoints(client, admin, plain_user):
                 "/api/vault/events"):
         assert client.get(url).status_code == 401, url
         assert client.get(url, headers=plain_user).status_code == 403, url
+
+
+def _agent(client, admin, scope="read-write", prefixes=("agent",)):
+    response = client.post("/api/vault/tokens", headers=admin,
+                           json={"name": "codex", "scope": scope, "prefixes": list(prefixes)})
+    assert response.status_code == 201, response.text
+    token = response.json()
+    return token, {"Authorization": f"Bearer {token['token']}",
+                   "Accept": "application/json, text/event-stream"}
+
+
+def _rpc(client, headers, method, params):
+    response = client.post("/mcp", headers=headers,
+                           json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+    assert response.status_code == 200, response.text
+    return response.json()["result"]
+
+
+def _tool(client, headers, name, **arguments):
+    return _rpc(client, headers, "tools/call", {"name": name, "arguments": arguments})
+
+
+def test_mcp_write_scope_audit_and_revocation(client, admin, plain_user):
+    token, headers = _agent(client, admin)
+    assert client.post("/mcp").status_code == 401
+    assert client.post("/mcp", headers={**headers, "Origin": "https://other.example"}).status_code == 403
+    assert client.get("/api/vault/settings", headers=plain_user).status_code == 403
+
+    info = _rpc(client, headers, "initialize", {
+        "protocolVersion": "2025-06-18", "capabilities": {},
+        "clientInfo": {"name": "vault-test", "version": "1"},
+    })
+    assert info["serverInfo"]["name"] == "MyDefaultSite vault"
+    assert len(_rpc(client, headers, "tools/list", {})["tools"]) == 9
+
+    made = _tool(client, headers, "create_note", path="agent/integration", content="matching phrase")
+    assert not made.get("isError"), made
+    source = _tool(client, headers, "read_note", path="agent/integration")["structuredContent"]
+    assert source["content"] == "matching phrase"
+    assert _tool(client, headers, "update_note", path="agent/integration",
+                 content="stale", expected_hash="0" * 64)["isError"]
+
+    for path in ("agent2/private", "Agent/private"):
+        response = client.post("/api/vault/notes", headers=admin, json={"path": path, "content": "matching phrase"})
+        assert response.status_code == 201
+        assert _tool(client, headers, "read_note", path=path)["isError"]
+    hits = _tool(client, headers, "search_notes", query="matching")["structuredContent"]["result"]
+    assert [row["path"] for row in hits] == ["agent/integration.md"]
+    visible = _tool(client, headers, "list_notes")["structuredContent"]["result"]
+    assert [row["path"] for row in visible] == ["agent/integration.md"]
+
+    blocked = _tool(client, headers, "create_note", path="private/new", content="needs approval")["structuredContent"]
+    assert blocked["status"] == "pending"
+    assert client.get("/api/vault/notes/private/new", headers=admin).status_code == 404
+    settings = client.get("/api/vault/settings", headers=admin)
+    assert token["token"] not in settings.text
+    assert any(req["id"] == blocked["request_id"] for req in settings.json()["pending"])
+    log = client.get("/api/vault/activity", headers=admin).json()["commits"]
+    assert any(row["author"] == "agent:codex" and row["message"] == "create: agent/integration.md" for row in log)
+
+    decision = f"/api/vault/pending/{blocked['request_id']}/decision"
+    assert client.post(decision, headers=plain_user, json={"approved": True}).status_code == 403
+    assert client.post(decision, headers=admin, json={"approved": True}).status_code == 200
+    assert client.post(decision, headers=admin, json={"approved": True}).status_code == 409
+
+    pending = _tool(client, headers, "move_to_trash", path="agent/integration")["structuredContent"]
+    current = client.get("/api/vault/notes/agent/integration", headers=admin).json()
+    client.put("/api/vault/notes/agent/integration", headers=admin, json={"content": "newer"})
+    decision = f"/api/vault/pending/{pending['request_id']}/decision"
+    assert client.post(decision, headers=admin, json={"approved": True, "expected_hash": current["hash"]}).status_code == 409
+    assert client.get("/api/vault/notes/agent/integration", headers=admin).json()["content"] == "newer"
+
+    assert client.delete(f"/api/vault/tokens/{token['id']}", headers=admin).status_code == 200
+    assert client.post("/mcp", headers=headers).status_code == 401
+
+
+def test_mcp_read_only_and_symlink(client, admin):
+    _, headers = _agent(client, admin, scope="read-only", prefixes=("reader",))
+    assert _tool(client, headers, "create_note", path="reader/no", content="x")["isError"]
+    from vault.service import get_service
+    root = get_service().root
+    (root / "reader").mkdir()
+    (root / "private-link.md").write_text("private")
+    (root / "reader" / "alias.md").symlink_to(root / "private-link.md")
+    assert _tool(client, headers, "read_note", path="reader/alias")["isError"]

@@ -159,6 +159,20 @@ class VaultService:
 
         return await asyncio.to_thread(read)
 
+    async def read_source(self, raw_path: str) -> dict[str, str]:
+        path, absolute = self._note_path(raw_path)
+        data = await self._read_bytes(path, absolute)
+        return {"path": path, "content": data.decode("utf-8", errors="replace"),
+                "hash": index.content_hash(data)}
+
+    async def note_hash(self, raw_path: str) -> str:
+        path, absolute = self._note_path(raw_path)
+        return index.content_hash(await self._read_bytes(path, absolute))
+
+    async def _verify_hash(self, path: str, expected_hash: str | None) -> None:
+        if expected_hash is not None and await self.note_hash(path) != expected_hash:
+            raise VaultConflict("заметка изменилась с момента чтения")
+
     async def read_note(self, raw_path: str, *, render: bool = True) -> dict[str, Any]:
         path, abs_path = self._note_path(raw_path)
         data = await self._read_bytes(path, abs_path)
@@ -215,10 +229,13 @@ class VaultService:
         folder: str | None = None,
         q: str | None = None,
         limit: int = 5000,
+        prefixes: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         limit = max(1, min(limit, 5000))
         async with self._sessions() as session:
             stmt = select(VaultNote.path, VaultNote.title, VaultNote.folder, VaultNote.mtime, VaultNote.size)
+            if prefixes is not None and "" not in prefixes:
+                stmt = stmt.where(index.folder_scope(VaultNote.path, prefixes))
             folder_norm = normalize_folder(folder)
             if folder_norm:
                 stmt = stmt.where(
@@ -240,7 +257,7 @@ class VaultService:
             snippets: dict[str, dict[str, str]] = {}
             order: dict[str, int] = {}
             if q and q.strip():
-                hits = await index.search(session, q, limit=min(limit, 200))
+                hits = await index.search(session, q, limit=min(limit, 200), prefixes=prefixes)
                 if not hits:
                     return []
                 for rank, hit in enumerate(hits):
@@ -513,10 +530,13 @@ class VaultService:
                 return {"path": path, "hash": current_hash, "commit": None, "action": "unchanged"}
             return await self._save(path, abs_path, data, actor, "update")
 
-    async def append_to_note(self, raw_path: str, addition: str, actor: str) -> dict[str, Any]:
+    async def append_to_note(self, raw_path: str, addition: str, actor: str, *, expected_hash: str | None = None) -> dict[str, Any]:
         path, abs_path = self._note_path(raw_path)
         async with self._lock:
-            current = (await self._read_bytes(path, abs_path)).decode("utf-8", errors="replace")
+            original = await self._read_bytes(path, abs_path)
+            if expected_hash is not None and index.content_hash(original) != expected_hash:
+                raise VaultConflict("заметка изменилась с момента чтения")
+            current = original.decode("utf-8", errors="replace")
             if current and not current.endswith("\n"):
                 current += "\n"
             data = self._check_size(current + addition + ("" if addition.endswith("\n") else "\n"))
@@ -543,7 +563,7 @@ class VaultService:
         self._invalidate()
         return {"path": path, "new_path": new_path, "commit": commit, "action": action}
 
-    async def move_note(self, raw_path: str, raw_new_path: str, actor: str) -> dict[str, Any]:
+    async def move_note(self, raw_path: str, raw_new_path: str, actor: str, *, expected_hash: str | None = None) -> dict[str, Any]:
         path, abs_path = self._note_path(raw_path)
         new_path, new_abs = self._note_path(raw_new_path)
         if path == new_path:
@@ -553,11 +573,12 @@ class VaultService:
                 raise VaultNotFound(f"заметка не найдена: {path}")
             if new_abs.exists():
                 raise VaultConflict(f"по новому пути уже есть файл: {new_path}")
+            await self._verify_hash(path, expected_hash)
             result = await self._relocate(path, new_path, actor, "move")
         self._publish("note_moved", path=path, to=new_path, actor=actor, commit=result["commit"])
         return result
 
-    async def trash_note(self, raw_path: str, actor: str) -> dict[str, Any]:
+    async def trash_note(self, raw_path: str, actor: str, *, expected_hash: str | None = None) -> dict[str, Any]:
         """Переносит заметку в .trash/. Файлы не удаляются никогда."""
         path, abs_path = self._note_path(raw_path)
         async with self._lock:
@@ -565,7 +586,8 @@ class VaultService:
                 raise VaultNotFound(f"заметка не найдена: {path}")
             trash_path = f"{TRASH_DIR}/{path}"
             if safe_join(self._root, trash_path).exists():
-                trash_path = f"{TRASH_DIR}/{path[:-3]}-{int(time.time())}.md"
+                trash_path = f"{TRASH_DIR}/{path[:-3]}-{time.time_ns()}.md"
+            await self._verify_hash(path, expected_hash)
             result = await self._relocate(path, trash_path, actor, "trash")
         self._publish("note_deleted", path=path, to=result["new_path"], actor=actor, commit=result["commit"])
         return result

@@ -7,22 +7,7 @@ VAULT_DIR.
 
 from __future__ import annotations
 
-import os
-import sys
-import tempfile
-from pathlib import Path
-
-BACKEND_DIR = Path(__file__).resolve().parents[2]
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
-
-_TMP = tempfile.mkdtemp(prefix="vault-tests-")
-os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_TMP}/test.db"
-os.environ["VAULT_DIR"] = f"{_TMP}/vault"
-os.environ["VAULT_WATCH"] = "off"
-os.environ.setdefault("SECRET_KEY", "test-secret-key")
-
-import pytest  # noqa: E402
+import pytest
 
 
 @pytest.fixture(scope="session")

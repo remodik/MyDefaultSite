@@ -739,3 +739,9 @@ summary.callout-title {
 .vault-graph g[role="button"] { cursor: pointer; }
 .vault-graph text { fill: var(--v1-fg); font-size: 11px; pointer-events: none; }
 .vault-graph-controls { display: grid; gap: .4rem; }
+
+.vault-settings-form, .vault-settings-form label { display: grid; gap: .5rem; }
+#vault-pending-list details { margin-block: .65rem; }
+#vault-pending-list pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+#vault-issued input { width: 100%; }
+#vault-settings-error { color: #fca5a5; }

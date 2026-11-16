@@ -1,20 +1,14 @@
 import asyncio
-import os
-import tempfile
 import unittest
 import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy import delete
 
-DB_FD, DB_PATH = tempfile.mkstemp(prefix="mydefaultsite-test-", suffix=".db")
-os.close(DB_FD)
-os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{DB_PATH}"
+from fastapi.testclient import TestClient
 
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.database import Conversation, DirectMessage, User, UserProfile, async_session_factory, engine  # noqa: E402
-from backend.server import ACCESS_TOKEN_EXPIRE_MINUTES, app, create_access_token, get_password_hash  # noqa: E402
+from database import Conversation, DirectMessage, User, UserProfile, async_session_factory, engine
+from server import ACCESS_TOKEN_EXPIRE_MINUTES, app, create_access_token, get_password_hash
 
 
 class ProfileAndConversationApiTests(unittest.TestCase):
@@ -27,8 +21,6 @@ class ProfileAndConversationApiTests(unittest.TestCase):
     def tearDownClass(cls):
         cls._client_context.__exit__(None, None, None)
         asyncio.run(engine.dispose())
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
 
     def setUp(self):
         asyncio.run(self._reset_database())

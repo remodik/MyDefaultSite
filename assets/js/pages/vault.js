@@ -1,3 +1,4 @@
+import { openVaultSettings } from '../components/vault-settings.js';
 import { drawGraph } from '../components/vault-graph.js';
 import { vaultApi, VaultApiError } from '../components/vault-api.js';
 import { renderPreview, scrollToHeading } from '../components/vault-preview.js';
@@ -32,6 +33,7 @@ const state = {
 let root = null;
 let stream;
 let graphStop;
+let closeSettings;
 let graphSeq = 0;
 let refreshTimer;
 let listSeq = 0;
@@ -138,6 +140,8 @@ export function render() {
                         <button type="button" data-mode="preview" role="tab">Просмотр</button>
                         <button type="button" data-mode="source" role="tab">Исходник</button>
                     </div>
+                    <button type="button" class="vault-icon-btn" id="vault-settings" title="Доступ агентов"
+                            aria-label="Доступ агентов"><i class="fas fa-key"></i></button>
                     <button type="button" class="vault-icon-btn" id="vault-rename" title="Переименовать или переместить"
                             aria-label="Переименовать или переместить"><i class="fas fa-pen"></i></button>
                     <button type="button" class="vault-icon-btn" id="vault-trash" title="В корзину"
@@ -736,6 +740,7 @@ export async function mount() {
     state.filter = { q: '', tag: params.get('tag') || '' };
 
     on(root, 'click', onRootClick);
+    on($('#vault-settings'), 'click', () => { closeSettings = openVaultSettings(); });
     on($('#vault-new'), 'click', () => newNoteDialog());
     on($('#vault-rename'), 'click', renameDialog);
     on($('#vault-trash'), 'click', trashCurrent);
@@ -788,6 +793,8 @@ export async function mount() {
 
 export function unmount() {
     stream?.abort();
+    closeSettings?.();
+    closeSettings = null;
     clearTimeout(refreshTimer);
     graphSeq++;
     listSeq++;

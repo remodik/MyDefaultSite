@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select, text, or_, func
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from vault.markdown import IMAGE_EXTENSIONS, ParsedNote
@@ -240,11 +240,22 @@ def fts_query(query: str) -> str | None:
     return " ".join(f'"{word}"*' for word in words)
 
 
-async def search(session: AsyncSession, query: str, limit: int = 50) -> list[dict[str, str]]:
+def folder_scope(column, prefixes: list[str]):
+    return or_(False, *(func.substr(column, 1, len(p) + 1) == p + "/" for p in prefixes))
+
+
+async def search(session: AsyncSession, query: str, limit: int = 50, *, prefixes: list[str] | None = None) -> list[dict[str, str]]:
     """Полнотекстовый поиск: путь и фрагмент с подсветкой (``snippet_html``
     экранирован, совпадения обёрнуты в <mark>)."""
     limit = max(1, min(limit, 200))
     if _is_sqlite(session.get_bind()):
+        args = {"limit": limit, "mo": _MARK_OPEN, "mc": _MARK_CLOSE}
+        scope = ""
+        if prefixes is not None and "" not in prefixes:
+            scope = " AND (" + " OR ".join(
+                f"substr(path, 1, length(:p{i})) = :p{i}" for i in range(len(prefixes))
+            ) + ")" if prefixes else " AND 0"
+            args.update({f"p{i}": p + "/" for i, p in enumerate(prefixes)})
         expr = fts_query(query)
         if expr is None:
             return []
@@ -252,10 +263,10 @@ async def search(session: AsyncSession, query: str, limit: int = 50) -> list[dic
             await session.execute(
                 text(
                     f"SELECT path, snippet({FTS_TABLE}, 2, :mo, :mc, '…', 14) AS snip "
-                    f"FROM {FTS_TABLE} WHERE {FTS_TABLE} MATCH :q "
+                    f"FROM {FTS_TABLE} WHERE {FTS_TABLE} MATCH :q {scope} "
                     f"ORDER BY bm25({FTS_TABLE}, 0.0, 8.0, 1.0, 4.0) LIMIT :limit"
                 ),
-                {"q": expr, "mo": _MARK_OPEN, "mc": _MARK_CLOSE, "limit": limit},
+                {**args, "q": expr},
             )
         ).all()
         out = []
@@ -271,6 +282,7 @@ async def search(session: AsyncSession, query: str, limit: int = 50) -> list[dic
         await session.execute(
             select(VaultNote.path)
             .where(VaultNote.title.ilike(pattern) | VaultNote.path.ilike(pattern))
+            .where(True if prefixes is None or "" in prefixes else folder_scope(VaultNote.path, prefixes))
             .order_by(VaultNote.path)
             .limit(limit)
         )

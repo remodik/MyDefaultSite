@@ -82,7 +82,12 @@ def normalize_folder(raw: str | None) -> str:
 def safe_join(root: Path, rel_path: str) -> Path:
     """Абсолютный путь внутри ``root``. Симлинк, ведущий наружу, отклоняется."""
     root_resolved = root.resolve()
-    candidate = (root_resolved / rel_path).resolve()
+    candidate = root_resolved
+    for segment in rel_path.split("/"):
+        candidate /= segment
+        if candidate.is_symlink():
+            raise VaultPathError("символические ссылки в vault запрещены")
+    candidate = candidate.resolve()
     if candidate != root_resolved and root_resolved not in candidate.parents:
         raise VaultPathError("путь выходит за пределы vault")
     return candidate

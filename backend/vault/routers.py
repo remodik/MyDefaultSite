@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
+from vault import agents
 from vault.paths import VaultPathError
 from vault.service import VaultError, dumps, get_service
 
@@ -61,6 +62,11 @@ def http_error(exc: Exception) -> HTTPException:
 
 def _actor(user: dict[str, Any]) -> str:
     return f"user:{user.get('username') or user.get('id')}"
+
+
+class Decision(BaseModel):
+    approved: bool
+    expected_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 def attach_routes(app, get_current_admin: Callable[..., Any]) -> None:
@@ -197,5 +203,36 @@ def attach_routes(app, get_current_admin: Callable[..., Any]) -> None:
             ping=SSE_PING_SECONDS,
             headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
         )
+
+    @vault_router.get("/settings")
+    async def _settings(_user: dict[str, Any] = admin):
+        return JSONResponse(await agents.settings(), headers={"Cache-Control": "no-store"})
+
+    @vault_router.post("/tokens", status_code=201)
+    async def _new_token(body: agents.TokenInput, _user: dict[str, Any] = admin):
+        try:
+            return JSONResponse(await agents.create_token(body), status_code=201,
+                                headers={"Cache-Control": "no-store"})
+        except (VaultError, VaultPathError) as exc:
+            raise http_error(exc) from exc
+
+    @vault_router.delete("/tokens/{token_id}")
+    async def _revoke(token_id: str, _user: dict[str, Any] = admin):
+        try:
+            await agents.revoke(token_id)
+        except VaultError as exc:
+            raise http_error(exc) from exc
+        return {"revoked": True}
+
+    @vault_router.post("/pending/{request_id}/decision")
+    async def _decision(request_id: str, body: Decision, user: dict[str, Any] = admin):
+        try:
+            return await agents.decide(request_id, body.approved, f"user:{user['username']}", body.expected_hash)
+        except (VaultError, VaultPathError) as exc:
+            raise http_error(exc) from exc
+
+    @vault_router.get("/activity")
+    async def _activity(_user: dict[str, Any] = admin):
+        return JSONResponse({"commits": await agents.history()}, headers={"Cache-Control": "no-store"})
 
     app.include_router(vault_router)

@@ -64,6 +64,9 @@ from licensing.portal_routes import (
 )
 from payments import create_payment as yookassa_create_payment, fetch_payment as yookassa_fetch_payment
 from vault.runtime import vault_lifespan
+from vault.config import login_rate_limit
+from vault.mcp_server import attach_mcp, mcp_lifespan
+from vault.rate import RateLimit, client_ip
 
 load_dotenv()
 
@@ -72,7 +75,7 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     await init_models()
     # Vault: каталог заметок, git-репозиторий и фоновая сверка индекса.
-    async with vault_lifespan(app):
+    async with vault_lifespan(app), mcp_lifespan(app):
         yield
 
 
@@ -80,6 +83,7 @@ app = FastAPI(lifespan=lifespan)
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
+_login_limits = RateLimit()
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(license_router)
@@ -1234,7 +1238,11 @@ async def register(user: UserCreate, session: AsyncSession = Depends(get_session
 
 
 @app.post(path="/api/auth/login", response_model=Token)
-async def login(user: UserLogin, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def login(request: Request, user: UserLogin, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+    if not _login_limits.allow(client_ip(request.scope, request.headers), *login_rate_limit()):
+        raise HTTPException(status_code=429, detail="Too many login attempts")
+    if len(user.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
     await ensure_db_connection(session)
     result = await session.execute(select(User).where(User.username == user.username))
     db_user = result.scalar_one_or_none()
@@ -3465,6 +3473,7 @@ _attach_automute_routes(app)
 from vault.routers import attach_routes as _attach_vault_routes
 
 _attach_vault_routes(app, get_current_admin)
+attach_mcp(app)
 
 
 if __name__ == "__main__":

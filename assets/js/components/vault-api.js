@@ -58,6 +58,13 @@ function query(params) {
 }
 
 export const vaultApi = {
+    settings: () => request('/api/vault/settings'),
+    activity: () => request('/api/vault/activity').then(r => r.commits),
+    issueToken: (data) => request('/api/vault/tokens', { method: 'POST', body: JSON.stringify(data) }),
+    revokeToken: (id) => request(`/api/vault/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    decide: (id, approved, expectedHash) => request(`/api/vault/pending/${encodeURIComponent(id)}/decision`, {
+        method: 'POST', body: JSON.stringify({ approved, expected_hash: expectedHash }),
+    }),
     backlinks: (path) => request(`/api/vault/backlinks/${encodePath(path)}`).then(r => r.backlinks),
     graph: (filters) => request(`/api/vault/graph${query(filters)}`),
     localGraph: (path, depth) => request(`/api/vault/graph/local/${encodePath(path)}${query({ depth })}`),

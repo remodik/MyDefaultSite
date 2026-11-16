@@ -26,7 +26,7 @@ def vault_dir() -> Path:
 
 
 def max_note_bytes() -> int:
-    return _int_env("VAULT_MAX_NOTE_BYTES", 1024 * 1024)
+    return max(1, min(8 * 1024 * 1024, _int_env("VAULT_MAX_NOTE_BYTES", 1024 * 1024)))
 
 
 def max_attachment_bytes() -> int:
@@ -41,13 +41,6 @@ def watch_mode() -> str:
 
 def poll_interval() -> float:
     return max(1.0, float(_int_env("VAULT_POLL_INTERVAL", 5)))
-
-
-def trust_proxy_header() -> str:
-    """Когда верить CF-Connecting-IP: auto (запрос пришёл с loopback, то есть
-    от cloudflared), always, never."""
-    mode = os.getenv("VAULT_TRUST_PROXY_HEADER", "auto").strip().lower()
-    return mode if mode in {"auto", "always", "never"} else "auto"
 
 
 def mcp_rate_limit() -> tuple[int, int]:
